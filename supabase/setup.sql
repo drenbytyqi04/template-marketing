@@ -1,12 +1,9 @@
 -- poster-forge-craft / Krijo24 - full schema bootstrap
 -- Generated from supabase/migrations/*.sql in chronological order.
 --
--- You only need this if you are NOT using the Supabase GitHub integration.
--- With the integration connected, supabase/migrations/ is applied automatically
--- and this file is redundant.
---
--- To run manually against a NEW, EMPTY project:
---   Dashboard > SQL Editor > New query > paste > Run
+-- Redundant if the Supabase GitHub integration or MCP has already applied
+-- supabase/migrations/. See supabase/disabled/README.md for the two upstream
+-- cron migrations that are deliberately excluded.
 --
 -- WARNING: creates public.profiles, replaces public.handle_new_user(), and
 -- repoints the on_auth_user_created trigger on auth.users. Never run it
@@ -514,7 +511,20 @@ create policy "Members delete own business files"
 -- ============================================================
 
 -- Internal trigger/event functions: never callable through the API
-REVOKE ALL ON FUNCTION public.rls_auto_enable() FROM PUBLIC, anon, authenticated;
+-- NOTE: public.rls_auto_enable() is referenced here but never created by any
+-- migration in this repo, so a bare REVOKE aborts on a clean database.
+-- Guarded so the statement is a no-op when the function is absent.
+do $guard$
+begin
+  if exists (
+    select 1 from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'rls_auto_enable'
+  ) then
+    execute 'REVOKE ALL ON FUNCTION public.rls_auto_enable() FROM PUBLIC, anon, authenticated';
+  end if;
+end
+$guard$;
 REVOKE ALL ON FUNCTION public.guard_business_privileged_fields() FROM PUBLIC, anon, authenticated;
 
 -- Anonymous role must not execute any SECURITY DEFINER helper
@@ -1536,49 +1546,6 @@ revoke all on function public.guard_social_connection_status() from public, anon
 -- 8. Remote post ids on the queue so a published item can be traced
 alter table public.scheduled_posts add column if not exists remote_post_id text;
 alter table public.scheduled_posts add column if not exists published_at timestamptz;
-
--- ============================================================
--- 20260818203522_ddf6c37b-24e5-4cd2-b765-b87805574891.sql
--- ============================================================
-
-create extension if not exists pg_cron;
-create extension if not exists pg_net;
-
-select cron.unschedule('krijo24-automation') where exists (select 1 from cron.job where jobname = 'krijo24-automation');
-
-select cron.schedule(
-  'krijo24-automation',
-  '*/15 * * * *',
-  $$
-  select net.http_post(
-    url := 'https://project--5a3f77fc-1723-4fd4-b3a8-1d753f001fad.lovable.app/api/public/cron/automation',
-    headers := '{"Content-Type": "application/json", "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpramd3cmxja3VsZWFlcHNobmZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxMTM5MjIsImV4cCI6MjEwMTY4OTkyMn0.-XeZg06y8NWFCmoLYYmKJZPIomxsdWh9lKGBY7FD_CA"}'::jsonb,
-    body := '{}'::jsonb
-  );
-  $$
-);
-
--- ============================================================
--- 20260818203646_052c3eda-55d6-4506-a0c8-5c43fd8c4dde.sql
--- ============================================================
-
-create schema if not exists extensions;
-drop extension if exists pg_net;
-create extension pg_net with schema extensions;
-
-select cron.unschedule('krijo24-automation') where exists (select 1 from cron.job where jobname = 'krijo24-automation');
-
-select cron.schedule(
-  'krijo24-automation',
-  '*/15 * * * *',
-  $$
-  select extensions.http_post(
-    url := 'https://project--5a3f77fc-1723-4fd4-b3a8-1d753f001fad.lovable.app/api/public/cron/automation',
-    headers := '{"Content-Type": "application/json", "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpramd3cmxja3VsZWFlcHNobmZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxMTM5MjIsImV4cCI6MjEwMTY4OTkyMn0.-XeZg06y8NWFCmoLYYmKJZPIomxsdWh9lKGBY7FD_CA"}'::jsonb,
-    body := '{}'::jsonb
-  );
-  $$
-);
 
 -- ============================================================
 -- 20260907120000_create_rafty_media_bucket.sql

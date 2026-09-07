@@ -1,5 +1,18 @@
 -- Internal trigger/event functions: never callable through the API
-REVOKE ALL ON FUNCTION public.rls_auto_enable() FROM PUBLIC, anon, authenticated;
+-- NOTE: public.rls_auto_enable() is referenced here but never created by any
+-- migration in this repo, so a bare REVOKE aborts on a clean database.
+-- Guarded so the statement is a no-op when the function is absent.
+do $guard$
+begin
+  if exists (
+    select 1 from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'rls_auto_enable'
+  ) then
+    execute 'REVOKE ALL ON FUNCTION public.rls_auto_enable() FROM PUBLIC, anon, authenticated';
+  end if;
+end
+$guard$;
 REVOKE ALL ON FUNCTION public.guard_business_privileged_fields() FROM PUBLIC, anon, authenticated;
 
 -- Anonymous role must not execute any SECURITY DEFINER helper
