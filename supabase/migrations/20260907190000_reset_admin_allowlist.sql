@@ -10,7 +10,15 @@ where ur.user_id = u.id
   and ur.role = 'super_admin'
   and lower(u.email) = 'contact@webdoagency.com';
 
--- Add your own address here, then this project's admin is you:
---   insert into public.admin_allowlist (email) values ('you@example.com')
---     on conflict (email) do nothing;
--- Sign in with it once and call the claim_admin_role() RPC to receive the role.
+-- This fork's platform admin.
+insert into public.admin_allowlist (email)
+values ('dren.bytyqi19@gmail.com')
+on conflict (email) do nothing;
+
+-- If that account already exists, grant the role right away; otherwise signing in
+-- and calling the claim_admin_role() RPC once picks it up from the allowlist.
+insert into public.user_roles (user_id, role)
+select u.id, 'super_admin'::public.app_role
+from auth.users u
+where lower(u.email) = 'dren.bytyqi19@gmail.com'
+on conflict (user_id, role) do nothing;
