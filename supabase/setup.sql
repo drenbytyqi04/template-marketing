@@ -1,15 +1,18 @@
 -- poster-forge-craft / Krijo24 - full schema bootstrap
 -- Generated from supabase/migrations/*.sql in chronological order.
 --
--- Run this ONCE against a NEW, EMPTY Supabase project:
+-- You only need this if you are NOT using the Supabase GitHub integration.
+-- With the integration connected, supabase/migrations/ is applied automatically
+-- and this file is redundant.
+--
+-- To run manually against a NEW, EMPTY project:
 --   Dashboard > SQL Editor > New query > paste > Run
 --
--- WARNING: this creates public.profiles and replaces public.handle_new_user(),
--- and repoints the on_auth_user_created trigger on auth.users.
--- Do NOT run it against a project that already hosts another application.
+-- WARNING: creates public.profiles, replaces public.handle_new_user(), and
+-- repoints the on_auth_user_created trigger on auth.users. Never run it
+-- against a project that already hosts another application.
 
 begin;
-
 
 -- ============================================================
 -- 20260807163259_186f74dd-9807-488c-928e-a79d3ee5b3b4.sql
@@ -1577,13 +1580,16 @@ select cron.schedule(
   $$
 );
 
+-- ============================================================
+-- 20260907120000_create_rafty_media_bucket.sql
+-- ============================================================
 
--- ============================================================
--- Storage bucket (not created by the Lovable migrations)
--- ============================================================
--- The RLS policies above reference bucket_id = 'rafty-media', but no migration
--- creates the bucket itself. The app reads media exclusively via
--- createSignedUrl() (src/lib/rafty/repo.ts), so the bucket must stay PRIVATE.
+-- The RLS policies in 20260807163400 reference bucket_id = 'rafty-media', but no
+-- migration ever created the bucket itself - it was made out-of-band in the Lovable
+-- dashboard. Without this, uploads fail on a freshly provisioned project.
+--
+-- Keep it PRIVATE: the app reads media exclusively through createSignedUrl()
+-- (src/lib/rafty/repo.ts, src/routes/api/public/cron/automation.ts).
 insert into storage.buckets (id, name, public)
 values ('rafty-media', 'rafty-media', false)
 on conflict (id) do nothing;

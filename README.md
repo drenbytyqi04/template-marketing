@@ -33,20 +33,19 @@ Do not reuse a project that already hosts another app: the schema below creates
 
 ### 2. Apply the schema
 
-Open **SQL Editor > New query**, paste the contents of [`supabase/setup.sql`](supabase/setup.sql),
-and run it once. That file is all 17 migrations from `supabase/migrations/` concatenated in
-chronological order and wrapped in a transaction, plus creation of the private
-`rafty-media` storage bucket (which the migrations reference but never create).
+**If you connected the Supabase GitHub integration** (Dashboard > Project Settings >
+Integrations > GitHub), migrations in `supabase/migrations/` are applied automatically
+when the configured *production branch* is pushed. Nothing to do by hand - just make sure
+that branch is the one carrying this code.
 
-If you prefer the CLI:
+**Otherwise**, open **SQL Editor > New query**, paste [`supabase/setup.sql`](supabase/setup.sql),
+and run it once. That file is every migration concatenated in chronological order and
+wrapped in a transaction. Or use the CLI:
 
 ```sh
-npx supabase link --project-ref <your-project-ref>
+npx supabase link --project-ref evspytufythlndhxudez
 npx supabase db push
 ```
-
-Note that `db push` does **not** create the `rafty-media` bucket - run that one
-`insert into storage.buckets` from the bottom of `setup.sql` yourself.
 
 ### 3. Configure environment variables
 
