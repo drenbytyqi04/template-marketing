@@ -43,10 +43,34 @@ export function fitTextToBox(
     text.style.lineHeight = String(lh);
   };
 
+  /**
+   * Width of the widest laid-out line of the text itself.
+   *
+   * `scrollWidth` cannot answer this: on a block element it is never smaller
+   * than the element's own content box, so comparing it against the container
+   * always reports a fit. That left the width constraint dead - a single-line
+   * headline a fraction too wide was never shrunk, it was silently cut off by
+   * the box's overflow:hidden. A Range over the contents measures the real
+   * glyph runs instead, one rect per line.
+   */
+  const textWidth = (): number => {
+    const range = document.createRange();
+    range.selectNodeContents(text);
+    let widest = 0;
+    for (const rect of range.getClientRects()) {
+      if (rect.width > widest) widest = rect.width;
+    }
+    range.detach();
+    return widest;
+  };
+
   const fits = () => {
     const computedLineHeight = parseFloat(getComputedStyle(text).lineHeight || "0") || 1;
     const maxHeight = computedLineHeight * maxLines + 1;
-    return text.scrollHeight <= maxHeight + 1 && text.scrollWidth <= container.clientWidth + 1;
+    if (text.scrollHeight > maxHeight + 1) return false;
+    // Sub-pixel tolerance only. Anything larger reappears multiplied when the
+    // design is exported at 1080px.
+    return textWidth() <= container.clientWidth + 0.5;
   };
 
   // Try the intended size first, at full line-height.
