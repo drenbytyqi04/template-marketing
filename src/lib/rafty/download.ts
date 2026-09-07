@@ -118,6 +118,19 @@ export async function renderNodeToDataUrl(
       canvasWidth: outWidth,
       canvasHeight: outHeight,
       cacheBust: true,
+      // html-to-image copies the node's computed style onto its clone, which
+      // would carry the off-screen parking above into the capture and draw the
+      // design 100000px to the left of the canvas - a blank PNG. Neutralise
+      // exactly those properties on the clone, keeping the export width.
+      style: {
+        position: "static",
+        left: "auto",
+        top: "auto",
+        zIndex: "auto",
+        margin: "0",
+        width: `${outWidth}px`,
+        maxWidth: "none",
+      } as Partial<CSSStyleDeclaration>,
       ...(fontEmbedCSS ? { fontEmbedCSS } : { skipFonts: true }),
     };
 
