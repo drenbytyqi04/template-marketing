@@ -20,6 +20,60 @@ Continue developing this project in the [Lovable editor](https://lovable.dev/pro
 - **Stay in sync**: every change made in Lovable is committed straight to this repository.
 - **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
+## Supabase setup (self-hosted fork)
+
+This fork is wired to **your own** Supabase project, not the original Lovable one.
+
+### 1. Create a project
+
+Create a new, **empty** project at [supabase.com/dashboard](https://supabase.com/dashboard).
+Do not reuse a project that already hosts another app: the schema below creates
+`public.profiles`, replaces `public.handle_new_user()`, and repoints the
+`on_auth_user_created` trigger on `auth.users`, which would break an existing app.
+
+### 2. Apply the schema
+
+Open **SQL Editor > New query**, paste the contents of [`supabase/setup.sql`](supabase/setup.sql),
+and run it once. That file is all 17 migrations from `supabase/migrations/` concatenated in
+chronological order and wrapped in a transaction, plus creation of the private
+`rafty-media` storage bucket (which the migrations reference but never create).
+
+If you prefer the CLI:
+
+```sh
+npx supabase link --project-ref <your-project-ref>
+npx supabase db push
+```
+
+Note that `db push` does **not** create the `rafty-media` bucket - run that one
+`insert into storage.buckets` from the bottom of `setup.sql` yourself.
+
+### 3. Configure environment variables
+
+```sh
+cp .env.example .env
+```
+
+Fill in the values from **Project Settings > Data API** (URL) and **API Keys**:
+
+| Variable | Where to find it | Secret? |
+| --- | --- | --- |
+| `SUPABASE_PROJECT_ID` / `VITE_SUPABASE_PROJECT_ID` | Your project ref | No |
+| `SUPABASE_URL` / `VITE_SUPABASE_URL` | Data API > Project URL | No |
+| `SUPABASE_PUBLISHABLE_KEY` / `VITE_SUPABASE_PUBLISHABLE_KEY` | API Keys > publishable (or legacy anon) | No |
+| `SUPABASE_SERVICE_ROLE_KEY` | API Keys > service_role | **Yes** |
+
+The `VITE_`-prefixed copies are what the browser bundle reads; keep them identical to
+their unprefixed counterparts. `SUPABASE_SERVICE_ROLE_KEY` is server-only and bypasses
+row-level security - never prefix it with `VITE_` and never commit it. `.env` is gitignored.
+
+### 4. Run
+
+```sh
+bun install   # or: npm install
+bun run dev
+```
+
 ## Development
 
 Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
