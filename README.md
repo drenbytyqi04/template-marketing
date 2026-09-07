@@ -73,6 +73,51 @@ bun install   # or: npm install
 bun run dev
 ```
 
+## Deploying to Vercel
+
+Two things have to be true or the deployment serves nothing.
+
+### 1. Vercel must build a branch that exists
+
+Vercel deploys the *production branch* configured on the project, `main` by default.
+This repo's work originally lived only on a feature branch, so a Vercel project
+pointed at `main` had nothing to build. `main` now carries the full project.
+
+### 2. Environment variables must be set in Vercel
+
+`.env` is gitignored, so Vercel never receives it. Without these the Supabase client
+throws on first use and server-side rendering fails, which renders as a blank or
+error page rather than an obvious message.
+
+In **Vercel > Project > Settings > Environment Variables**, add:
+
+| Variable | Value | Notes |
+| --- | --- | --- |
+| `SUPABASE_URL` | `https://<ref>.supabase.co` | |
+| `SUPABASE_PUBLISHABLE_KEY` | your publishable key | |
+| `VITE_SUPABASE_URL` | same as `SUPABASE_URL` | baked into the browser bundle at build time |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | same as `SUPABASE_PUBLISHABLE_KEY` | baked in at build time |
+| `SUPABASE_PROJECT_ID` / `VITE_SUPABASE_PROJECT_ID` | your project ref | |
+| `SUPABASE_SERVICE_ROLE_KEY` | your service_role key | **secret** - server only |
+
+The `VITE_`-prefixed values are substituted during the build, so changing them
+requires a redeploy, not just a restart.
+
+Optional, only for features that need them:
+
+| Variable | Enables |
+| --- | --- |
+| `META_APP_ID`, `META_APP_SECRET` | Facebook / Instagram publishing |
+| `CRON_SECRET` | the `/api/public/cron/automation` worker |
+| `LOVABLE_API_KEY`, `RESEND_API_KEY` | contact-form email delivery |
+
+### Build target
+
+Nitro auto-detects the platform it is building on, so Vercel gets the `vercel`
+preset without configuration (locally it falls back to `cloudflare-module`). If a
+deployment ever builds for the wrong target, set `NITRO_PRESET=vercel` as an
+environment variable - no code change needed.
+
 ## Development
 
 Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
