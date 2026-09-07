@@ -1,0 +1,234 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * krijo24 design system, premium minimalist SaaS.
+ * Light surfaces, violet accents, tasteful gradients and glass.
+ * All colors in oklch. Never hardcode colors in components.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-glow: var(--primary-glow);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-surface: var(--surface);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --shadow-soft:
+    0 1px 2px oklch(0.28 0.09 292 / 0.05), 0 8px 24px -12px oklch(0.28 0.09 292 / 0.14);
+  --shadow-lift: 0 24px 60px -28px oklch(0.28 0.09 292 / 0.32);
+}
+
+:root {
+  --radius: 0.9rem;
+  --background: oklch(0.995 0.003 300);
+  --foreground: oklch(0.19 0.03 285);
+  --surface: oklch(1 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.19 0.03 285);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.19 0.03 285);
+  --primary: oklch(0.53 0.22 293);
+  --primary-foreground: oklch(0.99 0.005 300);
+  --primary-soft: oklch(0.96 0.02 297);
+  --primary-glow: oklch(0.68 0.19 315);
+  --secondary: oklch(0.97 0.008 300);
+  --secondary-foreground: oklch(0.28 0.04 288);
+  --muted: oklch(0.97 0.008 300);
+  --muted-foreground: oklch(0.53 0.025 288);
+  --accent: oklch(0.96 0.02 297);
+  --accent-foreground: oklch(0.36 0.16 293);
+  --destructive: oklch(0.58 0.22 22);
+  --destructive-foreground: oklch(0.99 0.005 300);
+  --border: oklch(0.925 0.01 295);
+  --input: oklch(0.925 0.01 295);
+  --ring: oklch(0.53 0.22 293);
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.19 0.03 285);
+  --sidebar-primary: oklch(0.53 0.22 293);
+  --sidebar-primary-foreground: oklch(0.99 0.005 300);
+  --sidebar-accent: oklch(0.96 0.02 297);
+  --sidebar-accent-foreground: oklch(0.36 0.16 293);
+  --sidebar-border: oklch(0.925 0.01 295);
+  --sidebar-ring: oklch(0.53 0.22 293);
+  --gradient-brand: linear-gradient(135deg, oklch(0.53 0.22 293), oklch(0.68 0.19 315));
+  --gradient-page:
+    radial-gradient(1000px 520px at 12% -8%, oklch(0.53 0.22 293 / 0.1), transparent 70%),
+    radial-gradient(760px 420px at 96% 0%, oklch(0.68 0.19 315 / 0.09), transparent 70%);
+}
+
+.dark {
+  --background: oklch(0.17 0.025 288);
+  --foreground: oklch(0.97 0.006 300);
+  --surface: oklch(0.22 0.03 288);
+  --card: oklch(0.22 0.03 288);
+  --card-foreground: oklch(0.97 0.006 300);
+  --popover: oklch(0.22 0.03 288);
+  --popover-foreground: oklch(0.97 0.006 300);
+  --primary: oklch(0.68 0.19 300);
+  --primary-foreground: oklch(0.17 0.025 288);
+  --primary-soft: oklch(0.28 0.06 292);
+  --primary-glow: oklch(0.74 0.16 320);
+  --secondary: oklch(0.27 0.03 288);
+  --secondary-foreground: oklch(0.97 0.006 300);
+  --muted: oklch(0.27 0.03 288);
+  --muted-foreground: oklch(0.72 0.02 290);
+  --accent: oklch(0.3 0.05 292);
+  --accent-foreground: oklch(0.95 0.02 300);
+  --destructive: oklch(0.68 0.2 22);
+  --destructive-foreground: oklch(0.17 0.025 288);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.68 0.19 300);
+  --sidebar: oklch(0.22 0.03 288);
+  --sidebar-foreground: oklch(0.97 0.006 300);
+  --sidebar-primary: oklch(0.68 0.19 300);
+  --sidebar-primary-foreground: oklch(0.17 0.025 288);
+  --sidebar-accent: oklch(0.3 0.05 292);
+  --sidebar-accent-foreground: oklch(0.95 0.02 300);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.68 0.19 300);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+}
+
+@utility page-bg {
+  background-image: var(--gradient-page);
+}
+
+@utility brand-gradient {
+  background-image: var(--gradient-brand);
+}
+
+@utility text-brand-gradient {
+  background-image: var(--gradient-brand);
+  background-clip: text;
+  color: transparent;
+}
+
+@utility glass-panel {
+  background-color: color-mix(in oklab, var(--surface) 72%, transparent);
+  backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+}
+
+@utility card-soft {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-soft);
+}
+
+/* Subtle card transition used by the storyboard preview. */
+@keyframes krijo-card-in {
+  from {
+    opacity: 0;
+    transform: scale(1.02);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.krijo-card-in {
+  animation: krijo-card-in 320ms ease-out both;
+}
+
+/* Premium agency credit: a slow gradient sheen instead of a loud badge. */
+@keyframes shine-sweep {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+.shine-link {
+  background-image: linear-gradient(
+    100deg,
+    var(--muted-foreground) 0%,
+    var(--foreground) 35%,
+    var(--primary) 50%,
+    var(--foreground) 65%,
+    var(--muted-foreground) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shine-sweep 7s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shine-link {
+    animation: none;
+    color: var(--foreground);
+    -webkit-text-fill-color: currentColor;
+  }
+}
+
+/* Interface safe area for vertical formats. Stories, reels and TikToks cover
+   the top and bottom of the frame with profile rows, captions and buttons, so
+   template content layers are inset while the image stays full bleed. */
+.krijo-safe[data-safe="on"] > div > div[style*="padding"] {
+  border-top: var(--safe-t) solid transparent;
+  border-bottom: var(--safe-b) solid transparent;
+}
