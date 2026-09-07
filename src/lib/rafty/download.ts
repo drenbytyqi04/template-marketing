@@ -1,11 +1,8 @@
 import { toPng } from "html-to-image";
+import { FONT_LIBRARY } from "./constants";
 
-const FONT_CSS =
-  "https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap";
-
-// The embedded font CSS is immutable (same fonts for every post), so caching
-// it module-wide is safe and does not bleed per-post state between exports.
-let fontCssCache: string | null = null;
+/** Always embedded: every template declares these as its fallback faces. */
+const ALWAYS_EMBEDDED = ["Sora", "Plus Jakarta Sans"];
 
 /** Default export size, the standard 4:5 post. Other formats pass their own
  * size from the shared format table so there is still one pipeline. */
@@ -14,26 +11,62 @@ const EXPORT_HEIGHT = 1350;
 
 export type ExportSize = { width: number; height: number };
 
+/**
+ * Google Fonts URL covering exactly the families this node renders with.
+ *
+ * A brand picks its own typeface from the whole curated library, and templates
+ * apply it as `"<brand font>", "Sora", ...`. The exporter used to embed only
+ * Sora and Plus Jakarta Sans, so any other brand font was absent from the clone
+ * html-to-image rasterises. The text fell back to a face with different glyph
+ * widths, rendered wider than the layout the preview had measured, and lost its
+ * last character to the box's overflow:hidden - a headline read "Dubai" on
+ * screen and "Duba" in the PNG. Collecting the faces actually in use makes the
+ * capture render with the same typography as the screen.
+ */
+function fontCssUrlFor(node: HTMLElement): string {
+  const used = new Set<string>(ALWAYS_EMBEDDED);
+  const collect = (el: Element) => {
+    const family = getComputedStyle(el).fontFamily;
+    if (!family) return;
+    for (const font of FONT_LIBRARY) {
+      if (family.includes(font.family)) used.add(font.family);
+    }
+  };
+  collect(node);
+  for (const el of node.querySelectorAll("*")) collect(el);
+
+  const query = FONT_LIBRARY.filter((f) => used.has(f.family))
+    .map((f) => `family=${f.family.replace(/ /g, "+")}:wght@${f.weights}`)
+    .join("&");
+  return `https://fonts.googleapis.com/css2?${query}&display=swap`;
+}
+
+// Keyed by URL. A single shared slot would hand one brand's typefaces to the
+// next brand's export.
+const fontCssCache = new Map<string, string>();
+
 /** Inline the brand webfonts as base64 so exported PNGs keep the typography. */
-async function getFontEmbedCss(): Promise<string> {
-  if (fontCssCache !== null) return fontCssCache;
+async function getFontEmbedCss(url: string): Promise<string> {
+  const cached = fontCssCache.get(url);
+  if (cached !== undefined) return cached;
+  let out = "";
   try {
-    const css = await (await fetch(FONT_CSS)).text();
-    const urls = [...new Set(css.match(/https:\/\/[^)]+\.woff2/g) ?? [])];
-    let out = css;
+    const css = await (await fetch(url)).text();
+    const fontUrls = [...new Set(css.match(/https:\/\/[^)]+\.woff2/g) ?? [])];
+    out = css;
     await Promise.all(
-      urls.map(async (url) => {
-        const buf = await (await fetch(url)).arrayBuffer();
+      fontUrls.map(async (fontUrl) => {
+        const buf = await (await fetch(fontUrl)).arrayBuffer();
         let binary = "";
         new Uint8Array(buf).forEach((b) => (binary += String.fromCharCode(b)));
-        out = out.split(url).join(`data:font/woff2;base64,${btoa(binary)}`);
+        out = out.split(fontUrl).join(`data:font/woff2;base64,${btoa(binary)}`);
       }),
     );
-    fontCssCache = out;
   } catch {
-    fontCssCache = "";
+    out = "";
   }
-  return fontCssCache;
+  fontCssCache.set(url, out);
+  return out;
 }
 
 /** Waits for every image inside the node to finish decoding, tolerating
@@ -70,7 +103,7 @@ export async function renderNodeToDataUrl(
 ): Promise<string> {
   const outWidth = size?.width ?? EXPORT_WIDTH;
   const outHeight = size?.height ?? EXPORT_HEIGHT;
-  const fontEmbedCSS = await getFontEmbedCss();
+  const fontEmbedCSS = await getFontEmbedCss(fontCssUrlFor(node));
 
   // Lay the node out at the real export width instead of rasterising the small
   // on-screen preview and scaling it up.
