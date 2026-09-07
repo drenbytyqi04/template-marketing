@@ -4,10 +4,7 @@
 // For user-authenticated queries (with RLS), use the auth middleware instead.
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
-
-function isNewSupabaseApiKey(value: string): boolean {
-  return value.startsWith("sb_publishable_") || value.startsWith("sb_secret_");
-}
+import { isNewSupabaseApiKey, supabaseUrl } from "./config";
 
 function createSupabaseFetch(supabaseKey: string): typeof fetch {
   return (input, init) => {
@@ -33,15 +30,16 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
 }
 
 function createSupabaseAdminClient() {
-  const SUPABASE_URL = process.env["SUPABASE_URL"];
+  const SUPABASE_URL = supabaseUrl();
+  // Deliberately env-only and never given a fallback: this key bypasses row level
+  // security, so it must not live in the repository or reach the client bundle.
   const SUPABASE_SERVICE_ROLE_KEY = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    const missing = [
-      ...(!SUPABASE_URL ? ["SUPABASE_URL"] : []),
-      ...(!SUPABASE_SERVICE_ROLE_KEY ? ["SUPABASE_SERVICE_ROLE_KEY"] : []),
-    ];
-    const message = `Missing Supabase environment variable(s): ${missing.join(", ")}. Connect Supabase in Lovable Cloud.`;
+  if (!SUPABASE_SERVICE_ROLE_KEY) {
+    const message =
+      "Missing SUPABASE_SERVICE_ROLE_KEY. Set it in the host's environment variables. " +
+      "Only admin-side features need it (the cron worker and social publishing); " +
+      "the rest of the app runs without it.";
     console.error(`[Supabase] ${message}`);
     throw new Error(message);
   }
