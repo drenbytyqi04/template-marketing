@@ -70,34 +70,72 @@ export async function renderNodeToDataUrl(
 ): Promise<string> {
   const outWidth = size?.width ?? EXPORT_WIDTH;
   const outHeight = size?.height ?? EXPORT_HEIGHT;
-  const width = node.offsetWidth || node.getBoundingClientRect().width || 1;
   const fontEmbedCSS = await getFontEmbedCss();
 
-  await document.fonts.ready;
-  await waitForImages(node);
-  // Two frames, not one: FitText re-measures itself off the same fonts.ready
-  // promise, so a single frame can rasterise the layout before that re-fit has
-  // been applied - which is how a title could fit on screen yet lose its last
-  // glyph in the export.
-  await nextFrame();
-  await nextFrame();
-
-  const options = {
-    width,
-    height: node.offsetHeight || Math.round((width * outHeight) / outWidth),
-    pixelRatio: outWidth / width,
-    canvasWidth: outWidth,
-    canvasHeight: outHeight,
-    cacheBust: true,
-    ...(fontEmbedCSS ? { fontEmbedCSS } : { skipFonts: true }),
+  // Lay the node out at the real export width instead of rasterising the small
+  // on-screen preview and scaling it up.
+  //
+  // Everything in a template is sized in `cqw`, relative to this node's inline
+  // size, and FitText converges its font sizes against the width it can measure.
+  // Rasterising a ~340px preview at ~3.2x asks the browser to extrapolate that
+  // layout, and glyph advances do not scale perfectly linearly - text that fit
+  // on screen ends up a fraction too wide in the PNG and the box's
+  // overflow:hidden cuts the last character off.
+  //
+  // Widening the node first makes the browser lay the design out at 1080px for
+  // real: container queries resolve against the output width and FitText re-fits
+  // (its ResizeObserver fires), so the raster is a straight 1:1 capture of a
+  // layout that genuinely fits. The node is parked off-screen while this happens
+  // so the page does not visibly jump, and every touched style is restored.
+  const saved = {
+    width: node.style.width,
+    maxWidth: node.style.maxWidth,
+    position: node.style.position,
+    left: node.style.left,
+    top: node.style.top,
+    zIndex: node.style.zIndex,
   };
 
-  // html-to-image has a known first-pass race where fonts or images that
-  // finish loading during the initial rasterization are missing from the
-  // resulting canvas. A first, discarded render warms the browser's layout
-  // and image cache so the second render is stable and deterministic.
-  await toPng(node, options);
-  return toPng(node, options);
+  try {
+    node.style.position = "fixed";
+    node.style.left = "-100000px";
+    node.style.top = "0";
+    node.style.zIndex = "-1";
+    node.style.maxWidth = "none";
+    node.style.width = `${outWidth}px`;
+
+    // Force layout, then let the resize-driven re-fit settle before capturing.
+    node.getBoundingClientRect();
+    await document.fonts.ready;
+    await waitForImages(node);
+    await nextFrame();
+    await nextFrame();
+
+    const options = {
+      width: outWidth,
+      height: outHeight,
+      pixelRatio: 1,
+      canvasWidth: outWidth,
+      canvasHeight: outHeight,
+      cacheBust: true,
+      ...(fontEmbedCSS ? { fontEmbedCSS } : { skipFonts: true }),
+    };
+
+    // html-to-image has a known first-pass race where fonts or images that
+    // finish loading during the initial rasterization are missing from the
+    // resulting canvas. A first, discarded render warms the browser's layout
+    // and image cache so the second render is stable and deterministic.
+    await toPng(node, options);
+    return await toPng(node, options);
+  } finally {
+    node.style.width = saved.width;
+    node.style.maxWidth = saved.maxWidth;
+    node.style.position = saved.position;
+    node.style.left = saved.left;
+    node.style.top = saved.top;
+    node.style.zIndex = saved.zIndex;
+    node.getBoundingClientRect();
+  }
 }
 
 /** Renders the post to a PNG Blob. This is the single export implementation;
