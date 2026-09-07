@@ -37,13 +37,38 @@ export function FitText({
     const box = boxRef.current;
     const el = textRef.current;
     if (!box || !el) return;
-    fitTextToBox(box, el, {
+
+    const opts = {
       maxSize,
       minSize,
       maxLines,
       lineHeight,
       ...(tightLineHeight !== undefined ? { tightLineHeight } : {}),
+    };
+    const fit = () => {
+      if (boxRef.current && textRef.current) fitTextToBox(boxRef.current, textRef.current, opts);
+    };
+
+    // Fit now so the first paint is already close.
+    fit();
+
+    // Then fit again once the brand webfonts are actually in use. Measuring
+    // against a fallback face and then exporting with the real one is what made
+    // a title fit in the preview and lose its last glyph in the PNG.
+    let cancelled = false;
+    void document.fonts.ready.then(() => {
+      if (!cancelled) fit();
     });
+
+    // The preview box is responsive, and scrollWidth rounds to whole pixels, so
+    // the converged size is only correct for the width it was measured at.
+    const observer = new ResizeObserver(() => fit());
+    observer.observe(box);
+
+    return () => {
+      cancelled = true;
+      observer.disconnect();
+    };
   }, [text, maxSize, minSize, maxLines, lineHeight, tightLineHeight]);
 
   if (!text) return null;

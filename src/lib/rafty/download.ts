@@ -75,6 +75,11 @@ export async function renderNodeToDataUrl(
 
   await document.fonts.ready;
   await waitForImages(node);
+  // Two frames, not one: FitText re-measures itself off the same fonts.ready
+  // promise, so a single frame can rasterise the layout before that re-fit has
+  // been applied - which is how a title could fit on screen yet lose its last
+  // glyph in the export.
+  await nextFrame();
   await nextFrame();
 
   const options = {
