@@ -62,8 +62,16 @@ async function getFontEmbedCss(url: string): Promise<string> {
         out = out.split(fontUrl).join(`data:font/woff2;base64,${btoa(binary)}`);
       }),
     );
-  } catch {
-    out = "";
+  } catch (err) {
+    // Do NOT cache the failure. A transient network blip would otherwise disable
+    // font embedding for the rest of the session, and an export without the
+    // brand's typeface silently falls back to a face with different glyph
+    // widths - the exact failure that clipped headlines.
+    console.warn(
+      "[export] Could not embed webfonts; this PNG may not match the preview.",
+      err,
+    );
+    return "";
   }
   fontCssCache.set(url, out);
   return out;
