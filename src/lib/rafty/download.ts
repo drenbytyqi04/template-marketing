@@ -170,8 +170,19 @@ export async function downloadNode(node: HTMLElement, filename: string, size?: E
   const a = document.createElement("a");
   a.href = url;
   a.download = `${filename}.png`;
+  a.rel = "noopener";
+  a.style.display = "none";
+
+  // Some browsers ignore a click on an anchor that was never in the document.
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+
+  // Revoking in the same tick as the click races the browser: if it has not
+  // started reading the blob yet the download is dropped with no error, which is
+  // why saving an image "sometimes" did nothing. Hold the URL until the transfer
+  // has certainly begun.
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 /** Same export, returned as a File so it can be handed to the Web Share API. */

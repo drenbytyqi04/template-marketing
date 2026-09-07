@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Check, Copy, Download, Facebook, Instagram, Linkedin, Save, Share2 } from "lucide-react";
+import { Check, Copy, Download, Facebook, Instagram, Linkedin, Loader2, Save, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -62,6 +62,22 @@ export function ShareActions({
     }
   }
 
+  const [downloading, setDownloading] = useState(false);
+
+  async function downloadPng() {
+    const node = canvasRef.current;
+    if (!node || downloading) return;
+    setDownloading(true);
+    try {
+      await downloadNode(node, slugify(filename), size);
+      toast.success("Image downloaded.");
+    } catch {
+      toast.error("Could not prepare the image. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   async function exportAll() {
     setSharing(true);
     try {
@@ -107,8 +123,12 @@ export function ShareActions({
             onClick={exportAll}
             disabled={sharing}
           >
-            <Share2 className="mr-1 size-4" />
-            {multi ? "Save all slides" : "Save to device"}
+            {sharing ? (
+              <Loader2 className="mr-1 size-4 animate-spin" />
+            ) : (
+              <Share2 className="mr-1 size-4" />
+            )}
+            {sharing ? "Preparing…" : multi ? "Save all slides" : "Save to device"}
           </Button>
         ) : null}
       </div>
@@ -152,12 +172,15 @@ export function ShareActions({
         <Button
           variant="ghost"
           className="h-9 rounded-xl text-xs text-muted-foreground"
-          onClick={() =>
-            canvasRef.current && downloadNode(canvasRef.current, slugify(filename), size)
-          }
+          onClick={downloadPng}
+          disabled={downloading}
         >
-          <Download className="mr-1 size-3.5" />
-          Download PNG
+          {downloading ? (
+            <Loader2 className="mr-1 size-3.5 animate-spin" />
+          ) : (
+            <Download className="mr-1 size-3.5" />
+          )}
+          {downloading ? "Preparing…" : "Download PNG"}
         </Button>
       ) : null}
     </div>

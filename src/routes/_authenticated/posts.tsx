@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
-import { CalendarClock, Clipboard, Copy, Download, Pencil, Search, Trash2 } from "lucide-react";
+import { CalendarClock, Clipboard, Copy, Download, Loader2, Pencil, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,7 @@ function PostsPage() {
   const { business, brand, posts, templates, removePost, createPost, t } = useRafty();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const canvasRefs = useRef(new Map<string, HTMLDivElement>());
 
   const filtered = useMemo(() => {
@@ -50,8 +51,18 @@ function PostsPage() {
 
   async function handleDownload(post: Post) {
     const node = canvasRefs.current.get(post.id);
-    if (!node) return;
-    await downloadNode(node, slugify(post.content.title || "krijo24-post"));
+    // A second click while an export is in flight would race the first one and
+    // give no clue which download it belongs to.
+    if (!node || downloadingId) return;
+    setDownloadingId(post.id);
+    try {
+      await downloadNode(node, slugify(post.content.title || "krijo24-post"));
+      toast.success("Image downloaded.");
+    } catch {
+      toast.error("Could not prepare the image. Please try again.");
+    } finally {
+      setDownloadingId(null);
+    }
   }
 
   async function handleCopyCaption(post: Post) {
@@ -177,8 +188,13 @@ function PostsPage() {
                     className="size-7 shrink-0 rounded-lg"
                     aria-label="Download"
                     onClick={() => void handleDownload(post)}
+                    disabled={downloadingId !== null}
                   >
-                    <Download className="size-3.5" />
+                    {downloadingId === post.id ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <Download className="size-3.5" />
+                    )}
                   </Button>
                   <Button
                     asChild
