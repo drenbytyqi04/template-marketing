@@ -27,7 +27,11 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const { ready, user, business, signIn, signUp, t } = useRafty();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signup");
+  // Sign in is the default: an existing user landing here is the common case, and
+  // when the project has "Allow new users to sign up" turned off in Supabase the
+  // signup form can only ever answer "Email signups are disabled" - which reads as
+  // if the account does not exist. The "Create an account" link still switches.
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
