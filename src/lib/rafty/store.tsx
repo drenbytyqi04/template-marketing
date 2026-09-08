@@ -231,9 +231,14 @@ export function RaftyProvider({ children }: { children: React.ReactNode }) {
   const completeOnboarding = useCallback(
     async (input: OnboardingInput) => {
       if (!user) return;
-      const existing = await repo.myBusiness();
+      // Onboarding always applies to whichever brand is active. repo.myBusiness()
+      // returns the OLDEST business, so a second brand's setup was written onto
+      // the first one: the new brand stayed onboarded=false and AppShell bounced
+      // straight back into onboarding forever, while the original brand's name,
+      // colours and services were silently overwritten.
+      const active = activeBrandId ?? business?.id ?? (await repo.myBusiness())?.id ?? null;
       const businessId =
-        existing?.id ??
+        active ??
         (await repo.createMyBusiness({
           name: input.name,
           type: input.type,
@@ -270,7 +275,7 @@ export function RaftyProvider({ children }: { children: React.ReactNode }) {
       }
       refresh();
     },
-    [user, refresh],
+    [user, refresh, activeBrandId, business],
   );
 
   const saveBrandFn = useCallback(
