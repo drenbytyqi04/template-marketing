@@ -99,16 +99,53 @@ function drawCover(
   ctx.drawImage(video, (width - w) / 2, (height - h) / 2, w, h);
 }
 
+/**
+ * Loads the footage into an element this function fully controls.
+ *
+ * The on-screen <video> carries crossOrigin="anonymous" and a signed URL from
+ * storage. If that response ever lacks CORS headers the element decodes nothing,
+ * drawImage silently paints nothing, and the export comes out as design over
+ * blank - which is exactly what it did. Fetching the bytes and playing them from
+ * an object url makes the source same-origin, so decoding cannot fail that way
+ * and the canvas can never be tainted. It also lets looping be turned off, so the
+ * clip ends by itself.
+ */
+async function loadFootage(src: string): Promise<{ video: HTMLVideoElement; release: () => void }> {
+  const response = await fetch(src, { mode: "cors", credentials: "omit" });
+  if (!response.ok) throw new Error("Could not read the uploaded video.");
+  const url = URL.createObjectURL(await response.blob());
+
+  const video = document.createElement("video");
+  video.src = url;
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = "auto";
+
+  await new Promise<void>((resolve, reject) => {
+    video.onloadeddata = () => resolve();
+    video.onerror = () => reject(new Error("The uploaded video could not be decoded."));
+  });
+  if (!video.videoWidth || !video.videoHeight) {
+    URL.revokeObjectURL(url);
+    throw new Error("The uploaded video has no picture.");
+  }
+  return { video, release: () => URL.revokeObjectURL(url) };
+}
+
 export async function renderVideoPostToBlob(
   node: HTMLElement,
-  video: HTMLVideoElement,
+  onScreenVideo: HTMLVideoElement,
   size: VideoExportSize,
   opts: { maxDurationMs?: number } = {},
 ): Promise<Blob> {
   const mimeType = pickMimeType();
   if (!mimeType) throw new Error("This browser cannot record video.");
 
-  const overlay = await renderOverlay(node, video, size);
+  const src = onScreenVideo.currentSrc || onScreenVideo.src;
+  if (!src) throw new Error("This post has no video to export.");
+
+  const overlay = await renderOverlay(node, onScreenVideo, size);
+  const { video, release } = await loadFootage(src);
 
   const canvas = document.createElement("canvas");
   canvas.width = size.width;
@@ -116,8 +153,39 @@ export async function renderVideoPostToBlob(
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Could not get a drawing context.");
 
+  const drawFrame = () => {
+    ctx.clearRect(0, 0, size.width, size.height);
+    drawCover(ctx, video, size.width, size.height);
+    ctx.drawImage(overlay, 0, 0, size.width, size.height);
+  };
+
+  // Paint once before recording: captureStream only emits on paint, so starting
+  // on an unpainted canvas records an empty file.
+  video.currentTime = 0;
+  drawFrame();
+
+  // Refuse to hand back a clip that is only the design. Comparing the composite
+  // against the overlay alone catches footage that decoded but never painted,
+  // rather than shipping a silently empty export.
+  const probe = document.createElement("canvas");
+  probe.width = size.width;
+  probe.height = size.height;
+  const pctx = probe.getContext("2d");
+  if (pctx) {
+    pctx.drawImage(overlay, 0, 0, size.width, size.height);
+    const a = ctx.getImageData(0, 0, size.width, size.height).data;
+    const b = pctx.getImageData(0, 0, size.width, size.height).data;
+    let different = 0;
+    for (let i = 0; i < a.length; i += 4 * 997) {
+      if (Math.abs(a[i]! - b[i]!) > 6 || Math.abs(a[i + 1]! - b[i + 1]!) > 6) different++;
+    }
+    if (different === 0) {
+      release();
+      throw new Error("The video frames could not be read, so the export would have no picture.");
+    }
+  }
+
   const stream = canvas.captureStream(30);
-  // Carry the clip's own audio when the browser exposes it.
   const source = video as HTMLVideoElement & { captureStream?: () => MediaStream };
   try {
     const audio = source.captureStream?.().getAudioTracks() ?? [];
@@ -131,43 +199,27 @@ export async function renderVideoPostToBlob(
   recorder.ondataavailable = (e) => {
     if (e.data.size > 0) chunks.push(e.data);
   };
-
   const done = new Promise<Blob>((resolve) => {
     recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType }));
   });
 
-  const wasMuted = video.muted;
   const limit = opts.maxDurationMs ?? 60_000;
   let raf = 0;
   const startedAt = performance.now();
-
   const stop = () => {
     cancelAnimationFrame(raf);
     video.removeEventListener("ended", stop);
     if (recorder.state !== "inactive") recorder.stop();
-    video.muted = wasMuted;
+    video.pause();
+    release();
   };
-
   const tick = () => {
-    ctx.clearRect(0, 0, size.width, size.height);
-    drawCover(ctx, video, size.width, size.height);
-    ctx.drawImage(overlay, 0, 0, size.width, size.height);
-    if (performance.now() - startedAt > limit) return stop();
+    drawFrame();
+    if (video.ended || performance.now() - startedAt > limit) return stop();
     raf = requestAnimationFrame(tick);
   };
 
-  video.currentTime = 0;
   video.addEventListener("ended", stop, { once: true });
-
-  // Draw one frame before recording starts. captureStream only emits when the
-  // canvas is painted, so starting the recorder on a canvas that has never been
-  // drawn to yields an empty file.
-  ctx.clearRect(0, 0, size.width, size.height);
-  drawCover(ctx, video, size.width, size.height);
-  ctx.drawImage(overlay, 0, 0, size.width, size.height);
-
-  // A timeslice makes data flow throughout rather than only at stop, so a short
-  // clip cannot end before the single dataavailable ever fires.
   recorder.start(100);
   await video.play();
   tick();
