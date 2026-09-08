@@ -39,11 +39,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // The route gate already requires a session. Onboarding must be finished
-  // before any business surface is usable.
+  // The route gate already requires a session. Onboarding is the first-run path
+  // for an account with no brand at all - it is not a gate on individual brands.
+  // Requiring business.onboarded here meant switching to a brand created through
+  // Add brand threw the user straight back into setup, with no way to simply use
+  // that brand. A brand always has a name, type, brand profile and trial row from
+  // the moment it is created, so it is usable immediately; anything still unset is
+  // editable on the Brand page.
   useEffect(() => {
     if (!ready || !user) return;
-    if (!business || !business.onboarded) navigate({ to: "/onboarding", replace: true });
+    if (!business) navigate({ to: "/onboarding", replace: true });
   }, [ready, user, business, navigate]);
 
   async function handleSignOut() {
@@ -53,7 +58,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     navigate({ to: "/auth", replace: true });
   }
 
-  if (!ready || !user || !business || !business.onboarded) {
+  if (!ready || !user || !business) {
     return <div className="page-bg min-h-screen" />;
   }
 

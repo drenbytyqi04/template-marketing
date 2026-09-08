@@ -41,7 +41,10 @@ function AuthPage() {
   useEffect(() => {
     if (!ready || !user) return;
     if (user.role === "admin") navigate({ to: "/admin", replace: true });
-    else if (business?.onboarded) navigate({ to: "/create", replace: true });
+    // Onboarding is only for an account with no brand yet. Keying this on
+    // business.onboarded sent anyone whose active brand was created through Add
+    // brand back into setup on every sign in.
+    else if (business) navigate({ to: "/create", replace: true });
     else navigate({ to: "/onboarding", replace: true });
   }, [ready, user, business, navigate]);
 
