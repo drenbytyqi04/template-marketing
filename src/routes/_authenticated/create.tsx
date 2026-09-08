@@ -392,7 +392,13 @@ function CreatePage() {
   function changeFormat(next: ContentFormat) {
     if (next === format) return;
     const nextSpec = FORMAT_SPECS[next];
-    const nextTemplate = templatesForFormat(templates, next)[0];
+    // The same order the picker shows, so switching format lands on the design
+    // that leads the list rather than whichever one happens to be first in the
+    // library.
+    const nextTemplate = recommendedFirst(
+      templatesForFormat(templates, next),
+      business?.type ?? "other",
+    )[0];
     const nextMax = nextTemplate?.slides?.max ?? nextSpec.maxSlides;
     if (next !== "video") clearVideo();
     setFormat(next);

@@ -222,6 +222,9 @@ export type BusinessService = {
 
 export type TemplateScope = "global" | "custom";
 
+/** Template sets that are grouped and labelled separately in the picker. */
+export type TemplateCollection = "signature";
+
 /** Visual families. The library is not locked to an industry. */
 export type TemplateTag =
   | "editorial"
@@ -288,6 +291,9 @@ export type Template = {
   /** Kept in the library so older posts still render, but never offered in the
    * picker. Used for the near identical colour variants of one layout. */
   hidden?: boolean;
+  /** Named set this template belongs to. A set is shown as its own group at the
+   * top of the picker, ahead of the standard library, which carries none. */
+  collection?: TemplateCollection | undefined;
   /** Which content format this template renders. Defaults to post. */
   format?: ContentFormat;
   /** Multi card formats: how many slides the design supports. */

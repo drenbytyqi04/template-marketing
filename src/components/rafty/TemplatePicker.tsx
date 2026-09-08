@@ -57,6 +57,21 @@ export function TemplatePicker({
     return templates;
   }, [templates, filter, favorites, templateUsage]);
 
+  /** The named sets lead, each under its own heading, then the standard
+   * library. Filtering by favourites or usage answers a different question, so
+   * those views stay one flat list in their own order. */
+  const groups = useMemo(() => {
+    if (filter !== "all") return [{ key: "flat", label: null as string | null, items: list }];
+    const fresh = list.filter((x) => x.collection === "signature");
+    const rest = list.filter((x) => !x.collection);
+    return [
+      ...(fresh.length ? [{ key: "signature", label: "New designs", items: fresh }] : []),
+      ...(rest.length
+        ? [{ key: "library", label: fresh.length ? "All templates" : null, items: rest }]
+        : []),
+    ];
+  }, [list, filter]);
+
   const tabs: { key: Filter; label: string }[] = [
     { key: "all", label: "All" },
     { key: "favorites", label: "Favourites" },
@@ -163,53 +178,64 @@ export function TemplatePicker({
                     : "No templates used yet."}
                 </p>
               ) : (
-                <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
-                  {list.map((tpl) => (
-                    <div key={tpl.id} className="relative">
-                      <button
-                        type="button"
-                        onClick={() => setPreview(tpl)}
-                        className={cn(
-                          "block w-full overflow-hidden rounded-lg border p-1 text-left transition",
-                          tpl.id === value
-                            ? "border-primary ring-2 ring-primary/40"
-                            : "border-border",
-                        )}
-                      >
-                        <LazyMount>
-                          <PostCanvas
-                            template={tpl}
-                            content={content}
-                            brand={brand}
-                            businessName={businessName}
-                            businessType={businessType}
-                            format={format}
-                            className="rounded-md"
-                          />
-                        </LazyMount>
-                        <span className="mt-1 block truncate text-[11px] font-semibold">
-                          {tpl.name}
-                          {tpl.scope === "custom" ? " • yours" : ""}
-                        </span>
-                      </button>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        aria-label="Favourite"
-                        className="absolute right-1 top-1 size-7 rounded-full bg-background/80"
-                        onClick={() => void toggleFavorite(tpl.id)}
-                      >
-                        <Star
-                          className={cn(
-                            "size-3.5",
-                            favorites.includes(tpl.id)
-                              ? "fill-primary text-primary"
-                              : "text-muted-foreground",
-                          )}
-                        />
-                      </Button>
-                    </div>
+                <div className="flex flex-col gap-5">
+                  {groups.map((group) => (
+                    <section key={group.key} className="flex flex-col gap-2">
+                      {group.label ? (
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          {group.label}
+                        </h3>
+                      ) : null}
+                      <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
+                        {group.items.map((tpl) => (
+                          <div key={tpl.id} className="relative">
+                            <button
+                              type="button"
+                              onClick={() => setPreview(tpl)}
+                              className={cn(
+                                "block w-full overflow-hidden rounded-lg border p-1 text-left transition",
+                                tpl.id === value
+                                  ? "border-primary ring-2 ring-primary/40"
+                                  : "border-border",
+                              )}
+                            >
+                              <LazyMount>
+                                <PostCanvas
+                                  template={tpl}
+                                  content={content}
+                                  brand={brand}
+                                  businessName={businessName}
+                                  businessType={businessType}
+                                  format={format}
+                                  className="rounded-md"
+                                />
+                              </LazyMount>
+                              <span className="mt-1 block truncate text-[11px] font-semibold">
+                                {tpl.name}
+                                {tpl.scope === "custom" ? " • yours" : ""}
+                              </span>
+                            </button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              aria-label="Favourite"
+                              className="absolute right-1 top-1 size-7 rounded-full bg-background/80"
+                              onClick={() => void toggleFavorite(tpl.id)}
+                            >
+                              <Star
+                                className={cn(
+                                  "size-3.5",
+                                  favorites.includes(tpl.id)
+                                    ? "fill-primary text-primary"
+                                    : "text-muted-foreground",
+                                )}
+                              />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
                   ))}
                 </div>
               )}

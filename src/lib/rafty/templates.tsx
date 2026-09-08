@@ -3049,6 +3049,7 @@ function buildSignatureTemplates(): Template[] {
       scope: "global" as const,
       businessId: null,
       archived: false,
+      collection: "signature" as const,
       format: "post" as const,
     };
   });
@@ -3072,7 +3073,11 @@ export function templatesForFormat(all: Template[], format: ContentFormat): Temp
 /** Sorts templates suggested for a business type first, without removing or
  * hiding any template. Every template stays selectable by every brand. */
 export function recommendedFirst(list: Template[], type: BusinessType): Template[] {
+  // A named set leads, then the designs suggested for this kind of business.
+  // The sort is stable, so inside each band the library keeps its own order.
   return [...list].sort((a, b) => {
+    const set = (a.collection ? 0 : 1) - (b.collection ? 0 : 1);
+    if (set !== 0) return set;
     const aScore = a.suggestedFor?.includes(type) ? 0 : 1;
     const bScore = b.suggestedFor?.includes(type) ? 0 : 1;
     return aScore - bScore;
