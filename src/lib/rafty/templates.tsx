@@ -300,6 +300,33 @@ function AdditionalText({
   );
 }
 
+/**
+ * What the post says is included, as one quiet line.
+ *
+ * Designs built around a chip row print these among the chips. The sparser
+ * layouts have no chip row at all, and used to drop the choice silently: a
+ * customer ticked Breakfast and Transfers and nothing appeared anywhere. A
+ * single separated line states them without loading up a minimal design.
+ */
+function ServiceLine({ ctx, tone }: { ctx: RenderCtx; tone: "light" | "dark" }) {
+  const items = ctx.content.services.filter(Boolean).slice(0, 6);
+  if (!items.length) return null;
+  return (
+    <div
+      style={{
+        fontSize: px(2.3),
+        fontWeight: 600,
+        lineHeight: 1.4,
+        letterSpacing: "0.02em",
+        fontFamily: fontSecondary(ctx.brand),
+        color: tone === "light" ? "rgba(255,255,255,0.92)" : "rgba(20,16,32,0.72)",
+      }}
+    >
+      {items.join("  ·  ")}
+    </div>
+  );
+}
+
 /** Compact contact line, only rendered when the post opts in. Tasteful and
  * small: never more than a single wrapped line of the brand's essentials. */
 function ContactLine({ ctx, tone }: { ctx: RenderCtx; tone: "light" | "dark" }) {
@@ -723,7 +750,10 @@ const engines: Engine[] = [
             <Kicker ctx={ctx} color="rgba(255,255,255,0.8)" />
             <Title ctx={ctx} size={10.5} color="#fff" />
             <AdditionalText ctx={ctx} size={2.9} opacity={0.86} />
-            <Chips items={metaItems(content, ctx.businessType)} tone="light" />
+            <Chips
+              items={[...metaItems(content, ctx.businessType), ...content.services]}
+              tone="light"
+            />
             <PriceBadge ctx={ctx} tone="light" />
           </AdjustBox>
           <div style={{ position: "absolute", left: px(6), bottom: px(6) }}>
@@ -827,7 +857,10 @@ const engines: Engine[] = [
             <AdditionalText ctx={ctx} size={2.7} opacity={0.55} />
           </AdjustBox>
           <div style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: px(2) }}>
-            <Chips items={metaItems(content, ctx.businessType)} tone="dark" />
+            <Chips
+              items={[...metaItems(content, ctx.businessType), ...content.services]}
+              tone="dark"
+            />
             <span style={{ marginLeft: "auto" }}>
               <PriceBadge ctx={ctx} tone="dark" />
             </span>
@@ -1013,7 +1046,10 @@ const engines: Engine[] = [
             >
               <Kicker ctx={ctx} color={accentColor(ctx)} />
               <Title ctx={ctx} size={7} color="#141024" />
-              <Chips items={metaItems(content, ctx.businessType)} tone="dark" />
+              <Chips
+                items={[...metaItems(content, ctx.businessType), ...content.services]}
+                tone="dark"
+              />
             </AdjustBox>
             <div style={{ marginTop: "auto" }}>
               <PriceBadge ctx={ctx} tone="dark" />
@@ -1125,6 +1161,7 @@ const engines: Engine[] = [
               <Kicker ctx={ctx} color={brand.accent} />
               <Title ctx={ctx} size={8.4} color="#f6f1ff" />
               <AdditionalText ctx={ctx} size={2.6} opacity={0.7} />
+              <ServiceLine ctx={ctx} tone="light" />
               <PriceBadge ctx={ctx} tone="light" />
             </AdjustBox>
           </div>
@@ -1165,6 +1202,7 @@ const engines: Engine[] = [
           >
             <Kicker ctx={ctx} color={accentColor(ctx)} />
             <Title ctx={ctx} size={6.4} color="#241c30" />
+            <ServiceLine ctx={ctx} tone="dark" />
             <PriceBadge ctx={ctx} tone="dark" />
           </AdjustBox>
         </div>
@@ -1217,7 +1255,10 @@ const engines: Engine[] = [
             <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(2.4) }}>
               <Kicker ctx={ctx} color={brand.accent} />
               <Title ctx={ctx} size={13} color="#fff" />
-              <Chips items={metaItems(content, ctx.businessType)} tone="light" />
+              <Chips
+                items={[...metaItems(content, ctx.businessType), ...content.services]}
+                tone="light"
+              />
               <div style={{ display: "flex", gap: px(2) }}>
                 <PriceBadge ctx={ctx} tone="light" />
                 <CtaTag ctx={ctx} tone="light" />
@@ -1251,6 +1292,7 @@ const engines: Engine[] = [
               <Kicker ctx={ctx} color={accentColor(ctx)} />
               <Title ctx={ctx} size={7.6} color="#181026" />
               <AdditionalText ctx={ctx} size={2.6} opacity={0.6} />
+              <ServiceLine ctx={ctx} tone="dark" />
               <PriceBadge ctx={ctx} tone="dark" />
               <ContactLine ctx={ctx} tone="dark" />
             </AdjustBox>
@@ -1359,6 +1401,7 @@ const engines: Engine[] = [
               <BizRow ctx={ctx} tone="light" />
               <Kicker ctx={ctx} color={brand.accent} />
               <Title ctx={ctx} size={7.6} color="#fff" />
+              <ServiceLine ctx={ctx} tone="light" />
               <PriceBadge ctx={ctx} tone="light" />
               <CtaTag ctx={ctx} tone="light" />
             </AdjustBox>
@@ -1576,6 +1619,7 @@ const engines: Engine[] = [
               <Kicker ctx={ctx} color={accentColor(ctx)} />
               <Title ctx={ctx} size={6.8} color="#1a1225" />
               <AdditionalText ctx={ctx} size={2.6} opacity={0.6} />
+              <ServiceLine ctx={ctx} tone="dark" />
               <div style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: px(2) }}>
                 <BizRow ctx={ctx} tone="dark" />
                 <span style={{ marginLeft: "auto" }}>
@@ -1648,6 +1692,7 @@ const engines: Engine[] = [
             >
               <Kicker ctx={ctx} color="rgba(255,255,255,0.85)" />
               <Title ctx={ctx} size={8.6} color="#fff" />
+              <ServiceLine ctx={ctx} tone="light" />
               <div style={{ display: "flex", gap: px(2), alignItems: "center" }}>
                 <PriceBadge ctx={ctx} tone="light" />
                 <CtaTag ctx={ctx} tone="light" />
@@ -1695,7 +1740,10 @@ const engines: Engine[] = [
               <Kicker ctx={ctx} color="rgba(255,255,255,0.88)" />
               <Title ctx={ctx} size={8} color="#fff" />
               <AdditionalText ctx={ctx} size={2.7} opacity={0.85} />
-              <Chips items={metaItems(content, ctx.businessType)} tone="light" />
+              <Chips
+                items={[...metaItems(content, ctx.businessType), ...content.services]}
+                tone="light"
+              />
               <PriceBadge ctx={ctx} tone="light" />
             </AdjustBox>
           </div>
@@ -1878,6 +1926,7 @@ const engines: Engine[] = [
           >
             <Kicker ctx={ctx} color={accentColor(ctx)} />
             <Title ctx={ctx} size={6.2} color="#181026" />
+            <ServiceLine ctx={ctx} tone="dark" />
             <PriceBadge ctx={ctx} tone="dark" />
           </AdjustBox>
         </div>
@@ -1929,6 +1978,7 @@ const engines: Engine[] = [
               <Kicker ctx={ctx} color={brand.accent} />
               <Title ctx={ctx} size={7.6} color="#f7f2ff" />
               <AdditionalText ctx={ctx} size={2.5} opacity={0.7} />
+              <ServiceLine ctx={ctx} tone="light" />
               <PriceBadge ctx={ctx} tone="light" />
             </AdjustBox>
             <div style={{ height: px(1) }} />
@@ -1971,6 +2021,7 @@ const engines: Engine[] = [
             <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(1.8) }}>
               <Kicker ctx={ctx} color={brand.accent} />
               <Title ctx={ctx} size={13.5} color="#fff" />
+              <ServiceLine ctx={ctx} tone="light" />
               <PriceBadge ctx={ctx} tone="light" />
             </AdjustBox>
           </div>
@@ -2007,6 +2058,7 @@ const engines: Engine[] = [
             <div style={{ display: "flex", flexDirection: "column", gap: px(0.8), flex: 1 }}>
               <Kicker ctx={ctx} color="rgba(255,255,255,0.85)" />
               <Title ctx={ctx} size={5.2} color="#fff" />
+              <ServiceLine ctx={ctx} tone="light" />
             </div>
             <div
               style={{
@@ -2079,7 +2131,10 @@ const engines: Engine[] = [
                 gap: px(1.6),
               }}
             >
-              <Chips items={metaItems(content, ctx.businessType)} tone="light" />
+              <Chips
+                items={[...metaItems(content, ctx.businessType), ...content.services]}
+                tone="light"
+              />
               <ContactLine ctx={ctx} tone="light" />
             </div>
           </div>
@@ -2126,7 +2181,10 @@ const engines: Engine[] = [
                 </div>
               </div>
               <Title ctx={ctx} size={7} color="#fff" />
-              <Chips items={metaItems(content, ctx.businessType)} tone="light" />
+              <Chips
+                items={[...metaItems(content, ctx.businessType), ...content.services]}
+                tone="light"
+              />
               <ContactLine ctx={ctx} tone="light" />
             </AdjustBox>
           </div>
@@ -2162,6 +2220,7 @@ const engines: Engine[] = [
             >
               <div style={{ display: "flex", flexDirection: "column", gap: px(1.4), flex: 1 }}>
                 <Title ctx={ctx} size={6.4} color="#fff" />
+                <ServiceLine ctx={ctx} tone="light" />
                 <Kicker ctx={ctx} color="rgba(255,255,255,0.88)" />
                 <ContactLine ctx={ctx} tone="light" />
               </div>
@@ -2218,7 +2277,10 @@ const engines: Engine[] = [
           >
             <Kicker ctx={ctx} color={accentColor(ctx)} />
             <Title ctx={ctx} size={7} color="#1b1329" />
-            <Chips items={metaItems(content, ctx.businessType)} tone="dark" />
+            <Chips
+              items={[...metaItems(content, ctx.businessType), ...content.services]}
+              tone="dark"
+            />
             <div style={{ display: "flex", gap: px(2), alignItems: "center", flexWrap: "wrap" }}>
               <PriceBadge ctx={ctx} tone="dark" />
               <CtaTag ctx={ctx} tone="dark" />
@@ -2272,6 +2334,7 @@ const engines: Engine[] = [
             <Kicker ctx={ctx} color={accentColor(ctx)} />
             <Title ctx={ctx} size={6.6} color="#191128" />
             <AdditionalText ctx={ctx} size={2.6} opacity={0.66} />
+            <ServiceLine ctx={ctx} tone="dark" />
             <div style={{ display: "flex", gap: px(2), alignItems: "center", flexWrap: "wrap" }}>
               <PriceBadge ctx={ctx} tone="dark" />
               <CtaTag ctx={ctx} tone="dark" />
@@ -2351,7 +2414,10 @@ const engines: Engine[] = [
             >
               <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(2) }}>
                 <Title ctx={ctx} size={9} color="#fff" />
-                <Chips items={metaItems(content, ctx.businessType)} tone="light" />
+                <Chips
+                  items={[...metaItems(content, ctx.businessType), ...content.services]}
+                  tone="light"
+                />
                 <div
                   style={{ display: "flex", gap: px(2), alignItems: "center", flexWrap: "wrap" }}
                 >
@@ -2417,6 +2483,7 @@ const engines: Engine[] = [
               <Kicker ctx={ctx} color="rgba(255,255,255,0.9)" />
               <Title ctx={ctx} size={7.8} color="#fff" />
               <AdditionalText ctx={ctx} size={2.6} opacity={0.82} />
+              <ServiceLine ctx={ctx} tone="light" />
               <div style={{ display: "flex", gap: px(2), alignItems: "center" }}>
                 <PriceBadge ctx={ctx} tone="light" />
                 <CtaTag ctx={ctx} tone="light" />
@@ -2497,8 +2564,8 @@ const engines: Engine[] = [
                   color: "rgba(255,255,255,0.82)",
                 }}
               >
-                {metaItems(content, ctx.businessType)
-                  .slice(0, 3)
+                {[...metaItems(content, ctx.businessType), ...content.services]
+                  .slice(0, 5)
                   .map((item) => (
                     <span key={item}>{item}</span>
                   ))}
@@ -2577,7 +2644,10 @@ const engines: Engine[] = [
           >
             <Kicker ctx={ctx} color={accentColor(ctx)} />
             <Title ctx={ctx} size={7.2} color="#1a1226" />
-            <Chips items={metaItems(content, ctx.businessType)} tone="dark" />
+            <Chips
+              items={[...metaItems(content, ctx.businessType), ...content.services]}
+              tone="dark"
+            />
             <div style={{ display: "flex", gap: px(2), alignItems: "center", flexWrap: "wrap" }}>
               <CtaTag ctx={ctx} tone="dark" />
               <BizRow ctx={ctx} tone="dark" />
