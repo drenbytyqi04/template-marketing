@@ -132,6 +132,48 @@ async function loadFootage(src: string): Promise<{ video: HTMLVideoElement; rele
   return { video, release: () => URL.revokeObjectURL(url) };
 }
 
+/**
+ * A still of a video post, with the footage actually in it.
+ *
+ * html-to-image serialises the DOM, and a cloned <video> paints nothing - so the
+ * saved thumbnail of a video post came out as the design over an empty gradient.
+ * This composites the same way the clip export does, one frame instead of many:
+ * design rasterised with the footage hidden, drawn over a real video frame.
+ */
+export async function renderVideoPosterToDataUrl(
+  node: HTMLElement,
+  onScreenVideo: HTMLVideoElement,
+  size: VideoExportSize,
+): Promise<string> {
+  const src = onScreenVideo.currentSrc || onScreenVideo.src;
+  if (!src) throw new Error("This post has no video.");
+
+  const overlay = await renderOverlay(node, onScreenVideo, size);
+  const { video, release } = await loadFootage(src);
+  try {
+    // A frame from a little way in: the very first frame of a clip is often
+    // black or a fade.
+    const target = Number.isFinite(video.duration) ? Math.min(0.4, video.duration / 4) : 0.2;
+    video.currentTime = target;
+    await new Promise<void>((resolve) => {
+      const done = () => resolve();
+      video.onseeked = done;
+      setTimeout(done, 2000);
+    });
+
+    const canvas = document.createElement("canvas");
+    canvas.width = size.width;
+    canvas.height = size.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Could not get a drawing context.");
+    drawCover(ctx, video, size.width, size.height);
+    ctx.drawImage(overlay, 0, 0, size.width, size.height);
+    return canvas.toDataURL("image/png");
+  } finally {
+    release();
+  }
+}
+
 export async function renderVideoPostToBlob(
   node: HTMLElement,
   onScreenVideo: HTMLVideoElement,

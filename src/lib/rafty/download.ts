@@ -1,6 +1,10 @@
 import { toPng } from "html-to-image";
 import { FONT_LIBRARY } from "./constants";
-import { canExportVideo, renderVideoPostToBlob } from "./video-export";
+import {
+  canExportVideo,
+  renderVideoPosterToDataUrl,
+  renderVideoPostToBlob,
+} from "./video-export";
 
 /** Always embedded: every template declares these as its fallback faces. */
 const ALWAYS_EMBEDDED = ["Sora", "Plus Jakarta Sans"];
@@ -106,6 +110,17 @@ function nextFrame(): Promise<void> {
 export async function renderNodeToDataUrl(node: HTMLElement, size?: ExportSize): Promise<string> {
   const outWidth = size?.width ?? EXPORT_WIDTH;
   const outHeight = size?.height ?? EXPORT_HEIGHT;
+
+  // A cloned <video> paints nothing, so rasterising a video post this way would
+  // return the design over an empty background. Composite a real frame instead.
+  const posterVideo = node.querySelector("video");
+  if (posterVideo && (posterVideo.currentSrc || posterVideo.getAttribute("src"))) {
+    return renderVideoPosterToDataUrl(node, posterVideo, {
+      width: outWidth,
+      height: outHeight,
+    });
+  }
+
   const fontEmbedCSS = await getFontEmbedCss(fontCssUrlFor(node));
 
   // Lay the node out at the real export width instead of rasterising the small
