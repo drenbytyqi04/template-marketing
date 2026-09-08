@@ -18,6 +18,7 @@ import {
 import { useRafty } from "@/lib/rafty/store";
 import * as repo from "@/lib/rafty/repo";
 import { PLATFORM_LABELS, SOCIAL_PLATFORMS, TIMEZONES } from "@/lib/rafty/constants";
+import { brandForPost } from "@/lib/rafty/types";
 import type { ScheduledPost, SocialConnection, SocialPlatform } from "@/lib/rafty/types";
 
 export const Route = createFileRoute("/_authenticated/schedule")({
@@ -110,7 +111,7 @@ function SchedulePage() {
           <PostCanvas
             template={template}
             content={post.slides?.[0]?.content ?? post.content}
-            brand={brand}
+            brand={brandForPost(brand, post)}
             businessName={business.name}
             businessType={business.type}
             showBrandName={post.showBrandName}

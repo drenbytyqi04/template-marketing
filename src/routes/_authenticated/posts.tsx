@@ -1,6 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
-import { CalendarClock, Clipboard, Copy, Download, Loader2, Pencil, Search, Trash2 } from "lucide-react";
+import {
+  CalendarClock,
+  Clipboard,
+  Copy,
+  Download,
+  Loader2,
+  Pencil,
+  Search,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +19,7 @@ import { LazyMount } from "@/components/rafty/LazyMount";
 import { useRafty } from "@/lib/rafty/store";
 import { downloadNode, slugify } from "@/lib/rafty/download";
 import { id as newId } from "@/lib/rafty/repo";
+import { brandForPost } from "@/lib/rafty/types";
 import type { Post } from "@/lib/rafty/types";
 
 export const Route = createFileRoute("/_authenticated/posts")({
@@ -135,7 +145,7 @@ function PostsPage() {
                       <PostCanvas
                         template={template}
                         content={post.slides?.[0]?.content ?? post.content}
-                        brand={brand}
+                        brand={brandForPost(brand, post)}
                         businessName={business.name}
                         businessType={business.type}
                         showBrandName={post.showBrandName}

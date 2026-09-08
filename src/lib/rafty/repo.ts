@@ -660,6 +660,7 @@ type PostRow = {
   image_path: string | null;
   format: string | null;
   slides: StoredSlide[] | null;
+  brand_snapshot: unknown;
   created_at: string;
   businesses?: { name: string } | null;
 };
@@ -696,6 +697,7 @@ async function toPost(row: PostRow): Promise<PostWithContact> {
     adjustments: row.adjustments ?? {},
     shareStatus: row.share_status ?? {},
     createdAt: row.created_at,
+    brandSnapshot: (row.brand_snapshot as Post["brandSnapshot"]) ?? null,
     format: (row.format as Post["format"]) ?? "post",
     slides: await Promise.all(
       (row.slides ?? []).map(async (slide) => ({
@@ -766,6 +768,9 @@ export async function savePost(post: PostWithContact): Promise<PostWithContact |
     image_path: imagePath,
     format: post.format ?? "post",
     slides: storedSlides,
+    // Freeze the styling this post was made with. Only set on first save, so
+    // re-saving an old post never restyles it to today's palette.
+    ...(post.brandSnapshot ? { brand_snapshot: post.brandSnapshot } : {}),
   };
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
     post.id ?? "",

@@ -26,6 +26,7 @@ import { FormatPicker } from "@/components/rafty/FormatPicker";
 import { SlideStrip } from "@/components/rafty/SlideStrip";
 import { CarouselPreview } from "@/components/rafty/CarouselPreview";
 import { StoryboardPreview } from "@/components/rafty/StoryboardPreview";
+import { snapshotOfBrand } from "@/lib/rafty/types";
 import { useRafty } from "@/lib/rafty/store";
 import { generateCaption } from "@/lib/rafty/caption";
 import { readFileAsDataUrl } from "@/lib/rafty/file";
@@ -516,6 +517,10 @@ function CreatePage() {
         showContact,
         shareStatus: {},
         createdAt: new Date().toISOString(),
+        // Freeze the brand styling this post is being made with, so a later
+        // palette or font change never restyles a post that is already finished.
+        // Only set on first save; re-saving keeps the original snapshot.
+        ...(postId || !brand ? {} : { brandSnapshot: snapshotOfBrand(brand) }),
       };
       const saved = await createPost(post);
       if (saved) {

@@ -389,6 +389,72 @@ export type ShareStatus = {
   facebook?: "not_connected" | "ready" | "publishing" | "published" | "failed";
 };
 
+/**
+ * The brand styling a post was made with.
+ *
+ * Posts used to render from whatever the brand looked like right now, so
+ * changing a colour restyled every post ever saved - including ones already
+ * downloaded and published. A saved post is a finished artefact, so it carries
+ * the styling it was made with. Absent on posts created before this existed;
+ * those still fall back to the live brand.
+ */
+export type BrandSnapshot = {
+  primary: string;
+  secondary: string;
+  accent: string;
+  background: string | null;
+  fontFamily: string;
+  fontSecondary: string | null;
+  logoPath: string | null;
+  currency: CurrencyCode;
+  language: LanguageCode;
+};
+
+/** Captures the styling a post is rendered with, for freezing at save time. */
+export function snapshotOfBrand(brand: BrandProfile): BrandSnapshot {
+  return {
+    primary: brand.primary,
+    secondary: brand.secondary,
+    accent: brand.accent,
+    background: brand.background,
+    fontFamily: brand.fontFamily,
+    fontSecondary: brand.fontSecondary,
+    logoPath: brand.logoPath ?? null,
+    currency: brand.currency,
+    language: brand.language,
+  };
+}
+
+/**
+ * Brand to render a saved post with.
+ *
+ * Returns the styling frozen at save time when the post has a snapshot, so an
+ * existing post keeps its look after the brand palette changes. Posts saved
+ * before snapshots existed have none and still follow the live brand.
+ *
+ * The logo is intentionally taken from the live brand: it is locked after the
+ * first save, so its path does not drift, and re-signing a stored path here
+ * would make rendering asynchronous.
+ */
+export function brandForPost(
+  brand: BrandProfile,
+  post: { brandSnapshot?: BrandSnapshot | null },
+): BrandProfile {
+  const snap = post.brandSnapshot;
+  if (!snap) return brand;
+  return {
+    ...brand,
+    primary: snap.primary,
+    secondary: snap.secondary,
+    accent: snap.accent,
+    background: snap.background,
+    fontFamily: snap.fontFamily,
+    fontSecondary: snap.fontSecondary,
+    currency: snap.currency,
+    language: snap.language,
+  };
+}
+
 export type Post = {
   id: string;
   businessId: string;
@@ -403,6 +469,8 @@ export type Post = {
   format?: ContentFormat;
   /** Multi card formats store every frame here, in display order. */
   slides?: Slide[];
+  /** Brand styling frozen at save time. Absent on posts made before snapshots. */
+  brandSnapshot?: BrandSnapshot | null;
 };
 
 export type TrialUsage = {
