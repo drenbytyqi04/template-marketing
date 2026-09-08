@@ -80,7 +80,39 @@ function AdjustBox({
   );
 }
 
-function Img({ src, style }: { src: string | null; style?: React.CSSProperties }) {
+function Img({
+  src,
+  video,
+  style,
+}: {
+  src: string | null;
+  /** Uploaded footage. When present it replaces the still as the base layer,
+   * so every template's design renders over the moving picture unchanged. */
+  video?: string | null | undefined;
+  style?: React.CSSProperties;
+}) {
+  const base: React.CSSProperties = {
+    position: "absolute",
+    inset: 0,
+    height: "100%",
+    width: "100%",
+    objectFit: "cover",
+    ...style,
+  };
+
+  if (video)
+    return (
+      <video
+        src={video}
+        autoPlay
+        loop
+        muted
+        playsInline
+        crossOrigin="anonymous"
+        style={base}
+      />
+    );
+
   if (!src)
     return (
       <div
@@ -92,22 +124,9 @@ function Img({ src, style }: { src: string | null; style?: React.CSSProperties }
         }}
       />
     );
-  return (
-    <img
-      src={src}
-      alt=""
-      crossOrigin="anonymous"
-      style={{
-        position: "absolute",
-        inset: 0,
-        height: "100%",
-        width: "100%",
-        objectFit: "cover",
-        ...style,
-      }}
-    />
-  );
+  return <img src={src} alt="" crossOrigin="anonymous" style={base} />;
 }
+
 
 /** Logo only renders when a real logo file exists. Never fabricated marks. */
 function Logo({ ctx }: { ctx: RenderCtx }) {
@@ -368,7 +387,7 @@ const engines: Engine[] = [
       const align = variant.align === "center" ? "center" : "flex-start";
       return (
         <div style={{ ...base(brand), color: "#fff" }}>
-          <Img src={content.imageDataUrl} />
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           <div
             style={{
               position: "absolute",
@@ -435,7 +454,7 @@ const engines: Engine[] = [
           }}
         >
           <div style={{ position: "relative", flex: "0 0 58%" }}>
-            <Img src={content.imageDataUrl} />
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           </div>
           <AdjustBox
             ctx={ctx}
@@ -519,7 +538,7 @@ const engines: Engine[] = [
                 boxShadow: "0 30px 60px -30px rgba(0,0,0,.5)",
               }}
             >
-              <Img src={content.imageDataUrl} />
+              <Img src={content.imageDataUrl} video={content.videoDataUrl} />
             </div>
             <AdjustBox
               ctx={ctx}
@@ -585,7 +604,7 @@ const engines: Engine[] = [
             </AdjustBox>
           </div>
           <div style={{ position: "relative", flex: 1 }}>
-            <Img src={content.imageDataUrl} />
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
             <div
               style={{
                 position: "absolute",
@@ -638,7 +657,7 @@ const engines: Engine[] = [
               border: `${px(0.9)} solid ${brand.primary}`,
             }}
           >
-            <Img src={content.imageDataUrl} />
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
             <div
               style={{
                 position: "absolute",
@@ -684,7 +703,7 @@ const engines: Engine[] = [
       const { content, brand, variant } = ctx;
       return (
         <div style={{ ...base(brand), background: brand.primary, color: "#fff" }}>
-          <Img src={content.imageDataUrl} style={{ mixBlendMode: "luminosity", opacity: 0.9 }} />
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} style={{ mixBlendMode: "luminosity", opacity: 0.9 }} />
           <div
             style={{
               position: "absolute",
@@ -735,7 +754,7 @@ const engines: Engine[] = [
           }}
         >
           <div style={{ position: "relative", flex: "0 0 52%" }}>
-            <Img src={content.imageDataUrl} />
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
             <div
               style={{
                 position: "absolute",
@@ -802,7 +821,7 @@ const engines: Engine[] = [
               overflow: "hidden",
             }}
           >
-            <Img src={content.imageDataUrl} />
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           </div>
           <AdjustBox
             ctx={ctx}
@@ -831,7 +850,7 @@ const engines: Engine[] = [
       const { content, brand } = ctx;
       return (
         <div style={{ ...base(brand), color: "#fff" }}>
-          <Img src={content.imageDataUrl} />
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           <div
             style={{
               position: "absolute",
@@ -906,7 +925,7 @@ const engines: Engine[] = [
             </AdjustBox>
           </div>
           <div style={{ position: "relative", flex: 1 }}>
-            <Img src={content.imageDataUrl} />
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
             <div
               style={{
                 position: "absolute",
@@ -986,7 +1005,7 @@ const engines: Engine[] = [
                 border: `${px(0.8)} solid #fff`,
               }}
             >
-              <Img src={content.imageDataUrl} />
+              <Img src={content.imageDataUrl} video={content.videoDataUrl} />
             </div>
             <AdjustBox
               ctx={ctx}
@@ -1046,7 +1065,7 @@ const engines: Engine[] = [
               overflow: "hidden",
             }}
           >
-            <Img src={content.imageDataUrl} />
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
             <div
               style={{
                 position: "absolute",
@@ -1085,7 +1104,7 @@ const engines: Engine[] = [
       const { content, brand, variant } = ctx;
       return (
         <div style={{ ...base(brand), background: "#0b0810" }}>
-          <Img src={content.imageDataUrl} style={{ opacity: 0.55 }} />
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} style={{ opacity: 0.55 }} />
           <div
             style={{
               position: "absolute",
@@ -1137,7 +1156,7 @@ const engines: Engine[] = [
         >
           <BizRow ctx={ctx} tone="dark" />
           <div style={{ position: "relative", flex: 1, borderRadius: px(2), overflow: "hidden" }}>
-            <Img src={content.imageDataUrl} />
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           </div>
           <AdjustBox
             ctx={ctx}
@@ -1227,7 +1246,7 @@ const engines: Engine[] = [
             </AdjustBox>
           </div>
           <div style={{ position: "relative", flex: "0 0 38%" }}>
-            <Img src={content.imageDataUrl} />
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           </div>
         </div>
       );
@@ -1249,7 +1268,7 @@ const engines: Engine[] = [
           }}
         >
           <div style={{ position: "relative", flex: "0 0 40%" }}>
-            <Img src={content.imageDataUrl} />
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           </div>
           <AdjustBox
             ctx={ctx}
@@ -1305,7 +1324,7 @@ const engines: Engine[] = [
               clipPath: "polygon(0 0, 62% 0, 46% 100%, 0 100%)",
             }}
           >
-            <Img src={content.imageDataUrl} />
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           </div>
           <div
             style={{
@@ -1347,7 +1366,7 @@ const engines: Engine[] = [
       const align = variant.align === "center" ? "center" : "flex-start";
       return (
         <div style={{ ...base(brand), color: "#fff" }}>
-          <Img src={content.imageDataUrl} />
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           <div
             style={{
               position: "absolute",
@@ -1427,7 +1446,7 @@ const engines: Engine[] = [
                 boxShadow: "0 40px 70px -30px rgba(0,0,0,.65)",
               }}
             >
-              <Img src={content.imageDataUrl} />
+              <Img src={content.imageDataUrl} video={content.videoDataUrl} />
               <div
                 style={{
                   position: "absolute",
@@ -1472,7 +1491,7 @@ const engines: Engine[] = [
       const { content, brand } = ctx;
       return (
         <div style={{ ...base(brand), background: "#0e0a1a" }}>
-          <Img src={content.imageDataUrl} />
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           <div
             style={{
               position: "absolute",
@@ -1530,7 +1549,7 @@ const engines: Engine[] = [
           }}
         >
           <div style={{ position: "relative", flex: "0 0 62%" }}>
-            <Img src={content.imageDataUrl} />
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           </div>
           <AdjustBox
             ctx={ctx}
@@ -1568,7 +1587,7 @@ const engines: Engine[] = [
       const { content, brand, variant } = ctx;
       return (
         <div style={{ ...base(brand), background: "#000" }}>
-          <Img src={content.imageDataUrl} style={{ top: "12%", height: "76%" }} />
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} style={{ top: "12%", height: "76%" }} />
           <div
             style={{
               position: "absolute",
@@ -1636,7 +1655,7 @@ const engines: Engine[] = [
       const { content, brand } = ctx;
       return (
         <div style={{ ...base(brand), color: "#fff" }}>
-          <Img src={content.imageDataUrl} />
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           <div
             style={{
               position: "absolute",
@@ -1678,7 +1697,7 @@ const engines: Engine[] = [
       const { content, brand } = ctx;
       return (
         <div style={{ ...base(brand), background: "#0a0714" }}>
-          <Img src={content.imageDataUrl} />
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           <div
             style={{
               position: "absolute",
@@ -1733,7 +1752,7 @@ const engines: Engine[] = [
       return (
         <div style={{ ...base(brand), display: "flex" }}>
           <div style={{ position: "relative", flex: "0 0 50%" }}>
-            <Img src={content.imageDataUrl} />
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           </div>
           <AdjustBox
             ctx={ctx}
@@ -1775,7 +1794,7 @@ const engines: Engine[] = [
       const { content, brand } = ctx;
       return (
         <div style={{ ...base(brand) }}>
-          <Img src={content.imageDataUrl} />
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           <div style={{ position: "absolute", left: 0, right: 0, top: 0, padding: px(5) }}>
             <BizRow ctx={ctx} tone="light" />
           </div>
@@ -1827,7 +1846,7 @@ const engines: Engine[] = [
           }}
         >
           <div style={{ position: "relative", flex: "0 0 58%" }}>
-            <Img src={content.imageDataUrl} />
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           </div>
           <AdjustBox
             ctx={ctx}
@@ -1859,7 +1878,7 @@ const engines: Engine[] = [
       const { content, brand } = ctx;
       return (
         <div style={{ ...base(brand), background: "#0a0712" }}>
-          <Img src={content.imageDataUrl} style={{ opacity: 0.62 }} />
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} style={{ opacity: 0.62 }} />
           <div
             style={{
               position: "absolute",
@@ -1912,7 +1931,7 @@ const engines: Engine[] = [
       const { content, brand } = ctx;
       return (
         <div style={{ ...base(brand), color: "#fff" }}>
-          <Img src={content.imageDataUrl} />
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           <div
             style={{
               position: "absolute",
@@ -1954,7 +1973,7 @@ const engines: Engine[] = [
       return (
         <div style={{ ...base(brand), display: "flex", flexDirection: "column" }}>
           <div style={{ position: "relative", flex: "0 0 72%" }}>
-            <Img src={content.imageDataUrl} />
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
             <div style={{ position: "absolute", left: px(4), top: px(4) }}>
               <BizRow ctx={ctx} tone="light" />
             </div>
@@ -2000,7 +2019,7 @@ const engines: Engine[] = [
       const { content, brand } = ctx;
       return (
         <div style={{ ...base(brand), color: "#fff" }}>
-          <Img src={content.imageDataUrl} />
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           <div
             style={{
               position: "absolute",
@@ -2062,7 +2081,7 @@ const engines: Engine[] = [
       const { content, brand } = ctx;
       return (
         <div style={{ ...base(brand), color: "#fff" }}>
-          <Img src={content.imageDataUrl} />
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           <div
             style={{
               position: "absolute",
@@ -2109,7 +2128,7 @@ const engines: Engine[] = [
       const { content, brand } = ctx;
       return (
         <div style={{ ...base(brand), color: "#fff" }}>
-          <Img src={content.imageDataUrl} />
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           <div
             style={{
               position: "absolute",

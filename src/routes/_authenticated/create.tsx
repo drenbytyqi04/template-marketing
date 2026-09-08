@@ -7,6 +7,7 @@ import {
   Pencil,
   Plus,
   Sparkles,
+  Video,
   Wand2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -254,6 +255,15 @@ function CreatePage() {
   const [savingService, setSavingService] = useState(false);
 
   const [saving, setSaving] = useState(false);
+  /**
+   * Footage for the video format.
+   *
+   * Kept as the picked File and previewed through an object url: a clip is far
+   * too large to carry as a data url the way stills are. It is uploaded to
+   * storage on save, and only its path is stored on the post.
+   */
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+
   const canvasRef = useRef<HTMLDivElement>(null);
   const slideNodes = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -428,6 +438,12 @@ function CreatePage() {
     set({ imageDataUrl: await readFileAsDataUrl(file) });
   }
 
+  function onVideo(file: File) {
+    const url = URL.createObjectURL(file);
+    setVideoFile(file);
+    setAll({ videoDataUrl: url });
+  }
+
   function captionFor(seed: number) {
     return generateCaption({
       content: slides[0]!.content,
@@ -503,15 +519,32 @@ function CreatePage() {
   async function persist() {
     setSaving(true);
     try {
+      // Upload freshly picked footage before writing the post, so the row keeps a
+      // storage path rather than an object url that dies with the tab. The result
+      // is threaded through locally: a setState here would not be visible to the
+      // payload built in this same tick.
+      let videoPath = slides[0]?.content.videoPath ?? null;
+      if (videoFile && business) {
+        const uploaded = await repo.uploadFile(business.id, "posts", videoFile);
+        if (!uploaded) {
+          toast.error("Could not upload the video. Please try a smaller file.");
+          setSaving(false);
+          return;
+        }
+        videoPath = uploaded;
+        setVideoFile(null);
+        setAll({ videoPath: uploaded });
+      }
+      const withVideo = (c: PostContent): PostContent => (videoPath ? { ...c, videoPath } : c);
       const first = slides[0]!;
       const post: PostWithContact = {
         id: postId ?? newId("post"),
         businessId: business!.id,
         templateId: template!.id,
         format,
-        content: first.content,
+        content: withVideo(first.content),
         adjustments: first.adjustments,
-        slides: multi ? slides : [],
+        slides: multi ? slides.map((sl) => ({ ...sl, content: withVideo(sl.content) })) : [],
         ...(multi ? {} : { imagePath: first.imagePath ?? null }),
         showBrandName,
         showContact,
@@ -671,25 +704,42 @@ function CreatePage() {
 
         <div className="card-soft flex flex-col gap-4 p-4">
           <Label>
-            {t("create.image")}
+            {format === "video" ? "Video" : t("create.image")}
             {multi ? ` (${frameLabel} ${activeIndex + 1})` : ""}
           </Label>
           <label className="relative block cursor-pointer overflow-hidden rounded-xl border border-dashed bg-card">
             <input
               type="file"
-              accept="image/*"
+              accept={format === "video" ? "video/*" : "image/*"}
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) void onImage(file);
+                if (!file) return;
+                if (format === "video") onVideo(file);
+                else void onImage(file);
               }}
             />
-            {content.imageDataUrl ? (
+            {format === "video" && content.videoDataUrl ? (
+              <video
+                src={content.videoDataUrl}
+                muted
+                loop
+                autoPlay
+                playsInline
+                className="aspect-[4/3] w-full object-cover"
+              />
+            ) : content.imageDataUrl ? (
               <img src={content.imageDataUrl} alt="" className="aspect-[4/3] w-full object-cover" />
             ) : (
               <div className="flex aspect-[4/3] flex-col items-center justify-center gap-2 text-muted-foreground">
-                <ImageIcon className="size-6" />
-                <span className="text-sm font-semibold">{t("create.upload")}</span>
+                {format === "video" ? (
+                  <Video className="size-6" />
+                ) : (
+                  <ImageIcon className="size-6" />
+                )}
+                <span className="text-sm font-semibold">
+                  {format === "video" ? "Upload a video" : t("create.upload")}
+                </span>
               </div>
             )}
           </label>

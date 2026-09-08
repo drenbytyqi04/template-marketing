@@ -367,6 +367,10 @@ export type PostContent = {
   /** Chosen output size inside the format, for example "4:5" or "1:1". */
   sizeKey?: string;
   imageDataUrl: string | null;
+  /** Uploaded footage for the video format. The design renders on top of it. */
+  videoDataUrl?: string | null;
+  /** Private storage path of that footage. Never a public url. */
+  videoPath?: string | null;
   caption: string;
 };
 

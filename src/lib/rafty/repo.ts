@@ -75,6 +75,27 @@ async function uploadDataUrl(
   return path;
 }
 
+/**
+ * Uploads a picked file straight from disk.
+ *
+ * Video footage is far too large to round-trip through a data url the way
+ * images do, so the File is streamed to storage as-is and only its path is
+ * kept on the post.
+ */
+export async function uploadFile(
+  businessId: string,
+  kind: "logos" | "posts" | "requests" | "templates",
+  file: File,
+): Promise<string | null> {
+  const ext = (file.name.split(".").pop() || file.type.split("/")[1] || "bin").toLowerCase();
+  const path = `${businessId}/${kind}/${id(kind)}.${ext}`;
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (error) return null;
+  return path;
+}
+
 async function removeFile(path: string | null) {
   if (!path) return;
   signedCache.delete(path);
@@ -691,6 +712,8 @@ async function toPost(row: PostRow): Promise<PostWithContact> {
       ...row.content,
       caption: row.caption || row.content?.caption || "",
       imageDataUrl: await signedUrl(row.image_path),
+      videoPath: row.content?.videoPath ?? null,
+      videoDataUrl: await signedUrl(row.content?.videoPath ?? null),
     },
     showBrandName: !!row.show_brand_name,
     showContact: !!row.show_contact,
@@ -725,7 +748,10 @@ export async function listPosts(businessId: string): Promise<PostWithContact[]> 
 }
 
 export async function savePost(post: PostWithContact): Promise<PostWithContact | null> {
-  const { imageDataUrl, ...text } = post.content;
+  // videoDataUrl is a short lived object or signed url; only the storage path
+  // belongs in the row, exactly as with imageDataUrl.
+  const { imageDataUrl, videoDataUrl, ...text } = post.content;
+  void videoDataUrl;
   let imagePath = post.imagePath ?? null;
   if (isDataUrl(imageDataUrl)) {
     const uploaded = await uploadDataUrl(post.businessId, "posts", imageDataUrl);
@@ -738,7 +764,8 @@ export async function savePost(post: PostWithContact): Promise<PostWithContact |
   // so saving one slide can never overwrite another slide's media.
   const storedSlides: StoredSlide[] = [];
   for (const slide of post.slides ?? []) {
-    const { imageDataUrl, ...slideText } = slide.content;
+    const { imageDataUrl, videoDataUrl, ...slideText } = slide.content;
+    void videoDataUrl;
     let slidePath = slide.imagePath ?? null;
     if (isDataUrl(imageDataUrl)) {
       const uploaded = await uploadDataUrl(post.businessId, "posts", imageDataUrl);
