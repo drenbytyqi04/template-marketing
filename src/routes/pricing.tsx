@@ -107,7 +107,7 @@ function PricingPage() {
                       isPartnership ? "text-background/70" : "text-muted-foreground",
                     )}
                   >
-                    {plan.brands} brand{plan.brands > 1 ? "s" : ""}
+                    Unlimited brands
                   </p>
                 </div>
 

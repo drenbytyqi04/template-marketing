@@ -435,7 +435,6 @@ function BrandPage() {
     trial,
     plan,
     brands,
-    brandSlotsLeft,
     saveBrand,
     addService,
     renameService,
@@ -805,8 +804,7 @@ function BrandPage() {
         <div className="flex items-center justify-between">
           <p className="text-sm font-bold">Brands</p>
           <p className="text-xs text-muted-foreground">
-            {plan ? `${brands.length} of ${plan.brandLimit} used` : ""} | {brandSlotsLeft} slots
-            left
+            {brands.length} {brands.length === 1 ? "brand" : "brands"}
           </p>
         </div>
         <div className="grid gap-2">
@@ -844,18 +842,12 @@ function BrandPage() {
           <Button
             variant="outline"
             className="h-10 w-fit rounded-xl"
-            disabled={brandSlotsLeft <= 0}
             onClick={() => setAddingBrand(true)}
           >
             <Plus className="mr-1.5 size-4" />
             Add brand
           </Button>
         )}
-        {brandSlotsLeft <= 0 ? (
-          <p className="text-xs text-muted-foreground">
-            Your plan does not have any more brand slots. Upgrade to add another brand.
-          </p>
-        ) : null}
       </div>
     </div>
   );

@@ -56,7 +56,6 @@ function SettingsPage() {
     brand,
     brands,
     plan,
-    brandSlotsLeft,
     language,
     setLanguage,
     saveBrand,
@@ -169,7 +168,7 @@ function SettingsPage() {
         <p className="text-sm font-semibold">{planLabel}</p>
         <div className="grid gap-1 text-sm text-muted-foreground">
           <p>
-            Brands: {brands.length} of {plan?.brandLimit ?? 1} used ({brandSlotsLeft} left)
+            Brands: {brands.length}
           </p>
           <p>Carousel: {plan?.allowCarousel ? "included" : "not included"}</p>
           <p>Video: {plan?.allowVideo ? "included" : "not included"}</p>
