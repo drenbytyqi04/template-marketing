@@ -384,6 +384,16 @@ function CreatePage() {
       prev.map((slide, i) => (i === activeIndex ? { ...slide, adjustments: next } : slide)),
     );
 
+  /** Drops the uploaded footage and frees its object url. Only a video post
+   * carries a clip, so anything else has to start clean. */
+  function clearVideo() {
+    setVideoFile(null);
+    for (const slide of slides) {
+      const url = slide.content.videoDataUrl;
+      if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
+    }
+  }
+
   /** Switching format keeps what the user already typed. Extra frames are
    * dropped or added to match the new format, the first frame always carries
    * over so nobody retypes an offer just to see it as a story. */
@@ -392,6 +402,7 @@ function CreatePage() {
     const nextSpec = FORMAT_SPECS[next];
     const nextTemplate = templatesForFormat(templates, next)[0];
     const nextMax = nextTemplate?.slides?.max ?? nextSpec.maxSlides;
+    if (next !== "video") clearVideo();
     setFormat(next);
     setTemplateId(nextTemplate?.id ?? "");
     setSizeKey(SIZE_OPTIONS[next][0]!.key);
@@ -400,7 +411,10 @@ function CreatePage() {
         .slice(0, Math.max(1, Math.min(nextSpec.defaultSlides, nextMax)))
         .map((slide) => ({
           ...slide,
-          content: { ...slide.content },
+          content:
+            next === "video"
+              ? { ...slide.content }
+              : { ...slide.content, videoDataUrl: null, videoPath: null },
           adjustments: { ...slide.adjustments },
           ...(next === "video" ? { durationMs: slide.durationMs ?? nextSpec.defaultDuration } : {}),
         }));
@@ -438,6 +452,7 @@ function CreatePage() {
   }
 
   function onVideo(file: File) {
+    clearVideo();
     const url = URL.createObjectURL(file);
     setVideoFile(file);
     setAll({ videoDataUrl: url });
@@ -584,6 +599,7 @@ function CreatePage() {
 
   function resetAll() {
     clearDraft();
+    clearVideo();
     setPostId(null);
     setSlides(
       Array.from({ length: spec.defaultSlides }, () =>

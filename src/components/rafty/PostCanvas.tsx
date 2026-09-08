@@ -62,6 +62,17 @@ export const PostCanvas = forwardRef<HTMLDivElement, Props>(function PostCanvas(
     return { ...brand, contact: { ...(brand.contact ?? {}), ...fields } };
   }, [brand, content.contactSetId]);
 
+  // Footage belongs to a video post only. A clip uploaded earlier must not
+  // keep playing once the post is a still format, in the preview or in an
+  // export, so it is dropped here rather than at every template call site.
+  const effectiveContent = useMemo(
+    () =>
+      activeFormat === "video" || !content.videoDataUrl
+        ? content
+        : { ...content, videoDataUrl: null },
+    [activeFormat, content],
+  );
+
   return (
     <div
       ref={ref}
@@ -77,7 +88,7 @@ export const PostCanvas = forwardRef<HTMLDivElement, Props>(function PostCanvas(
       data-safe={safe.top || safe.bottom ? "on" : "off"}
     >
       {renderTemplate(template, {
-        content,
+        content: effectiveContent,
         brand: effectiveBrand,
         businessName,
         businessType,
