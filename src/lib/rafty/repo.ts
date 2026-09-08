@@ -729,6 +729,12 @@ async function toPost(row: PostRow): Promise<PostWithContact> {
           ...emptyContent,
           ...slide.content,
           imageDataUrl: await signedUrl(slide.imagePath ?? null),
+          // A video post is multi-card, so the grid renders slides[0]. Without
+          // signing the footage here the card fell back to the empty gradient.
+          videoPath: slide.content?.videoPath ?? row.content?.videoPath ?? null,
+          videoDataUrl: await signedUrl(
+            slide.content?.videoPath ?? row.content?.videoPath ?? null,
+          ),
         },
         adjustments: slide.adjustments ?? {},
         ...(slide.durationMs !== undefined ? { durationMs: slide.durationMs } : {}),

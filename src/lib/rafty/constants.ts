@@ -636,7 +636,10 @@ export const FORMAT_SPECS: Record<ContentFormat, FormatSpec> = {
     minDuration: 1500,
     maxDuration: 8000,
     defaultDuration: 3000,
-    exportable: false,
+    // A video post exports as a real clip once footage is uploaded: the design
+    // is composited onto the frames and recorded to WebM. Without footage the
+    // download falls back to a still of the current card.
+    exportable: true,
   },
   story: {
     format: "story",

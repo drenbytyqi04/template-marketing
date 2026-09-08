@@ -1,5 +1,6 @@
 import { toPng } from "html-to-image";
 import { FONT_LIBRARY } from "./constants";
+import { canExportVideo, renderVideoPostToBlob } from "./video-export";
 
 /** Always embedded: every template declares these as its fallback faces. */
 const ALWAYS_EMBEDDED = ["Sora", "Plus Jakarta Sans"];
@@ -67,10 +68,7 @@ async function getFontEmbedCss(url: string): Promise<string> {
     // font embedding for the rest of the session, and an export without the
     // brand's typeface silently falls back to a face with different glyph
     // widths - the exact failure that clipped headlines.
-    console.warn(
-      "[export] Could not embed webfonts; this PNG may not match the preview.",
-      err,
-    );
+    console.warn("[export] Could not embed webfonts; this PNG may not match the preview.", err);
     return "";
   }
   fontCssCache.set(url, out);
@@ -105,10 +103,7 @@ function nextFrame(): Promise<void> {
  * export implementation, shared by download and share so preview, save,
  * download and share always agree pixel for pixel.
  */
-export async function renderNodeToDataUrl(
-  node: HTMLElement,
-  size?: ExportSize,
-): Promise<string> {
+export async function renderNodeToDataUrl(node: HTMLElement, size?: ExportSize): Promise<string> {
   const outWidth = size?.width ?? EXPORT_WIDTH;
   const outHeight = size?.height ?? EXPORT_HEIGHT;
   const fontEmbedCSS = await getFontEmbedCss(fontCssUrlFor(node));
@@ -206,11 +201,20 @@ export async function renderPostToBlob(
 
 /** Export a rendered post node as a 1080x1350 PNG. */
 export async function downloadNode(node: HTMLElement, filename: string, size?: ExportSize) {
-  const blob = await renderPostToBlob(node, filename, size);
+  // A post built on uploaded footage exports as a clip, not a still. Detecting
+  // the video here covers every download path - Create, Posts, share - because
+  // they all come through this function.
+  const video = node.querySelector("video");
+  const isVideoPost = !!video?.currentSrc || !!video?.getAttribute("src");
+  const blob =
+    isVideoPost && video && canExportVideo()
+      ? await renderVideoPostToBlob(node, video, size ?? { width: 1080, height: 1920 })
+      : await renderPostToBlob(node, filename, size);
+  const extension = blob.type.startsWith("video/") ? "webm" : "png";
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${filename}.png`;
+  a.download = `${filename}.${extension}`;
   a.rel = "noopener";
   a.style.display = "none";
 
