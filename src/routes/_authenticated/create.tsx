@@ -26,7 +26,6 @@ import { ShareActions } from "@/components/rafty/ShareActions";
 import { FormatPicker } from "@/components/rafty/FormatPicker";
 import { SlideStrip } from "@/components/rafty/SlideStrip";
 import { CarouselPreview } from "@/components/rafty/CarouselPreview";
-import { StoryboardPreview } from "@/components/rafty/StoryboardPreview";
 import { snapshotOfBrand } from "@/lib/rafty/types";
 import { useRafty } from "@/lib/rafty/store";
 import { generateCaption } from "@/lib/rafty/caption";
@@ -662,46 +661,6 @@ function CreatePage() {
           />
         ) : null}
 
-        {format === "video" ? (
-          <div className="card-soft flex items-center justify-between gap-3 p-4">
-            <div>
-              <p className="text-sm font-semibold">Time per card</p>
-              <p className="text-xs text-muted-foreground">
-                Sets every card, then fine tune single cards above.
-              </p>
-            </div>
-            <div className="flex items-center gap-1">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="size-9 rounded-xl"
-                aria-label="Shorter cards"
-                onClick={() =>
-                  setDefaultDuration((active.durationMs ?? spec.defaultDuration) - 500)
-                }
-              >
-                -
-              </Button>
-              <span className="w-14 text-center text-sm font-semibold">
-                {((active.durationMs ?? spec.defaultDuration) / 1000).toFixed(1)}s
-              </span>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="size-9 rounded-xl"
-                aria-label="Longer cards"
-                onClick={() =>
-                  setDefaultDuration((active.durationMs ?? spec.defaultDuration) + 500)
-                }
-              >
-                +
-              </Button>
-            </div>
-          </div>
-        ) : null}
-
         <div className="card-soft flex flex-col gap-4 p-4">
           <Label>
             {format === "video" ? "Video" : t("create.image")}
@@ -958,22 +917,9 @@ function CreatePage() {
               onSelect={setActiveIndex}
               nodesRef={slideNodes}
             />
-          ) : format === "video" ? (
-            <StoryboardPreview
-              slides={slides}
-              template={template}
-              brand={brand}
-              businessName={business.name}
-              businessType={business.type}
-              showBrandName={showBrandName}
-              showContact={showContact}
-              spec={spec}
-              activeIndex={activeIndex}
-              onSelect={setActiveIndex}
-            />
           ) : (
             <div
-              className={`card-soft mx-auto overflow-hidden p-2 ${format === "story" ? "max-w-[320px]" : ""}`}
+              className={`card-soft mx-auto overflow-hidden p-2 ${format === "story" || format === "video" ? "max-w-[320px]" : ""}`}
             >
               <PostCanvas
                 ref={canvasRef}

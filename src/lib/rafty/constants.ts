@@ -630,12 +630,15 @@ export const FORMAT_SPECS: Record<ContentFormat, FormatSpec> = {
     label: "Video",
     width: 1080,
     height: 1920,
-    minSlides: 2,
-    maxSlides: 6,
-    defaultSlides: 3,
-    minDuration: 1500,
-    maxDuration: 8000,
-    defaultDuration: 3000,
+    // One clip, one design. The format used to be a storyboard of 2 to 6 cards
+    // because no real video could be produced; now that footage is uploaded and
+    // composited, the clip's own length is the post and cards only got in the way.
+    minSlides: 1,
+    maxSlides: 1,
+    defaultSlides: 1,
+    minDuration: 0,
+    maxDuration: 0,
+    defaultDuration: 0,
     // A video post exports as a real clip once footage is uploaded: the design
     // is composited onto the frames and recorded to WebM. Without footage the
     // download falls back to a still of the current card.
