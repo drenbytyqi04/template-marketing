@@ -2172,6 +2172,422 @@ const engines: Engine[] = [
       );
     },
   },
+  {
+    id: "archway",
+    label: "Archway",
+    tags: ["editorial", "light", "image_first"],
+    render: (ctx) => {
+      const { content, brand, variant } = ctx;
+      const align = variant.align === "center" ? "center" : "flex-start";
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: bgOr(brand, "#f6f2ff"),
+            padding: px(5.5),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(3.4),
+          }}
+        >
+          <BizRow ctx={ctx} tone="dark" />
+          <div
+            style={{
+              position: "relative",
+              flex: "0 0 52%",
+              overflow: "hidden",
+              // An arch instead of a rectangle: a half ellipse across the top,
+              // square at the base, so the picture reads as a window. The radius
+              // is a percentage of the box, so the curve holds at every size.
+              borderRadius: "50% 50% 4% 4% / 34% 34% 3% 3%",
+            }}
+          >
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+          </div>
+          <AdjustBox
+            ctx={ctx}
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              gap: px(1.8),
+              alignItems: align,
+              textAlign: variant.align,
+              color: "#1b1329",
+            }}
+          >
+            <Kicker ctx={ctx} color={accentColor(ctx)} />
+            <Title ctx={ctx} size={7} color="#1b1329" />
+            <Chips items={metaItems(content, ctx.businessType)} tone="dark" />
+            <div style={{ display: "flex", gap: px(2), alignItems: "center", flexWrap: "wrap" }}>
+              <PriceBadge ctx={ctx} tone="dark" />
+              <CtaTag ctx={ctx} tone="dark" />
+            </div>
+            <ContactLine ctx={ctx} tone="dark" />
+          </AdjustBox>
+        </div>
+      );
+    },
+  },
+  {
+    id: "softcard",
+    label: "Soft Card",
+    tags: ["minimal", "light", "whitespace"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: bgOr(brand, `linear-gradient(160deg, ${brand.primary}1f, #ffffff 62%)`),
+            padding: px(6),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(3.2),
+          }}
+        >
+          <BizRow ctx={ctx} tone="dark" />
+          <div
+            style={{
+              position: "relative",
+              flex: "0 0 48%",
+              overflow: "hidden",
+              borderRadius: px(4.5),
+              boxShadow: `0 ${px(2.4)} ${px(6)} rgba(24,16,44,0.16)`,
+            }}
+          >
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+          </div>
+          <AdjustBox
+            ctx={ctx}
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              gap: px(1.8),
+              justifyContent: "center",
+              color: "#191128",
+            }}
+          >
+            <Kicker ctx={ctx} color={accentColor(ctx)} />
+            <Title ctx={ctx} size={6.6} color="#191128" />
+            <AdditionalText ctx={ctx} size={2.6} opacity={0.66} />
+            <div style={{ display: "flex", gap: px(2), alignItems: "center", flexWrap: "wrap" }}>
+              <PriceBadge ctx={ctx} tone="dark" />
+              <CtaTag ctx={ctx} tone="dark" />
+            </div>
+            <ContactLine ctx={ctx} tone="dark" />
+          </AdjustBox>
+        </div>
+      );
+    },
+  },
+  {
+    id: "marquee",
+    label: "Marquee",
+    tags: ["bold", "type_first", "gradient"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      // The kicker repeated as a running band, top and bottom, the way a poster
+      // or a shop window prints one word across its whole width.
+      const word = (content.subject.trim() || ctx.businessName || "krijo24").toUpperCase();
+      const band = Array.from({ length: 6 }, () => word).join("  ·  ");
+      const Band = () => (
+        <div
+          style={{
+            // A fixed band height rather than one grown by the line box: the
+            // strip is a design constant, and letting font metrics set it made
+            // the export sit a few percent off the preview.
+            height: px(6.4),
+            flex: "0 0 auto",
+            display: "flex",
+            alignItems: "center",
+            background: accentColor(ctx),
+            color: "#fff",
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <span
+            style={{
+              fontSize: px(2.6),
+              fontWeight: 800,
+              letterSpacing: "0.22em",
+              fontFamily: fontSecondary(brand),
+            }}
+          >
+            {band}
+          </span>
+        </div>
+      );
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: "#100a1c",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <Band />
+          <div style={{ position: "relative", flex: 1 }}>
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: `linear-gradient(to top, ${brand.primary}f0 6%, ${brand.primary}40 46%, transparent 72%)`,
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                padding: px(6),
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "flex-end",
+              }}
+            >
+              <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(2) }}>
+                <Title ctx={ctx} size={9} color="#fff" />
+                <Chips items={metaItems(content, ctx.businessType)} tone="light" />
+                <div
+                  style={{ display: "flex", gap: px(2), alignItems: "center", flexWrap: "wrap" }}
+                >
+                  <PriceBadge ctx={ctx} tone="light" />
+                  <CtaTag ctx={ctx} tone="light" />
+                </div>
+                <ContactLine ctx={ctx} tone="light" />
+              </AdjustBox>
+            </div>
+          </div>
+          <Band />
+        </div>
+      );
+    },
+  },
+  {
+    id: "halfmoon",
+    label: "Half Moon",
+    tags: ["bold", "gradient", "centered"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div style={{ ...base(brand), background: brand.primary }}>
+          <div style={{ position: "absolute", inset: 0, height: "58%", overflow: "hidden" }}>
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+          </div>
+          {/* The colour block rises into the picture as a wide dome, so the
+              headline sits in the curve rather than on a straight edge. */}
+          <div
+            style={{
+              position: "absolute",
+              left: `-${px(6)}`,
+              right: `-${px(6)}`,
+              top: "42%",
+              bottom: 0,
+              background: `linear-gradient(180deg, ${brand.primary}, ${brand.secondary})`,
+              borderRadius: "50% 50% 0 0 / 26% 26% 0 0",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              padding: px(6),
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              alignItems: "center",
+              textAlign: "center",
+            }}
+          >
+            <BizRow ctx={ctx} tone="light" />
+            <AdjustBox
+              ctx={ctx}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: px(2),
+                paddingTop: px(10),
+              }}
+            >
+              <Kicker ctx={ctx} color="rgba(255,255,255,0.9)" />
+              <Title ctx={ctx} size={7.8} color="#fff" />
+              <AdditionalText ctx={ctx} size={2.6} opacity={0.82} />
+              <div style={{ display: "flex", gap: px(2), alignItems: "center" }}>
+                <PriceBadge ctx={ctx} tone="light" />
+                <CtaTag ctx={ctx} tone="light" />
+              </div>
+            </AdjustBox>
+            <ContactLine ctx={ctx} tone="light" />
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "gridlines",
+    label: "Grid Lines",
+    tags: ["dense", "dark", "image_first"],
+    render: (ctx) => {
+      const { content, brand, variant } = ctx;
+      const rule = "rgba(255,255,255,0.32)";
+      return (
+        <div style={{ ...base(brand), background: "#0d0b14" }}>
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} style={{ opacity: 0.9 }} />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "linear-gradient(to top, rgba(10,8,16,.9) 12%, rgba(10,8,16,.15) 55%)",
+            }}
+          />
+          {/* Survey rules: two thin lines and their tick marks, the drafting
+              language a property or a car listing is measured in. */}
+          <div
+            style={{
+              position: "absolute",
+              left: px(5),
+              right: px(5),
+              top: "34%",
+              height: 1,
+              background: rule,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: px(5),
+              bottom: px(5),
+              width: 1,
+              background: rule,
+            }}
+          />
+          <div style={{ position: "absolute", inset: px(5), border: `1px solid ${rule}` }} />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              padding: px(8),
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              alignItems: variant.align === "center" ? "center" : "flex-start",
+              textAlign: variant.align,
+            }}
+          >
+            <BizRow ctx={ctx} tone="light" />
+            <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(1.8) }}>
+              <Kicker ctx={ctx} color={brand.accent} />
+              <Title ctx={ctx} size={7.4} color="#fff" />
+              <div
+                style={{
+                  display: "flex",
+                  gap: px(3),
+                  flexWrap: "wrap",
+                  fontSize: px(2.4),
+                  fontWeight: 600,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  fontFamily: fontSecondary(brand),
+                  color: "rgba(255,255,255,0.82)",
+                }}
+              >
+                {metaItems(content, ctx.businessType)
+                  .slice(0, 3)
+                  .map((item) => (
+                    <span key={item}>{item}</span>
+                  ))}
+              </div>
+              <div style={{ display: "flex", gap: px(2), alignItems: "center", flexWrap: "wrap" }}>
+                <PriceBadge ctx={ctx} tone="light" />
+                <CtaTag ctx={ctx} tone="light" />
+              </div>
+              <ContactLine ctx={ctx} tone="light" />
+            </AdjustBox>
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "stickerprice",
+    label: "Sticker",
+    tags: ["bold", "light", "image_first"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      const price = formatPrice(content.price, brand.currency);
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: bgOr(brand, "#fbf7f2"),
+            padding: px(5),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(3),
+          }}
+        >
+          <div
+            style={{
+              position: "relative",
+              flex: "0 0 60%",
+              overflow: "hidden",
+              borderRadius: px(3),
+            }}
+          >
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+            {/* The price as a stuck-on tag rather than a badge in the flow. */}
+            {price ? (
+              <span
+                style={{
+                  position: "absolute",
+                  right: px(4),
+                  top: px(4),
+                  transform: "rotate(-8deg)",
+                  padding: `${px(2)} ${px(3.2)}`,
+                  borderRadius: px(2),
+                  background: accentColor(ctx),
+                  color: "#fff",
+                  fontWeight: 800,
+                  fontSize: px(4.6),
+                  letterSpacing: "-0.02em",
+                  fontFamily: font(brand),
+                  boxShadow: `0 ${px(1.2)} ${px(3)} rgba(20,12,36,0.28)`,
+                }}
+              >
+                {price}
+              </span>
+            ) : null}
+          </div>
+          <AdjustBox
+            ctx={ctx}
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              gap: px(1.6),
+              justifyContent: "center",
+              color: "#1a1226",
+            }}
+          >
+            <Kicker ctx={ctx} color={accentColor(ctx)} />
+            <Title ctx={ctx} size={7.2} color="#1a1226" />
+            <Chips items={metaItems(content, ctx.businessType)} tone="dark" />
+            <div style={{ display: "flex", gap: px(2), alignItems: "center", flexWrap: "wrap" }}>
+              <CtaTag ctx={ctx} tone="dark" />
+              <BizRow ctx={ctx} tone="dark" />
+            </div>
+            <ContactLine ctx={ctx} tone="dark" />
+          </AdjustBox>
+        </div>
+      );
+    },
+  },
 ];
 
 export const engineIds = [...engines.map((e) => e.id), "custom"];
@@ -2341,6 +2757,12 @@ const ENGINE_STYLE: Record<string, string> = {
   clearcenter: "Clear Center",
   bottombar: "Bottom Bar",
   cornerprice: "Corner Price",
+  archway: "Archway",
+  softcard: "Soft Card",
+  marquee: "Marquee",
+  halfmoon: "Half Moon",
+  gridlines: "Grid Lines",
+  stickerprice: "Sticker",
 };
 
 const styleName = (engineId: string) => ENGINE_STYLE[engineId] ?? "Classic";
@@ -2385,6 +2807,12 @@ const ENGINE_SUGGESTED: Partial<Record<string, BusinessType[]>> = {
   clearcenter: ["travel_agency", "restaurant"],
   bottombar: ["real_estate", "retail"],
   cornerprice: ["car_dealership", "travel_agency"],
+  archway: ["travel_agency", "real_estate"],
+  softcard: ["retail", "other"],
+  marquee: ["restaurant", "retail"],
+  halfmoon: ["travel_agency", "restaurant"],
+  gridlines: ["real_estate", "car_dealership"],
+  stickerprice: ["retail", "car_dealership"],
 };
 
 const suggestedForEngine = (engineId: string): BusinessType[] | undefined =>
@@ -2595,12 +3023,44 @@ function buildCleanTemplates(format: ContentFormat, startIndex: number): Templat
   });
 }
 
+/** The signature set: six newer post designs. They are appended with their own
+ * id space, so every id already saved on a post keeps pointing at the design it
+ * was made with. */
+const SIGNATURE_ENGINE_IDS = [
+  "archway",
+  "softcard",
+  "marquee",
+  "halfmoon",
+  "gridlines",
+  "stickerprice",
+];
+
+function buildSignatureTemplates(): Template[] {
+  return SIGNATURE_ENGINE_IDS.map((engineId, index) => {
+    const engine = engineMap.get(engineId)!;
+    const variant = variants[index % variants.length]!;
+    return {
+      id: `signature_${index + 1}`,
+      name: templateName(index + 1, engine.id, "S"),
+      engine: engine.id,
+      tags: engine.tags,
+      ...(suggestedForEngine(engine.id) ? { suggestedFor: suggestedForEngine(engine.id) } : {}),
+      variant,
+      scope: "global" as const,
+      businessId: null,
+      archived: false,
+      format: "post" as const,
+    };
+  });
+}
+
 export const globalTemplates: Template[] = [
   ...buildGlobalTemplates(),
   ...buildNewGlobalTemplates(),
   ...buildFormatTemplates("video"),
   ...buildCleanTemplates("video", 90),
   ...buildCleanTemplates("post", 90),
+  ...buildSignatureTemplates(),
 ];
 
 /** Templates available for one format. Custom uploads stay in the post format
