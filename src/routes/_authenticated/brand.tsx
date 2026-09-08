@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { ArrowDown, ArrowUp, Lock, Plus, Trash2, Upload, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowDown, ArrowUp, Loader2, Lock, Plus, Save, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ import {
 import {
   contactSets,
   emptyContact,
+  type BrandProfile,
   type BrandContact,
   type ContactSet,
   type BusinessType,
@@ -426,6 +427,26 @@ function ContactForm({
   );
 }
 
+type BrandDraft = Pick<
+  BrandProfile,
+  | "primary"
+  | "secondary"
+  | "accent"
+  | "background"
+  | "fontFamily"
+  | "fontSecondary"
+  | "showBrandName"
+>;
+const draftOf = (b: BrandProfile): BrandDraft => ({
+  primary: b.primary,
+  secondary: b.secondary,
+  accent: b.accent,
+  background: b.background,
+  fontFamily: b.fontFamily,
+  fontSecondary: b.fontSecondary,
+  showBrandName: b.showBrandName,
+});
+
 function BrandPage() {
   const {
     business,
@@ -450,9 +471,63 @@ function BrandPage() {
   const [addingBrand, setAddingBrand] = useState(false);
   const [instructions, setInstructions] = useState<ContentInstructions | null>(null);
 
+  /**
+   * Pending edits to the brand's look.
+   *
+   * These fields used to write to the database on every keystroke and colour
+   * nudge, so there was no way to try a palette and back out, and no signal that
+   * anything had been stored. They are now held here until Save changes is
+   * pressed. Logo, contact details and services keep their own flows: each is a
+   * discrete action rather than part of a batch of styling tweaks.
+   */
+  const [draft, setDraft] = useState<BrandDraft | null>(null);
+  const [savingBrand, setSavingBrand] = useState(false);
+  const editedBrandId = useRef<string | null>(null);
+
+  // Reset the draft when the active brand changes, so switching never carries
+  // one brand's unsaved palette onto another.
+  useEffect(() => {
+    if (!brand || !business) return;
+    if (editedBrandId.current !== business.id) {
+      editedBrandId.current = business.id;
+      setDraft(draftOf(brand));
+      setInstructions(null);
+    }
+  }, [brand, business]);
+
   if (!business || !brand) return null;
 
+  const view = draft ?? draftOf(brand);
   const current = instructions ?? brand.instructions;
+
+  // What Save changes will write. Comparing against the stored brand means the
+  // button stays disabled until something genuinely differs, and re-enables if a
+  // value is edited back and forth.
+  const brandDirty =
+    !!draft && (Object.keys(draft) as (keyof BrandDraft)[]).some((k) => draft[k] !== brand[k]);
+  const instructionsDirty =
+    !!instructions &&
+    (instructions.styleSample !== brand.instructions.styleSample ||
+      instructions.hashtags !== brand.instructions.hashtags);
+  const dirty = brandDirty || instructionsDirty;
+
+  async function saveChanges() {
+    if (!dirty || savingBrand) return;
+    setSavingBrand(true);
+    try {
+      await saveBrand({
+        ...(brandDirty && draft ? draft : {}),
+        ...(instructionsDirty && instructions ? { instructions } : {}),
+      });
+      setInstructions(null);
+      toast.success(t("brand.saved"));
+    } catch {
+      toast.error("Could not save the changes. Please try again.");
+    } finally {
+      setSavingBrand(false);
+    }
+  }
+
   const trialLeft = Math.max(0, (trial?.freePostLimit ?? 1) - (trial?.postsCreated ?? 0));
 
   /** A short read on how this brand is actually being used. */
@@ -599,24 +674,24 @@ function BrandPage() {
         <div className="grid gap-3 sm:grid-cols-2">
           <ColorField
             label="Primary color"
-            value={brand.primary}
-            onChange={(v) => v && saveBrand({ primary: v })}
+            value={view.primary}
+            onChange={(v) => v && setDraft({ ...view, primary: v })}
           />
           <ColorField
             label="Secondary color"
-            value={brand.secondary}
-            onChange={(v) => v && saveBrand({ secondary: v })}
+            value={view.secondary}
+            onChange={(v) => v && setDraft({ ...view, secondary: v })}
           />
           <ColorField
             label="Accent color"
-            value={brand.accent}
-            onChange={(v) => v && saveBrand({ accent: v })}
+            value={view.accent}
+            onChange={(v) => v && setDraft({ ...view, accent: v })}
           />
           <ColorField
             label="Background color (optional)"
-            value={brand.background}
+            value={view.background}
             optional
-            onChange={(v) => saveBrand({ background: v })}
+            onChange={(v) => setDraft({ ...view, background: v })}
           />
         </div>
       </div>
@@ -626,14 +701,14 @@ function BrandPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <FontPicker
             label="Primary font"
-            value={brand.fontFamily}
-            onChange={(v) => v && saveBrand({ fontFamily: v })}
+            value={view.fontFamily}
+            onChange={(v) => v && setDraft({ ...view, fontFamily: v })}
           />
           <FontPicker
             label="Secondary font (optional)"
-            value={brand.fontSecondary}
+            value={view.fontSecondary}
             optional
-            onChange={(v) => saveBrand({ fontSecondary: v })}
+            onChange={(v) => setDraft({ ...view, fontSecondary: v })}
           />
         </div>
       </div>
@@ -648,11 +723,8 @@ function BrandPage() {
             </p>
           </div>
           <Switch
-            checked={brand.showBrandName}
-            onCheckedChange={async (v) => {
-              await saveBrand({ showBrandName: v });
-              toast.success(t("brand.saved"));
-            }}
+            checked={view.showBrandName}
+            onCheckedChange={(v) => setDraft({ ...view, showBrandName: v })}
           />
         </div>
       </div>
@@ -788,15 +860,27 @@ function BrandPage() {
             className="h-10 rounded-xl"
           />
         </div>
+      </div>
+
+      {/* One place to commit styling and caption edits. Everything above used to
+          write on every keystroke, which gave no way to try a palette and back
+          out. Logo, contact and services still act immediately - each is a
+          discrete action, not part of a batch of tweaks. */}
+      <div className="sticky bottom-3 z-10 flex items-center justify-between gap-3 rounded-2xl border bg-card/95 p-3 shadow-lg backdrop-blur">
+        <p className="text-xs text-muted-foreground">
+          {dirty ? "You have unsaved changes." : "All changes saved."}
+        </p>
         <Button
-          className="h-10 w-fit rounded-xl"
-          onClick={async () => {
-            await saveBrand({ instructions: current });
-            setInstructions(null);
-            toast.success(t("brand.saved"));
-          }}
+          className="h-10 rounded-xl"
+          onClick={() => void saveChanges()}
+          disabled={!dirty || savingBrand}
         >
-          {t("brand.save")}
+          {savingBrand ? (
+            <Loader2 className="mr-1.5 size-4 animate-spin" />
+          ) : (
+            <Save className="mr-1.5 size-4" />
+          )}
+          {savingBrand ? "Saving…" : "Save changes"}
         </Button>
       </div>
 
