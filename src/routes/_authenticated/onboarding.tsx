@@ -61,7 +61,8 @@ const SUBMIT_STEPS = [
 ];
 
 function OnboardingPage() {
-  const { ready, user, business, completeOnboarding, t, language, setLanguage } = useRafty();
+  const { ready, user, business, brand, completeOnboarding, t, language, setLanguage } =
+    useRafty();
   const navigate = useNavigate();
 
   const [step, setStep] = useState(0);
@@ -93,6 +94,27 @@ function OnboardingPage() {
     if (!user) navigate({ to: "/auth", replace: true });
     else if (business?.onboarded) navigate({ to: "/create", replace: true });
   }, [ready, user, business, navigate]);
+
+  // Seed the form from the brand this is actually setting up. Switching to a
+  // brand that has not been set up yet lands here, and starting blank made it
+  // look like a second brand was being created from scratch - the name and type
+  // already entered in Add brand were thrown away.
+  const seeded = useRef<string | null>(null);
+  useEffect(() => {
+    if (!business || seeded.current === business.id) return;
+    seeded.current = business.id;
+    setName(business.name);
+    setType(business.type);
+    setCustomType(business.customType ?? "");
+    if (brand) {
+      setPrimary(brand.primary);
+      setSecondary(brand.secondary);
+      setAccent(brand.accent);
+      setFont(brand.fontFamily);
+      setFontSecondary(brand.fontSecondary);
+      setCurrency(brand.currency);
+    }
+  }, [business, brand]);
 
   const suggestions = useMemo(() => SERVICE_SUGGESTIONS[type], [type]);
   const canNext =
@@ -163,6 +185,11 @@ function OnboardingPage() {
         <div className="card-soft flex flex-col gap-5 p-5 sm:p-6">
           <div>
             <h1 className="font-display text-xl font-extrabold">{t("onb.title")}</h1>
+            {/* Name the brand being set up. Without it, arriving here after
+                switching to an unfinished brand reads as creating another one. */}
+            {business?.name ? (
+              <p className="text-sm font-semibold text-primary">{business.name}</p>
+            ) : null}
             <p className="text-sm text-muted-foreground">{t(STEP_KEYS[step]!)}</p>
           </div>
 
