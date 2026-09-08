@@ -1,15 +1,19 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Check, Copy, Download, Facebook, Instagram, Linkedin, Loader2, Save, Share2 } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Download,
+  Facebook,
+  Instagram,
+  Linkedin,
+  Loader2,
+  Save,
+  Share2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import {
-  downloadNode,
-  downloadNodes,
-  nodeToPngFile,
-  slugify,
-  type ExportSize,
-} from "@/lib/rafty/download";
+import { downloadNode, nodeToPngFile, slugify, type ExportSize } from "@/lib/rafty/download";
 
 type Props = {
   canvasRef: React.RefObject<HTMLElement | null>;
@@ -20,8 +24,6 @@ type Props = {
   saving?: boolean;
   /** Export canvas size, from the shared format table. */
   size?: ExportSize;
-  /** Ordered slide nodes for multi frame formats. */
-  slideNodes?: React.MutableRefObject<(HTMLDivElement | null)[]>;
   /** False for formats without a reliable renderer yet, such as video. */
   exportable?: boolean;
   /** Shown instead of the export buttons when export is unavailable. */
@@ -42,14 +44,11 @@ export function ShareActions({
   saveLabel = "Save",
   saving,
   size,
-  slideNodes,
   exportable = true,
   unavailableNote,
 }: Props) {
   const [copied, setCopied] = useState(false);
   const [sharing, setSharing] = useState(false);
-
-  const multi = (slideNodes?.current?.filter(Boolean).length ?? 0) > 1;
 
   async function copyCaption() {
     try {
@@ -81,12 +80,6 @@ export function ShareActions({
   async function exportAll() {
     setSharing(true);
     try {
-      if (slideNodes) {
-        const nodes = slideNodes.current.filter((n): n is HTMLDivElement => !!n);
-        const count = await downloadNodes(nodes, slugify(filename), size);
-        toast.success(`${count} images downloaded in order.`);
-        return;
-      }
       const node = canvasRef.current;
       if (!node) return;
       const file = await nodeToPngFile(node, slugify(filename), size);
@@ -128,7 +121,7 @@ export function ShareActions({
             ) : (
               <Share2 className="mr-1 size-4" />
             )}
-            {sharing ? "Preparing…" : multi ? "Save all slides" : "Save to device"}
+            {sharing ? "Preparing…" : "Save to device"}
           </Button>
         ) : null}
       </div>
@@ -168,7 +161,7 @@ export function ShareActions({
         </p>
       </div>
 
-      {exportable && !slideNodes ? (
+      {exportable ? (
         <Button
           variant="ghost"
           className="h-9 rounded-xl text-xs text-muted-foreground"

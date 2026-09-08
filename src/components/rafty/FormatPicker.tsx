@@ -1,14 +1,12 @@
 import { motion } from "framer-motion";
-import { Film, Images, Image as ImageIcon, Lock, Smartphone } from "lucide-react";
+import { Film, Image as ImageIcon, Lock } from "lucide-react";
 import { CONTENT_FORMATS, FORMAT_SPECS } from "@/lib/rafty/constants";
 import type { ContentFormat } from "@/lib/rafty/types";
 import { cn } from "@/lib/utils";
 
 const ICONS: Record<ContentFormat, typeof ImageIcon> = {
   post: ImageIcon,
-  carousel: Images,
   video: Film,
-  story: Smartphone,
 };
 
 /**

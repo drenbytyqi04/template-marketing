@@ -24,8 +24,6 @@ import { PostCanvas } from "@/components/rafty/PostCanvas";
 import { AdjustControls } from "@/components/rafty/AdjustControls";
 import { ShareActions } from "@/components/rafty/ShareActions";
 import { FormatPicker } from "@/components/rafty/FormatPicker";
-import { SlideStrip } from "@/components/rafty/SlideStrip";
-import { CarouselPreview } from "@/components/rafty/CarouselPreview";
 import { snapshotOfBrand } from "@/lib/rafty/types";
 import { useRafty } from "@/lib/rafty/store";
 import { generateCaption } from "@/lib/rafty/caption";
@@ -264,7 +262,6 @@ function CreatePage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
 
   const canvasRef = useRef<HTMLDivElement>(null);
-  const slideNodes = useRef<(HTMLDivElement | null)[]>([]);
 
   // Prefill from an item found on the brand's own website. Only the text and
   // the picture come across: the template still owns the whole layout.
@@ -344,11 +341,6 @@ function CreatePage() {
 
   if (!business || !brand || !template) return null;
 
-  const limits = {
-    min: template.slides?.min ?? spec.minSlides,
-    max: template.slides?.max ?? spec.maxSlides,
-  };
-  const multi = limits.max > 1;
   const active = slides[Math.min(activeIndex, slides.length - 1)] ?? slides[0]!;
   const content = active.content;
   const fields = TYPE_FIELDS[business.type];
@@ -427,7 +419,6 @@ function CreatePage() {
     setPostId(null);
     setGenerated(false);
     setShowAdjust(false);
-    slideNodes.current = [];
   }
 
   /** Saves a typed service to the brand so it never has to be retyped, then
@@ -489,47 +480,6 @@ function CreatePage() {
     setShowAdjust(false);
   }
 
-  function setDefaultDuration(ms: number) {
-    const value = clampDuration(ms, spec);
-    setSlides((prev) => prev.map((slide) => ({ ...slide, durationMs: value })));
-  }
-
-  function setCardDuration(index: number, ms: number) {
-    setSlides((prev) =>
-      prev.map((slide, i) =>
-        i === index ? { ...slide, durationMs: clampDuration(ms, spec) } : slide,
-      ),
-    );
-  }
-
-  function moveSlide(index: number, direction: -1 | 1) {
-    setSlides((prev) => {
-      const next = [...prev];
-      const target = index + direction;
-      if (target < 0 || target >= next.length) return prev;
-      const a = next[index]!;
-      const b = next[target]!;
-      next[index] = b;
-      next[target] = a;
-      return next;
-    });
-    slideNodes.current = [];
-    setActiveIndex(index + direction);
-  }
-
-  function addSlide() {
-    if (slides.length >= limits.max) return;
-    setSlides((prev) => [...prev, newSlide(format === "video" ? spec.defaultDuration : undefined)]);
-    setActiveIndex(slides.length);
-  }
-
-  function removeSlide(index: number) {
-    if (slides.length <= limits.min) return;
-    setSlides((prev) => prev.filter((_, i) => i !== index));
-    slideNodes.current = [];
-    setActiveIndex((prev) => Math.max(0, Math.min(prev, slides.length - 2)));
-  }
-
   async function persist() {
     setSaving(true);
     try {
@@ -558,8 +508,10 @@ function CreatePage() {
         format,
         content: withVideo(first.content),
         adjustments: first.adjustments,
-        slides: multi ? slides.map((sl) => ({ ...sl, content: withVideo(sl.content) })) : [],
-        ...(multi ? {} : { imagePath: first.imagePath ?? null }),
+        // Every format is a single frame now, so the post is its own content and
+        // the slide list stays empty.
+        slides: [],
+        imagePath: first.imagePath ?? null,
         showBrandName,
         showContact,
         shareStatus: {},
@@ -611,11 +563,8 @@ function CreatePage() {
     setShowContact(brandHasContact);
     setGenerated(false);
     setShowAdjust(false);
-    slideNodes.current = [];
     navigate({ to: "/create", search: {} });
   }
-
-  const frameLabel = format === "video" ? "card" : "slide";
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
@@ -662,26 +611,8 @@ function CreatePage() {
           </div>
         ) : null}
 
-        {multi ? (
-          <SlideStrip
-            slides={slides}
-            activeIndex={activeIndex}
-            format={format}
-            spec={spec}
-            limits={limits}
-            onSelect={setActiveIndex}
-            onMove={moveSlide}
-            onAdd={addSlide}
-            onRemove={removeSlide}
-            onDuration={setCardDuration}
-          />
-        ) : null}
-
         <div className="card-soft flex flex-col gap-4 p-4">
-          <Label>
-            {format === "video" ? "Video" : t("create.image")}
-            {multi ? ` (${frameLabel} ${activeIndex + 1})` : ""}
-          </Label>
+          <Label>{format === "video" ? "Video" : t("create.image")}</Label>
           <label className="relative block cursor-pointer overflow-hidden rounded-xl border border-dashed bg-card">
             <input
               type="file"
@@ -919,39 +850,23 @@ function CreatePage() {
         </div>
 
         <div className="mx-auto w-full max-w-[520px]">
-          {format === "carousel" ? (
-            <CarouselPreview
-              slides={slides}
+          <div
+            className={`card-soft mx-auto overflow-hidden p-2 ${format === "video" ? "max-w-[320px]" : ""}`}
+          >
+            <PostCanvas
+              ref={canvasRef}
               template={template}
+              content={content}
               brand={brand}
               businessName={business.name}
               businessType={business.type}
               showBrandName={showBrandName}
               showContact={showContact}
+              adjustments={active.adjustments}
               format={format}
-              activeIndex={activeIndex}
-              onSelect={setActiveIndex}
-              nodesRef={slideNodes}
+              className="rounded-xl"
             />
-          ) : (
-            <div
-              className={`card-soft mx-auto overflow-hidden p-2 ${format === "story" || format === "video" ? "max-w-[320px]" : ""}`}
-            >
-              <PostCanvas
-                ref={canvasRef}
-                template={template}
-                content={content}
-                brand={brand}
-                businessName={business.name}
-                businessType={business.type}
-                showBrandName={showBrandName}
-                showContact={showContact}
-                adjustments={active.adjustments}
-                format={format}
-                className="rounded-xl"
-              />
-            </div>
-          )}
+          </div>
         </div>
 
         <div className="mx-auto w-full max-w-[520px]">
@@ -963,7 +878,6 @@ function CreatePage() {
               onSave={persist}
               saving={saving}
               size={{ width: size.width, height: size.height }}
-              {...(format === "carousel" ? { slideNodes } : {})}
               exportable={spec.exportable}
             />
           ) : (

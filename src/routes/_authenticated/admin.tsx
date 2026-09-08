@@ -390,7 +390,8 @@ function AdminPage() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-bold">{r.fileName}</p>
                       <p className="truncate text-xs text-muted-foreground">
-                        {business?.name || r.businessName || "Unknown brand"} · {timeAgo(r.createdAt)}
+                        {business?.name || r.businessName || "Unknown brand"} ·{" "}
+                        {timeAgo(r.createdAt)}
                       </p>
                     </div>
                     <Badge variant={r.templateId ? "default" : "secondary"}>
@@ -426,9 +427,7 @@ function AdminPage() {
               ) : null}
             </div>
 
-            <h2 className="mb-3 mt-8 font-display text-lg font-extrabold">
-              Live custom templates
-            </h2>
+            <h2 className="mb-3 mt-8 font-display text-lg font-extrabold">Live custom templates</h2>
             <div className="grid gap-2">
               {customTemplates.map((tpl) => {
                 const business = businesses.find((b) => b.id === tpl.businessId);
@@ -592,9 +591,7 @@ function AccountDialog({
                 onCheckedChange={(v) => void onPlan(business.ownerUserId, price, v)}
               />
             </div>
-            <p className="text-xs text-muted-foreground">
-              Carousel {plan?.allowCarousel ? "on" : "off"} · Video {plan?.allowVideo ? "on" : "off"}
-            </p>
+            <p className="text-xs text-muted-foreground">Video {plan?.allowVideo ? "on" : "off"}</p>
           </div>
 
           <div className="grid gap-2">

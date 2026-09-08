@@ -31,9 +31,9 @@ export type BusinessType =
 /**
  * Content formats. One shared template model drives all of them, so a
  * template only declares which format it belongs to plus the extra rules that
- * format needs (slide counts for carousels, card timing for video).
+ * format needs (frame count and, for video, its timing).
  */
-export type ContentFormat = "post" | "carousel" | "video" | "story";
+export type ContentFormat = "post" | "video";
 
 export type FormatSpec = {
   format: ContentFormat;
@@ -45,7 +45,7 @@ export type FormatSpec = {
   minSlides: number;
   maxSlides: number;
   defaultSlides: number;
-  /** Video and story timing, in milliseconds. */
+  /** Video timing, in milliseconds. */
   minDuration: number;
   maxDuration: number;
   defaultDuration: number;
@@ -58,7 +58,7 @@ export type Slide = {
   id: string;
   content: PostContent;
   adjustments: PostAdjustments;
-  /** Video and story cards only. */
+  /** Video only. */
   durationMs?: number;
   imagePath?: string | null;
 };
@@ -85,7 +85,6 @@ export type AccountPlan = {
   active: boolean;
   brandLimit: number;
   billingCycle: string;
-  allowCarousel: boolean;
   allowVideo: boolean;
   allowCustomTemplates: boolean;
   partnershipPostsUsed: number;
@@ -96,8 +95,7 @@ export type AccountPlan = {
 export function allowedFormats(plan: AccountPlan | null): ContentFormat[] {
   const out: ContentFormat[] = ["post"];
   if (!plan?.active) return out;
-  if (plan.allowCarousel) out.push("carousel");
-  if (plan.allowVideo) out.push("video", "story");
+  if (plan.allowVideo) out.push("video");
   return out;
 }
 
@@ -294,7 +292,7 @@ export type Template = {
   format?: ContentFormat;
   /** Multi card formats: how many slides the design supports. */
   slides?: { min: number; max: number; default: number };
-  /** Video and story: card timing plus the transition between cards. */
+  /** Video: clip timing plus its transition. */
   motion?: {
     minDuration: number;
     maxDuration: number;

@@ -2497,34 +2497,11 @@ function buildNewGlobalTemplates(): Template[] {
 /* --------------------------- other content formats -------------------------- */
 
 /**
- * Representative sets for the remaining formats. They reuse the exact same
- * engines, brand data, text fit rules and adjustments as posts, only the
- * canvas shape and the format rules differ. The first entries of each list
- * keep their original ids and engine mapping.
+ * The video set. It reuses the exact same engines, brand data, text fit rules
+ * and adjustments as posts, only the canvas shape and the format rules differ.
+ * Ids and engine mapping stay as they were, so saved posts keep their design.
  */
-const FORMAT_ENGINES: Record<"carousel" | "video" | "story", string[]> = {
-  carousel: [
-    "aurora",
-    "editorial",
-    "spotlight",
-    "darkluxury",
-    "glass",
-    "poster",
-    "split",
-    "ticket",
-    "minimal",
-    "banner",
-    "stack",
-    "lightluxury",
-    "whitespacepanel",
-    "densegrid",
-    "asymmetricoffer",
-    "fullbleed",
-    "blurbackdrop",
-    "serifcolumn",
-    "letterbox",
-    "splitstack",
-  ],
+const FORMAT_ENGINES: Record<"video", string[]> = {
   video: [
     "aurora",
     "spotlight",
@@ -2535,30 +2512,14 @@ const FORMAT_ENGINES: Record<"carousel" | "video" | "story", string[]> = {
     "letterbox",
     "typeoffer",
   ],
-  story: [
-    "aurora",
-    "glass",
-    "darkluxury",
-    "typeblast",
-    "fullbleed",
-    "letterbox",
-    "colorwash",
-    "duskframe",
-    "quietwhite",
-    "thinframe",
-    "diagonalslash",
-    "typeoffer",
-  ],
 };
 
 /** Neutral prefixes keep the numbering readable per format. */
-const FORMAT_PREFIX: Record<"carousel" | "video" | "story", string> = {
-  carousel: "C",
+const FORMAT_PREFIX: Record<"video", string> = {
   video: "V",
-  story: "S",
 };
 
-function buildFormatTemplates(format: "carousel" | "video" | "story"): Template[] {
+function buildFormatTemplates(format: "video"): Template[] {
   const spec = FORMAT_SPECS[format];
   return FORMAT_ENGINES[format].map((engineId, index) => {
     const engine = engineMap.get(engineId) ?? engines[0]!;
@@ -2592,8 +2553,8 @@ function buildFormatTemplates(format: "carousel" | "video" | "story"): Template[
 }
 
 /** Content forward designs: the picture is the message, the brand only adds a
- * logo, the price and the essentials. Especially for video and story, where a
- * heavy colour wash would hide the footage. */
+ * logo, the price and the essentials. Especially for video, where a heavy
+ * colour wash would hide the footage. */
 const CLEAN_ENGINE_IDS = ["clearcenter", "bottombar", "cornerprice"];
 
 function buildCleanTemplates(format: ContentFormat, startIndex: number): Template[] {
@@ -2601,7 +2562,7 @@ function buildCleanTemplates(format: ContentFormat, startIndex: number): Templat
   return CLEAN_ENGINE_IDS.map((engineId, index) => {
     const engine = engineMap.get(engineId)!;
     const variant = variants[index % variants.length]!;
-    const multi = format === "carousel" || format === "video";
+    const multi = format === "video";
     return {
       id: `clean_${format}_${index + 1}`,
       name: templateName(
@@ -2637,13 +2598,9 @@ function buildCleanTemplates(format: ContentFormat, startIndex: number): Templat
 export const globalTemplates: Template[] = [
   ...buildGlobalTemplates(),
   ...buildNewGlobalTemplates(),
-  ...buildFormatTemplates("carousel"),
   ...buildFormatTemplates("video"),
-  ...buildFormatTemplates("story"),
   ...buildCleanTemplates("video", 90),
-  ...buildCleanTemplates("story", 90),
   ...buildCleanTemplates("post", 90),
-  ...buildCleanTemplates("carousel", 90),
 ];
 
 /** Templates available for one format. Custom uploads stay in the post format

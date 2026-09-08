@@ -13,6 +13,7 @@ import {
   type BusinessService,
   type BusinessStatus,
   type BusinessType,
+  type ContentFormat,
   type ContentInstructions,
   type CurrencyCode,
   type CustomTemplateRequest,
@@ -322,6 +323,13 @@ export async function saveBrand(businessId: string, patch: Partial<BrandProfile>
 
 /* ---------------------------------- plan ---------------------------------- */
 
+/** A post saved before carousel and story were dropped still carries that
+ * format. Nothing renders those any more, so such a post opens as a plain post
+ * rather than crashing every lookup that keys off the format. */
+function readFormat(value: string | null): ContentFormat {
+  return value === "video" ? "video" : "post";
+}
+
 type PlanRow = {
   user_id: string;
   plan: PlanTier;
@@ -329,7 +337,6 @@ type PlanRow = {
   active?: boolean | null;
   brand_limit: number;
   billing_cycle: string;
-  allow_carousel?: boolean | null;
   allow_video?: boolean | null;
   allow_custom_templates?: boolean | null;
   partnership_posts_used: number;
@@ -344,7 +351,6 @@ function toPlan(row: PlanRow): AccountPlan {
     active: !!row.active,
     brandLimit: row.brand_limit,
     billingCycle: row.billing_cycle,
-    allowCarousel: !!row.allow_carousel,
     allowVideo: !!row.allow_video,
     allowCustomTemplates: row.allow_custom_templates !== false,
     partnershipPostsUsed: row.partnership_posts_used,
@@ -370,7 +376,6 @@ export async function getMyPlan(): Promise<AccountPlan | null> {
       active: false,
       brandLimit: 1,
       billingCycle: "monthly",
-      allowCarousel: false,
       allowVideo: false,
       allowCustomTemplates: true,
       partnershipPostsUsed: 0,
@@ -721,7 +726,7 @@ async function toPost(row: PostRow): Promise<PostWithContact> {
     shareStatus: row.share_status ?? {},
     createdAt: row.created_at,
     brandSnapshot: (row.brand_snapshot as Post["brandSnapshot"]) ?? null,
-    format: (row.format as Post["format"]) ?? "post",
+    format: readFormat(row.format),
     slides: await Promise.all(
       (row.slides ?? []).map(async (slide) => ({
         id: slide.id,
@@ -732,9 +737,7 @@ async function toPost(row: PostRow): Promise<PostWithContact> {
           // A video post is multi-card, so the grid renders slides[0]. Without
           // signing the footage here the card fell back to the empty gradient.
           videoPath: slide.content?.videoPath ?? row.content?.videoPath ?? null,
-          videoDataUrl: await signedUrl(
-            slide.content?.videoPath ?? row.content?.videoPath ?? null,
-          ),
+          videoDataUrl: await signedUrl(slide.content?.videoPath ?? row.content?.videoPath ?? null),
         },
         adjustments: slide.adjustments ?? {},
         ...(slide.durationMs !== undefined ? { durationMs: slide.durationMs } : {}),

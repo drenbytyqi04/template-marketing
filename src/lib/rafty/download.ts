@@ -1,10 +1,6 @@
 import { toPng } from "html-to-image";
 import { FONT_LIBRARY } from "./constants";
-import {
-  canExportVideo,
-  renderVideoPosterToDataUrl,
-  renderVideoPostToBlob,
-} from "./video-export";
+import { canExportVideo, renderVideoPosterToDataUrl, renderVideoPostToBlob } from "./video-export";
 
 /** Always embedded: every template declares these as its fallback faces. */
 const ALWAYS_EMBEDDED = ["Sora", "Plus Jakarta Sans"];
@@ -253,29 +249,6 @@ export async function nodeToPngFile(
 ): Promise<File> {
   const blob = await renderPostToBlob(node, filename, size);
   return new File([blob], `${filename}.png`, { type: "image/png" });
-}
-
-/**
- * Exports an ordered list of nodes (carousel slides) one after another with
- * the same deterministic single frame pipeline. Slides are rendered
- * sequentially from their own live DOM nodes, so one slide can never pick up
- * another slide's content or overwrite its file.
- */
-export async function downloadNodes(
-  nodes: HTMLElement[],
-  filename: string,
-  size?: ExportSize,
-): Promise<number> {
-  let done = 0;
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
-    if (!node) continue;
-    await downloadNode(node, `${filename}-${String(i + 1).padStart(2, "0")}`, size);
-    done++;
-    // Small gap so browsers do not drop consecutive programmatic downloads.
-    await new Promise((resolve) => setTimeout(resolve, 350));
-  }
-  return done;
 }
 
 export function slugify(value: string) {

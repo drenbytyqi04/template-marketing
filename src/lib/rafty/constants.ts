@@ -189,10 +189,10 @@ export const PLANS: {
     monthly: 100,
     brands: 1,
     partnershipPosts: 0,
-    formats: "Posts, carousels, story and reel",
+    formats: "Posts and video",
     features: [
       "1 brand",
-      "Full app: posts, carousels, story and reel",
+      "Full app: image posts and video posts",
       "Unlimited ready made templates",
       "Your own uploaded templates",
     ],
@@ -203,10 +203,10 @@ export const PLANS: {
     monthly: 150,
     brands: 2,
     partnershipPosts: 0,
-    formats: "Posts, carousels, story and reel",
+    formats: "Posts and video",
     features: [
       "2 brands",
-      "Full app: posts, carousels, story and reel",
+      "Full app: image posts and video posts",
       "Unlimited ready made templates",
       "Your own uploaded templates",
     ],
@@ -217,7 +217,7 @@ export const PLANS: {
     monthly: 200,
     brands: 1,
     partnershipPosts: 30,
-    formats: "Posts, carousels, story and reel",
+    formats: "Posts and video",
     features: [
       "Full app plus a content team",
       "1 brand",
@@ -612,19 +612,6 @@ export const FORMAT_SPECS: Record<ContentFormat, FormatSpec> = {
     defaultDuration: 0,
     exportable: true,
   },
-  carousel: {
-    format: "carousel",
-    label: "Carousel",
-    width: 1080,
-    height: 1350,
-    minSlides: 2,
-    maxSlides: 8,
-    defaultSlides: 3,
-    minDuration: 0,
-    maxDuration: 0,
-    defaultDuration: 0,
-    exportable: true,
-  },
   video: {
     format: "video",
     label: "Video",
@@ -644,28 +631,13 @@ export const FORMAT_SPECS: Record<ContentFormat, FormatSpec> = {
     // download falls back to a still of the current card.
     exportable: true,
   },
-  story: {
-    format: "story",
-    label: "Story",
-    width: 1080,
-    height: 1920,
-    minSlides: 1,
-    maxSlides: 1,
-    defaultSlides: 1,
-    minDuration: 0,
-    maxDuration: 0,
-    defaultDuration: 0,
-    exportable: true,
-  },
 };
 
-export const CONTENT_FORMATS: ContentFormat[] = ["post", "carousel", "video", "story"];
+export const CONTENT_FORMATS: ContentFormat[] = ["post", "video"];
 
 export const FORMAT_HINTS: Record<ContentFormat, string> = {
   post: "One image, one design.",
-  carousel: "Several slides in one order.",
-  video: "Short storyboard with timing.",
-  story: "Tall full screen design.",
+  video: "One clip with your design on it.",
 };
 
 /** Clamps a card duration into the template or format safe bounds. */
@@ -684,8 +656,7 @@ export type SizeOption = {
 
 /**
  * The sizes each network actually renders without cropping. Feeds keep 4:5 as
- * the tallest safe frame, square is the safest for carousels because every
- * slide lines up, and vertical formats stay 9:16.
+ * the tallest safe frame, and video stays vertical for reels and shorts.
  */
 export const SIZE_OPTIONS: Record<ContentFormat, SizeOption[]> = {
   post: [
@@ -694,11 +665,6 @@ export const SIZE_OPTIONS: Record<ContentFormat, SizeOption[]> = {
     { key: "9:16", label: "9:16", note: "Full screen vertical", width: 1080, height: 1920 },
     { key: "16:9", label: "16:9", note: "Landscape, LinkedIn", width: 1080, height: 608 },
   ],
-  carousel: [
-    { key: "1:1", label: "1:1", note: "Square, slides line up", width: 1080, height: 1080 },
-    { key: "4:5", label: "4:5", note: "Taller, more presence", width: 1080, height: 1350 },
-  ],
-  story: [{ key: "9:16", label: "9:16", note: "Full screen", width: 1080, height: 1920 }],
   video: [
     { key: "9:16", label: "9:16", note: "Reels, TikTok, Shorts", width: 1080, height: 1920 },
     { key: "1:1", label: "1:1", note: "Square video", width: 1080, height: 1080 },
@@ -719,8 +685,6 @@ export function sizeFor(format: ContentFormat, key?: string | null): SizeOption 
  */
 export const SAFE_INSETS: Record<ContentFormat, { top: number; bottom: number }> = {
   post: { top: 0, bottom: 0 },
-  carousel: { top: 0, bottom: 0 },
-  story: { top: 14, bottom: 24 },
   video: { top: 14, bottom: 28 },
 };
 

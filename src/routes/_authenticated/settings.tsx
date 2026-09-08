@@ -167,10 +167,7 @@ function SettingsPage() {
         </div>
         <p className="text-sm font-semibold">{planLabel}</p>
         <div className="grid gap-1 text-sm text-muted-foreground">
-          <p>
-            Brands: {brands.length}
-          </p>
-          <p>Carousel: {plan?.allowCarousel ? "included" : "not included"}</p>
+          <p>Brands: {brands.length}</p>
           <p>Video: {plan?.allowVideo ? "included" : "not included"}</p>
           {plan && plan.partnershipPostsLimit > 0 ? (
             <p>
