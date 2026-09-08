@@ -102,15 +102,7 @@ function Img({
 
   if (video)
     return (
-      <video
-        src={video}
-        autoPlay
-        loop
-        muted
-        playsInline
-        crossOrigin="anonymous"
-        style={base}
-      />
+      <video src={video} autoPlay loop muted playsInline crossOrigin="anonymous" style={base} />
     );
 
   if (!src)
@@ -126,7 +118,6 @@ function Img({
     );
   return <img src={src} alt="" crossOrigin="anonymous" style={base} />;
 }
-
 
 /** Logo only renders when a real logo file exists. Never fabricated marks. */
 function Logo({ ctx }: { ctx: RenderCtx }) {
@@ -703,7 +694,11 @@ const engines: Engine[] = [
       const { content, brand, variant } = ctx;
       return (
         <div style={{ ...base(brand), background: brand.primary, color: "#fff" }}>
-          <Img src={content.imageDataUrl} video={content.videoDataUrl} style={{ mixBlendMode: "luminosity", opacity: 0.9 }} />
+          <Img
+            src={content.imageDataUrl}
+            video={content.videoDataUrl}
+            style={{ mixBlendMode: "luminosity", opacity: 0.9 }}
+          />
           <div
             style={{
               position: "absolute",
@@ -1182,6 +1177,9 @@ const engines: Engine[] = [
     tags: ["type_first", "bold", "dark"],
     render: (ctx) => {
       const { content, brand, variant } = ctx;
+      // Type first, but never blind to an upload: with no picture the wash is the
+      // design, with one it becomes a scrim so the shot still reads underneath.
+      const hasMedia = !!(content.videoDataUrl || content.imageDataUrl);
       return (
         <div
           style={{
@@ -1190,6 +1188,18 @@ const engines: Engine[] = [
             color: "#fff",
           }}
         >
+          {hasMedia ? (
+            <>
+              <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: `linear-gradient(155deg, ${brand.primary}b3, #0c0716e0)`,
+                }}
+              />
+            </>
+          ) : null}
           <div
             style={{
               position: "absolute",
@@ -1587,7 +1597,11 @@ const engines: Engine[] = [
       const { content, brand, variant } = ctx;
       return (
         <div style={{ ...base(brand), background: "#000" }}>
-          <Img src={content.imageDataUrl} video={content.videoDataUrl} style={{ top: "12%", height: "76%" }} />
+          <Img
+            src={content.imageDataUrl}
+            video={content.videoDataUrl}
+            style={{ top: "12%", height: "76%" }}
+          />
           <div
             style={{
               position: "absolute",
