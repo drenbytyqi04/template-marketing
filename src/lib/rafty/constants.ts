@@ -704,6 +704,24 @@ export const FIELD_LABEL_PRESETS: Record<FieldKey, string[]> = {
   meta2: ["field.area", "field.mileage", "field.persons", "field.detail"],
 };
 
+/**
+ * What the Included section is called for this kind of business.
+ *
+ * A hotel night is included, a flat's balcony is a feature and a car's
+ * navigation is equipment. The field is the same list either way, but calling
+ * it "Included" to an estate agent reads as though something is being thrown
+ * in with the sale. Types without an entry keep the plain wording.
+ */
+export const INCLUDED_LABEL_KEY: Partial<Record<BusinessType, string>> = {
+  real_estate: "create.features",
+  construction: "create.features",
+  retail: "create.features",
+  ecommerce: "create.features",
+  car_dealership: "create.equipment",
+  automotive_service: "create.equipment",
+  restaurant: "create.onTheMenu",
+};
+
 /** A plain number plus its label reads better than the number alone. */
 export function labelledValue(value: string, label?: string): string {
   const v = (value ?? "").trim();

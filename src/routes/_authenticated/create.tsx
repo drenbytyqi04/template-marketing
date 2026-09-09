@@ -33,6 +33,8 @@ import { recommendedFirst, templatesForFormat } from "@/lib/rafty/templates";
 import {
   clampDuration,
   FIELD_LABEL_PRESETS,
+  INCLUDED_LABEL_KEY,
+  SERVICE_SUGGESTIONS,
   FORMAT_SPECS,
   SIZE_OPTIONS,
   sizeFor,
@@ -347,11 +349,27 @@ function CreatePage() {
   /** Saved wording wins over the business type default. */
   const labelFor = (key: string, fallbackKey: string) =>
     content.labels?.[key]?.trim() || t(fallbackKey);
-  const presetsFor = (key: keyof typeof FIELD_LABEL_PRESETS) =>
-    FIELD_LABEL_PRESETS[key].map((k) => t(k));
+  /** The wording this business type uses for the field comes first; the rest of
+   * the library still follows, since renaming a field is the point of the list. */
+  const presetsFor = (key: keyof typeof FIELD_LABEL_PRESETS) => {
+    const own = fields.find((f) => f.key === key)?.labelKey;
+    const keys = own
+      ? [own, ...FIELD_LABEL_PRESETS[key].filter((k) => k !== own)]
+      : FIELD_LABEL_PRESETS[key];
+    return keys.map((k) => t(k));
+  };
   const sets = contactSets(brand.contact);
+  /** "Included" for a tour, "Features" for a flat, "Equipment" for a car. */
+  const includedLabel = t(INCLUDED_LABEL_KEY[business.type] ?? "create.services");
+  /**
+   * A brand with nothing saved yet used to see an empty section and a blank
+   * field, which reads as a feature that does not work. The suggestions for
+   * this kind of business stand in until the brand has its own: an estate agent
+   * is offered Parking and Balcony, not Half board and Transfers.
+   */
+  const savedIncluded = services.map((s) => s.name);
   const included = includedOptions(
-    services.map((s) => s.name),
+    savedIncluded.length ? savedIncluded : SERVICE_SUGGESTIONS[business.type],
     content.services,
   );
   /**
@@ -700,7 +718,7 @@ function CreatePage() {
           </div>
 
           <div className="grid gap-2 border-t pt-4">
-            <Label htmlFor="new-service">{t("create.services")}</Label>
+            <Label htmlFor="new-service">{includedLabel}</Label>
             {included.length ? (
               <div className="flex flex-wrap gap-2">
                 {included.map((name) => {
