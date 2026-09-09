@@ -354,9 +354,18 @@ function CreatePage() {
     services.map((s) => s.name),
     content.services,
   );
-  /** Only the two headline fields stay visible, the rest is optional detail. */
-  const primaryFields = fields.slice(0, 2);
-  const secondaryFields = fields.slice(2);
+  /**
+   * What stays in front of the user: the two headline fields and the price.
+   *
+   * The price sat under "More details (optional)" with the rest, which is the
+   * wrong place for the one number every design prints and every customer
+   * looks for. Its position differs per business type, so it is pulled out by
+   * key rather than by index.
+   */
+  const headlineFields = fields.slice(0, 2);
+  const priceField = fields.find((f) => f.key === "price" && !headlineFields.includes(f));
+  const primaryFields = [...headlineFields, ...(priceField ? [priceField] : [])];
+  const secondaryFields = fields.filter((f) => !primaryFields.includes(f));
 
   const locked = !canCreatePost && !postId;
 

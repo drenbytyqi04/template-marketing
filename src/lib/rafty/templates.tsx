@@ -1,5 +1,5 @@
 import { formatPrice, FORMAT_SPECS, labelledValue } from "./constants";
-import { alpha, INK, shade } from "./tokens";
+import { alpha, INK, shade, TRACK } from "./tokens";
 import { Briefcase, Building2, MapPin, Plane } from "lucide-react";
 import { FitText } from "@/components/rafty/FitText";
 import type {
@@ -883,8 +883,11 @@ function FeatureBoxes({
 /** The wide call to action bar these posters close on. */
 function CtaBar({ ctx, tone }: { ctx: RenderCtx; tone: "light" | "dark" }) {
   const label = ctx.content.cta.trim();
-  if (!label) return null;
   const price = formatPrice(ctx.content.price, ctx.brand.currency);
+  // The bar is where these designs carry the fare. With no call to action
+  // written it becomes the price on its own rather than taking the price down
+  // with it; only an offer with neither disappears.
+  if (!label && !price) return null;
   return (
     <div
       style={{
@@ -899,17 +902,19 @@ function CtaBar({ ctx, tone }: { ctx: RenderCtx; tone: "light" | "dark" }) {
         color: tone === "light" ? accentColor(ctx) : "#ffffff",
       }}
     >
-      <span
-        style={{
-          fontSize: px(2.6),
-          fontWeight: 800,
-          letterSpacing: "0.04em",
-          textTransform: "uppercase",
-          fontFamily: fontSecondary(ctx.brand),
-        }}
-      >
-        {label}
-      </span>
+      {label ? (
+        <span
+          style={{
+            fontSize: px(2.6),
+            fontWeight: 800,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+            fontFamily: fontSecondary(ctx.brand),
+          }}
+        >
+          {label}
+        </span>
+      ) : null}
       {price ? (
         <span style={{ fontSize: px(3.2), fontWeight: 800, fontFamily: font(ctx.brand) }}>
           {price}
@@ -1269,6 +1274,7 @@ function CategoryRow({ ctx }: { ctx: RenderCtx }) {
 /** The hero deal card, the one the screen sells with. */
 function DealCard({ ctx, heading }: { ctx: RenderCtx; heading: string }) {
   const { content, brand } = ctx;
+  const price = formatPrice(content.price, brand.currency);
   return (
     <div
       style={{
@@ -1334,6 +1340,19 @@ function DealCard({ ctx, heading }: { ctx: RenderCtx; heading: string }) {
             }}
           >
             {content.additionalText}
+          </span>
+        ) : null}
+        {price ? (
+          <span
+            style={{
+              fontSize: px(4.2),
+              fontWeight: 800,
+              letterSpacing: TRACK.snug,
+              color: INK.onDark,
+              fontFamily: font(brand),
+            }}
+          >
+            {price}
           </span>
         ) : null}
         {content.cta ? (
