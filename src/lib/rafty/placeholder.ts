@@ -1,3 +1,6 @@
+import demoBeach from "@/assets/demo-beach.jpg";
+import demoCity from "@/assets/demo-city.jpg";
+import demoCoffee from "@/assets/demo-coffee.jpg";
 import { emptyContent, type BusinessType, type PostContent } from "./types";
 
 /**
@@ -172,6 +175,31 @@ const BY_TYPE: Partial<Record<BusinessType, Partial<PostContent>>> = {
   },
 };
 
+/**
+ * A real photograph behind the placeholder text.
+ *
+ * Thumbnails used to preview every design over the empty-image gradient, which
+ * is the one thing none of these layouts are built for: a design that frames a
+ * picture, scrims it or cuts it into a shape has nothing to work with, so the
+ * whole library looked flat and washed out in the very screen where a design is
+ * chosen. These three photographs already ship with the app for the landing
+ * page, so the picker shows each design doing its actual job at no extra weight.
+ */
+const PHOTO_BY_TYPE: Partial<Record<BusinessType, string>> = {
+  travel_agency: demoBeach,
+  hotel: demoBeach,
+  events: demoBeach,
+  restaurant: demoCoffee,
+  retail: demoCoffee,
+  ecommerce: demoCoffee,
+  beauty: demoCoffee,
+};
+
 export function placeholderContent(type: BusinessType): PostContent {
-  return { ...emptyContent, services: [], ...(BY_TYPE[type] ?? BY_TYPE.other) } as PostContent;
+  return {
+    ...emptyContent,
+    services: [],
+    ...(BY_TYPE[type] ?? BY_TYPE.other),
+    imageDataUrl: PHOTO_BY_TYPE[type] ?? demoCity,
+  } as PostContent;
 }
