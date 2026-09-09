@@ -148,14 +148,24 @@ function readImageSize(dataUrl: string): Promise<{ width: number; height: number
   });
 }
 
-function UploadWizard({ businessId, onDone }: { businessId: string; onDone: () => void }) {
-  const [stage, setStage] = useState<"pick" | "requirements" | "map">("pick");
+function UploadWizard({
+  businessId,
+  existing,
+  onDone,
+}: {
+  businessId: string;
+  /** Re-opening a saved upload to map its zones. The picture is already in
+   * storage, so only the zones are written back. */
+  existing?: Template | undefined;
+  onDone: () => void;
+}) {
+  const [stage, setStage] = useState<"pick" | "requirements" | "map">(existing ? "map" : "pick");
   const [file, setFile] = useState<File | null>(null);
-  const [dataUrl, setDataUrl] = useState<string | null>(null);
+  const [dataUrl, setDataUrl] = useState<string | null>(existing?.backgroundUrl ?? null);
   const [dims, setDims] = useState<{ width: number; height: number } | null>(null);
-  const [zones, setZones] = useState<TemplateZone[]>([]);
+  const [zones, setZones] = useState<TemplateZone[]>(existing?.zones ?? []);
   const [selectedKey, setSelectedKey] = useState<ZoneKey | null>(null);
-  const [name, setName] = useState("");
+  const [name, setName] = useState(existing?.name ?? "");
   const [saving, setSaving] = useState(false);
 
   const selectedZone = zones.find((z) => z.key === selectedKey) ?? null;
@@ -180,6 +190,17 @@ function UploadWizard({ businessId, onDone }: { businessId: string; onDone: () =
 
   async function save() {
     setSaving(true);
+    if (existing) {
+      await repo.updateCustomTemplateZones(existing.id, zones);
+      setSaving(false);
+      toast.success(
+        zones.length === 0
+          ? "Saved. This template still prints no text, map at least one zone to show post text."
+          : "Zones updated.",
+      );
+      onDone();
+      return;
+    }
     const requirements = REQUIREMENTS_TEXT;
     const templateId = await repo.saveCustomTemplate({
       businessId,
@@ -209,7 +230,7 @@ function UploadWizard({ businessId, onDone }: { businessId: string; onDone: () =
   return (
     <div className="card-soft grid gap-4 p-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-bold">Add your own template</p>
+        <p className="text-sm font-bold">{existing ? "Map text zones" : "Add your own template"}</p>
         <Button variant="ghost" size="icon" className="rounded-xl" onClick={onDone}>
           <X className="size-4" />
         </Button>
@@ -492,16 +513,16 @@ function UploadWizard({ businessId, onDone }: { businessId: string; onDone: () =
             <Button
               variant="outline"
               className="h-10 rounded-xl"
-              onClick={() => setStage("requirements")}
+              onClick={() => (existing ? onDone() : setStage("requirements"))}
             >
-              Back
+              {existing ? "Cancel" : "Back"}
             </Button>
             <Button
               className="ml-auto h-10 rounded-xl"
               disabled={saving}
               onClick={() => void save()}
             >
-              {saving ? "Saving..." : "Save template"}
+              {saving ? "Saving..." : existing ? "Save zones" : "Save template"}
             </Button>
           </div>
         </div>
@@ -519,6 +540,7 @@ function TemplatesPage() {
 
   const [tag, setTag] = useState<TemplateTag | "all">("all");
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [editing, setEditing] = useState<Template | null>(null);
   const [requests, setRequests] = useState<CustomTemplateRequest[]>([]);
   const [removing, setRemoving] = useState<string | null>(null);
 
@@ -581,7 +603,13 @@ function TemplatesPage() {
             ))}
           </SelectContent>
         </Select>
-        <Button className="h-11 rounded-xl" onClick={() => setWizardOpen(true)}>
+        <Button
+          className="h-11 rounded-xl"
+          onClick={() => {
+            setEditing(null);
+            setWizardOpen(true);
+          }}
+        >
           <Upload className="mr-2 size-4" />
           {t("tpl.upload")}
         </Button>
@@ -590,9 +618,12 @@ function TemplatesPage() {
       {wizardOpen ? (
         <div className="mb-6">
           <UploadWizard
+            key={editing?.id ?? "new"}
             businessId={business.id}
+            existing={editing ?? undefined}
             onDone={() => {
               setWizardOpen(false);
+              setEditing(null);
               refresh();
             }}
           />
@@ -670,15 +701,33 @@ function TemplatesPage() {
                 <p className="truncate text-[11px] font-bold">{tpl.name}</p>
                 <p className="truncate text-[10px] text-muted-foreground">
                   {tpl.scope === "custom"
-                    ? "Your template"
+                    ? (tpl.zones ?? []).length === 0
+                      ? "Your template • background only"
+                      : "Your template"
                     : (tpl.tags ?? []).map((x) => TAG_LABELS[x]).join(", ")}
                 </p>
               </div>
+              {tpl.scope === "custom" ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="ml-auto h-7 shrink-0 rounded-lg px-2 text-[11px]"
+                  onClick={() => {
+                    setEditing(tpl);
+                    setWizardOpen(true);
+                  }}
+                >
+                  {t("tpl.mapZones")}
+                </Button>
+              ) : null}
               <Button
                 asChild
                 size="sm"
                 variant="ghost"
-                className="ml-auto h-7 shrink-0 rounded-lg px-2 text-[11px]"
+                className={`h-7 shrink-0 rounded-lg px-2 text-[11px] ${
+                  tpl.scope === "custom" ? "" : "ml-auto"
+                }`}
               >
                 <Link to="/create" search={{ template: tpl.id }}>
                   {t("tpl.select")}
