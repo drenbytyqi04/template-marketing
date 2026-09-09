@@ -1,5 +1,5 @@
 import { formatPrice, FORMAT_SPECS, labelledValue } from "./constants";
-import { INK } from "./tokens";
+import { alpha, INK, shade } from "./tokens";
 import { Briefcase, Building2, MapPin, Plane } from "lucide-react";
 import { FitText } from "@/components/rafty/FitText";
 import type {
@@ -715,6 +715,78 @@ function Snowfall({
         />
       ))}
     </div>
+  );
+}
+
+/* ------------------------------ photo treatment ---------------------------- */
+
+/** How a design treats the picture under it. */
+export type PhotoTreatment =
+  "plain" | "scrimBottom" | "scrimTop" | "scrimBoth" | "wash" | "duotone";
+
+/**
+ * One place that decides how a photograph is prepared.
+ *
+ * Every design used to roll its own gradient over the picture, so thirty odd
+ * ramps existed for four intentions and no two dark posters darkened the same
+ * way. Naming the intentions instead - carry the type at the bottom, at the
+ * top, wash the whole thing, grade it to the brand - is what makes a set look
+ * art directed rather than assembled, and it means a change to how pictures are
+ * handled is one edit rather than thirty.
+ *
+ * The ramps are built from the brand's own primary pushed dark, so the shadow
+ * over the picture belongs to the brand rather than being a neutral black.
+ */
+function PhotoLayer({
+  ctx,
+  treatment = "plain",
+  strength = 1,
+  grain = false,
+  style,
+}: {
+  ctx: RenderCtx;
+  treatment?: PhotoTreatment;
+  strength?: number;
+  grain?: boolean;
+  style?: React.CSSProperties;
+}) {
+  const { content, brand } = ctx;
+  const deep = shade(brand.primary, 0.72);
+  const s = Math.min(1, Math.max(0, strength));
+  const ramps: Record<PhotoTreatment, string | null> = {
+    plain: null,
+    scrimBottom: `linear-gradient(to top, ${alpha(deep, 0.92 * s)} 4%, ${alpha(deep, 0.5 * s)} 30%, ${alpha(deep, 0)} 64%)`,
+    scrimTop: `linear-gradient(to bottom, ${alpha(deep, 0.8 * s)} 0%, ${alpha(deep, 0.28 * s)} 26%, ${alpha(deep, 0)} 52%)`,
+    scrimBoth: `linear-gradient(to bottom, ${alpha(deep, 0.72 * s)} 0%, ${alpha(deep, 0)} 34%, ${alpha(deep, 0)} 52%, ${alpha(deep, 0.9 * s)} 96%)`,
+    wash: `linear-gradient(150deg, ${alpha(brand.primary, 0.86 * s)}, ${alpha(deep, 0.94 * s)})`,
+    duotone: `linear-gradient(150deg, ${alpha(brand.primary, 0.82 * s)}, ${alpha(deep, 0.9 * s)})`,
+  };
+  const ramp = ramps[treatment];
+  return (
+    <>
+      <Img
+        src={content.imageDataUrl}
+        video={content.videoDataUrl}
+        style={{
+          // A graded picture reads as one image with the brand rather than a
+          // photograph with a colour laid on top of it.
+          ...(treatment === "duotone" ? { filter: "grayscale(1) contrast(1.08)" } : {}),
+          ...style,
+        }}
+      />
+      {ramp ? <div style={{ position: "absolute", inset: 0, background: ramp }} /> : null}
+      {grain ? (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            opacity: 0.14,
+            backgroundImage: `radial-gradient(${alpha("#ffffff", 0.9)} 0.5px, transparent 0.6px)`,
+            backgroundSize: `${px(0.8)} ${px(0.8)}`,
+          }}
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -3095,15 +3167,7 @@ const engines: Engine[] = [
       const { content, brand } = ctx;
       return (
         <div style={{ ...base(brand), background: "#0a0712" }}>
-          <Img src={content.imageDataUrl} video={content.videoDataUrl} style={{ opacity: 0.62 }} />
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background:
-                "radial-gradient(120% 90% at 50% 40%, transparent 30%, rgba(10,7,18,.85) 90%)",
-            }}
-          />
+          <PhotoLayer ctx={ctx} treatment="duotone" strength={0.86} grain />
           <div
             style={{ position: "absolute", inset: px(4.2), border: `1px solid ${brand.accent}88` }}
           />
@@ -3836,14 +3900,7 @@ const engines: Engine[] = [
           }}
         >
           <div style={{ position: "absolute", inset: 0 }}>
-            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                background: `linear-gradient(to bottom, rgba(7,12,30,0.72) 0%, rgba(7,12,30,0.15) 38%, rgba(7,12,30,0.88) 82%)`,
-              }}
-            />
+            <PhotoLayer ctx={ctx} treatment="scrimBoth" />
           </div>
           <div
             style={{
@@ -4090,14 +4147,7 @@ const engines: Engine[] = [
       const { content, brand } = ctx;
       return (
         <div style={{ ...base(brand), background: deepGround(brand) }}>
-          <Img src={content.imageDataUrl} video={content.videoDataUrl} style={{ opacity: 0.7 }} />
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: "linear-gradient(to bottom, rgba(7,12,30,0.5), rgba(7,12,30,0.92))",
-            }}
-          />
+          <PhotoLayer ctx={ctx} treatment="wash" strength={0.92} />
           <div
             style={{
               position: "absolute",
@@ -4347,15 +4397,7 @@ const engines: Engine[] = [
       const { content, brand } = ctx;
       return (
         <div style={{ ...base(brand), background: "#08101f" }}>
-          <Img src={content.imageDataUrl} video={content.videoDataUrl} />
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background:
-                "linear-gradient(to bottom, rgba(8,16,31,0.9) 8%, rgba(8,16,31,0.15) 45%, rgba(8,16,31,0.92))",
-            }}
-          />
+          <PhotoLayer ctx={ctx} treatment="scrimBoth" />
           <div
             style={{
               position: "absolute",
@@ -4484,14 +4526,7 @@ const engines: Engine[] = [
       const { content, brand } = ctx;
       return (
         <div style={{ ...base(brand), background: "#070c1e" }}>
-          <Img src={content.imageDataUrl} video={content.videoDataUrl} style={{ opacity: 0.72 }} />
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: "linear-gradient(to top, rgba(7,12,30,0.95) 22%, rgba(7,12,30,0.25) 70%)",
-            }}
-          />
+          <PhotoLayer ctx={ctx} treatment="duotone" grain />
           <div
             style={{
               position: "absolute",
