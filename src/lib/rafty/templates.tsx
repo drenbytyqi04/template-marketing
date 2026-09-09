@@ -716,6 +716,337 @@ function Snowfall({
   );
 }
 
+/* ------------------------- flight poster vocabulary ------------------------ */
+
+/**
+ * The parts a travel agency flight post is actually built from.
+ *
+ * Working from real agency posts rather than from imagination: a deep navy
+ * ground, a sky photograph, a headline whose tail turns italic, a row of small
+ * reassurance boxes, one wide call to action and a contact strip along the
+ * bottom. The brand still supplies every colour - the navy is the brand's own
+ * primary pushed dark, so an orange agency and a blue one both look like
+ * themselves.
+ */
+const deepGround = (brand: BrandProfile) =>
+  `linear-gradient(0deg, rgba(7,12,30,0.82), rgba(7,12,30,0.82)), ${brand.primary}`;
+
+/** A check mark drawn from two borders, so no icon font has to load. */
+function Tick({ color, size = 2.2 }: { color: string; size?: number }) {
+  return (
+    <span
+      style={{
+        width: px(size),
+        height: px(size * 1.7),
+        borderRight: `${px(0.42)} solid ${color}`,
+        borderBottom: `${px(0.42)} solid ${color}`,
+        transform: "rotate(45deg)",
+        marginTop: `-${px(size * 0.35)}`,
+        flex: "0 0 auto",
+      }}
+    />
+  );
+}
+
+/**
+ * What the post says is included, as the reassurance boxes these posters put
+ * under the headline - the "best fares, 24/7 support, safe booking" row.
+ */
+function FeatureBoxes({
+  ctx,
+  tone,
+  columns = 2,
+  limit = 4,
+}: {
+  ctx: RenderCtx;
+  tone: "light" | "dark";
+  columns?: number;
+  limit?: number;
+}) {
+  const items = ctx.content.services.filter(Boolean).slice(0, limit);
+  if (!items.length) return null;
+  const ink = tone === "light" ? "#ffffff" : "#0f1731";
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+        gap: px(1.4),
+        width: "100%",
+      }}
+    >
+      {items.map((item) => (
+        <div
+          key={item}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: px(1.6),
+            padding: `${px(1.4)} ${px(2)}`,
+            borderRadius: px(1.6),
+            background: tone === "light" ? "rgba(255,255,255,0.12)" : "rgba(15,23,49,0.06)",
+            border: `1px solid ${tone === "light" ? "rgba(255,255,255,0.28)" : "rgba(15,23,49,0.12)"}`,
+          }}
+        >
+          <Tick color={ctx.brand.accent} />
+          <span
+            style={{
+              fontSize: px(2.2),
+              fontWeight: 700,
+              lineHeight: 1.2,
+              color: ink,
+              fontFamily: fontSecondary(ctx.brand),
+            }}
+          >
+            {item}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** The wide call to action bar these posters close on. */
+function CtaBar({ ctx, tone }: { ctx: RenderCtx; tone: "light" | "dark" }) {
+  const label = ctx.content.cta.trim();
+  if (!label) return null;
+  const price = formatPrice(ctx.content.price, ctx.brand.currency);
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: px(2.4),
+        width: "100%",
+        padding: `${px(2)} ${px(3)}`,
+        borderRadius: px(9),
+        background: tone === "light" ? "#ffffff" : accentColor(ctx),
+        color: tone === "light" ? accentColor(ctx) : "#ffffff",
+      }}
+    >
+      <span
+        style={{
+          fontSize: px(2.9),
+          fontWeight: 800,
+          letterSpacing: "0.04em",
+          textTransform: "uppercase",
+          fontFamily: fontSecondary(ctx.brand),
+        }}
+      >
+        {label}
+      </span>
+      {price ? (
+        <span style={{ fontSize: px(3.4), fontWeight: 800, fontFamily: font(ctx.brand) }}>
+          {price}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/** The contact strip along the very bottom of an agency poster. */
+function ContactBar({ ctx, ground }: { ctx: RenderCtx; ground?: string }) {
+  if (!ctx.showContact) return null;
+  const { contact } = ctx.brand;
+  if (!contact) return null;
+  const parts = [contact.phones.filter(Boolean)[0], contact.website, contact.address].filter(
+    (v): v is string => !!v && v.trim().length > 0,
+  );
+  if (!parts.length) return null;
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: px(3),
+        flexWrap: "wrap",
+        padding: `${px(1.8)} ${px(3)}`,
+        background: ground ?? "rgba(7,12,30,0.9)",
+        width: "100%",
+      }}
+    >
+      {parts.map((part) => (
+        <span
+          key={part}
+          style={{
+            fontSize: px(2.1),
+            fontWeight: 600,
+            color: "rgba(255,255,255,0.9)",
+            fontFamily: fontSecondary(ctx.brand),
+          }}
+        >
+          {part}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * The headline these posters run: bold sans, with the tail of the line turning
+ * italic in the brand accent. Two blocks rather than one, so each half fits its
+ * own box instead of one mixed run overflowing.
+ */
+function HeadlineTwoTone({
+  ctx,
+  size,
+  color,
+  accent,
+  align = "left",
+}: {
+  ctx: RenderCtx;
+  size: number;
+  color: string;
+  accent: string;
+  align?: "left" | "center" | "right";
+}) {
+  const words = (ctx.content.title || "Your headline here").trim().split(/\s+/);
+  const tail = words.length >= 3 ? words.slice(-2).join(" ") : "";
+  const head = tail ? words.slice(0, -2).join(" ") : words.join(" ");
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: px(0.4), width: "100%" }}>
+      <FitText
+        as="h2"
+        text={head}
+        maxSize={size}
+        minSize={Math.max(3.4, size * 0.45)}
+        maxLines={2}
+        lineHeight={1.02}
+        tightLineHeight={0.96}
+        style={{
+          fontWeight: 800,
+          letterSpacing: "-0.03em",
+          fontFamily: font(ctx.brand),
+          color,
+          textAlign: align,
+        }}
+      />
+      {tail ? (
+        <FitText
+          as="div"
+          text={tail}
+          maxSize={size * 0.82}
+          minSize={Math.max(3, size * 0.4)}
+          maxLines={1}
+          lineHeight={1.1}
+          style={{
+            fontStyle: "italic",
+            fontWeight: 600,
+            letterSpacing: "-0.01em",
+            fontFamily: fontSecondary(ctx.brand),
+            color: accent,
+            textAlign: align,
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/** A curved sweep, the shape these posters use to cut a colour block into the
+ * photograph. */
+function SweepArc({ color, height = 16 }: { color: string; height?: number }) {
+  return (
+    <div
+      style={{
+        position: "relative",
+        height: px(height / 2),
+        marginTop: `-${px(height / 2)}`,
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: `-${px(6)}`,
+          right: `-${px(6)}`,
+          top: 0,
+          height: px(height),
+          background: color,
+          borderRadius: "50% 50% 0 0 / 100% 100% 0 0",
+        }}
+      />
+    </div>
+  );
+}
+
+/** The dashed flight path, curved, with a plane sitting on it. */
+function DashedArc({ color }: { color: string }) {
+  return (
+    <div style={{ position: "relative", height: px(7), width: "100%" }}>
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: px(3),
+          height: px(7),
+          borderTop: `${px(0.35)} dashed ${color}`,
+          borderRadius: "50% 50% 0 0 / 100% 100% 0 0",
+        }}
+      />
+      <span
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: px(1.4),
+          marginLeft: `-${px(1.4)}`,
+          width: 0,
+          height: 0,
+          borderTop: `${px(1.2)} solid transparent`,
+          borderBottom: `${px(1.2)} solid transparent`,
+          borderLeft: `${px(2.6)} solid ${color}`,
+        }}
+      />
+    </div>
+  );
+}
+
+/** Airline style route codes with the cities under them. */
+function RouteCodes({ ctx, color, muted }: { ctx: RenderCtx; color: string; muted: string }) {
+  const { content } = ctx;
+  const from = codeOf(ctx.businessName, "OUT");
+  const to = codeOf(content.subject || content.location, "DXB");
+  const cell = (code: string, label: string, align: "flex-start" | "flex-end") => (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: align, gap: px(0.3) }}>
+      <span
+        style={{
+          fontSize: px(6.6),
+          fontWeight: 800,
+          letterSpacing: "-0.02em",
+          color,
+          fontFamily: font(ctx.brand),
+        }}
+      >
+        {code}
+      </span>
+      <span
+        style={{
+          fontSize: px(2),
+          fontWeight: 600,
+          letterSpacing: "0.16em",
+          textTransform: "uppercase",
+          color: muted,
+          fontFamily: fontSecondary(ctx.brand),
+        }}
+      >
+        {label}
+      </span>
+    </div>
+  );
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: px(2.6), width: "100%" }}>
+      {cell(from, ctx.businessName, "flex-start")}
+      <div style={{ flex: 1 }}>
+        <DashedArc color={muted} />
+      </div>
+      {cell(to, content.subject || content.location || "", "flex-end")}
+    </div>
+  );
+}
+
 /**
  * The offer block every design ends up needing: what it is, what it costs, what
  * is included and how to reach the business, in the order a reader scans them.
@@ -3069,38 +3400,91 @@ const engines: Engine[] = [
     },
   },
   {
-    id: "boardingpass",
-    label: "Boarding Pass",
-    tags: ["bold", "light", "dense"],
+    id: "skycall",
+    label: "Sky Call",
+    tags: ["image_first", "bold", "light"],
     render: (ctx) => {
       const { content, brand } = ctx;
-      const from = codeOf(ctx.businessName, "OUT");
-      const to = codeOf(content.subject || content.location, "DXB");
       return (
         <div
           style={{
             ...base(brand),
-            background: bgOr(brand, "#eef0f7"),
-            padding: px(4.5),
+            background: deepGround(brand),
             display: "flex",
             flexDirection: "column",
           }}
         >
-          <div
-            style={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              background: "#fff",
-              borderRadius: px(3),
-              overflow: "hidden",
-              boxShadow: `0 ${px(2)} ${px(5)} rgba(20,14,38,0.14)`,
-            }}
-          >
+          <div style={{ position: "absolute", inset: 0 }}>
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
             <div
               style={{
-                background: brand.primary,
-                padding: `${px(3)} ${px(4)}`,
+                position: "absolute",
+                inset: 0,
+                background: `linear-gradient(to bottom, rgba(7,12,30,0.72) 0%, rgba(7,12,30,0.15) 38%, rgba(7,12,30,0.88) 82%)`,
+              }}
+            />
+          </div>
+          <div
+            style={{
+              position: "relative",
+              flex: 1,
+              padding: `${px(5.5)} ${px(5.5)} 0`,
+              display: "flex",
+              flexDirection: "column",
+              gap: px(2.4),
+            }}
+          >
+            <BizRow ctx={ctx} tone="light" />
+            <HeadlineTwoTone ctx={ctx} size={8.6} color="#fff" accent={brand.accent} />
+            <AdditionalText ctx={ctx} size={2.6} opacity={0.85} style={{ color: "#fff" }} />
+            <div
+              style={{
+                marginTop: "auto",
+                display: "flex",
+                flexDirection: "column",
+                gap: px(2),
+                paddingBottom: px(4),
+              }}
+            >
+              <FeatureBoxes ctx={ctx} tone="light" columns={2} />
+              <CtaBar ctx={ctx} tone="light" />
+            </div>
+          </div>
+          <ContactBar ctx={ctx} />
+        </div>
+      );
+    },
+  },
+  {
+    id: "agencysweep",
+    label: "Agency Sweep",
+    tags: ["dense", "dark", "luxury"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: deepGround(brand),
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <div style={{ position: "relative", flex: "0 0 42%" }}>
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: "linear-gradient(to bottom, rgba(7,12,30,0.55), rgba(7,12,30,0.1))",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                left: px(5),
+                top: px(4.5),
+                right: px(5),
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
@@ -3109,117 +3493,275 @@ const engines: Engine[] = [
               <BizRow ctx={ctx} tone="light" />
               <span
                 style={{
-                  fontSize: px(2.2),
-                  fontWeight: 800,
-                  letterSpacing: "0.2em",
-                  color: "rgba(255,255,255,0.86)",
+                  fontSize: px(2),
+                  fontWeight: 700,
+                  letterSpacing: "0.22em",
+                  color: brand.accent,
                   fontFamily: fontSecondary(brand),
                 }}
               >
-                BOARDING PASS
+                {(content.date || "").toUpperCase()}
               </span>
             </div>
-            <div style={{ position: "relative", flex: "0 0 34%" }}>
-              <Img src={content.imageDataUrl} video={content.videoDataUrl} />
-            </div>
-            <div
+          </div>
+          <SweepArc color={brand.accent} height={14} />
+          <div
+            style={{
+              background: brand.accent,
+              padding: `0 ${px(5.5)} ${px(2.6)}`,
+              display: "flex",
+              justifyContent: "center",
+            }}
+          >
+            <span
               style={{
-                padding: `${px(3.5)} ${px(4)}`,
-                display: "flex",
-                flexDirection: "column",
-                gap: px(2.4),
+                fontSize: px(2.2),
+                fontWeight: 800,
+                letterSpacing: "0.3em",
+                color: "#0a0f22",
+                fontFamily: fontSecondary(brand),
               }}
             >
-              <RouteLine from={from} to={to} color={brand.primary} />
-              <div style={{ display: "flex", gap: px(5), flexWrap: "wrap" }}>
-                <TicketField ctx={ctx} label="Flight" value={content.title} tone="dark" />
-                <TicketField ctx={ctx} label="Date" value={content.date} tone="dark" />
-                <TicketField ctx={ctx} label="Nights" value={content.meta1} tone="dark" />
-              </div>
-            </div>
-            <Perforation color={bgOr(brand, "#eef0f7")} />
-            <div
-              style={{
-                padding: `${px(3)} ${px(4)} ${px(3.5)}`,
-                display: "flex",
-                flexDirection: "column",
-                gap: px(1.6),
-              }}
-            >
-              <ServiceLine ctx={ctx} tone="dark" />
-              <div
-                style={{ display: "flex", alignItems: "center", gap: px(2.4), flexWrap: "wrap" }}
-              >
-                <PriceBadge ctx={ctx} tone="dark" />
-                <CtaTag ctx={ctx} tone="dark" />
-                <span style={{ marginLeft: "auto" }}>
-                  <Barcode color={brand.primary} />
-                </span>
-              </div>
-              <ContactLine ctx={ctx} tone="dark" />
+              {(content.subject || "FLIGHT").toUpperCase()}
+            </span>
+          </div>
+          <div
+            style={{
+              flex: 1,
+              padding: `${px(4)} ${px(5.5)} 0`,
+              display: "flex",
+              flexDirection: "column",
+              gap: px(2.4),
+            }}
+          >
+            <HeadlineTwoTone
+              ctx={ctx}
+              size={7.6}
+              color="#fff"
+              accent={brand.accent}
+              align="center"
+            />
+            <FeatureBoxes ctx={ctx} tone="light" columns={2} />
+            <div style={{ marginTop: "auto", paddingBottom: px(4) }}>
+              <CtaBar ctx={ctx} tone="dark" />
             </div>
           </div>
+          <ContactBar ctx={ctx} ground="rgba(255,255,255,0.08)" />
         </div>
       );
     },
   },
   {
-    id: "routeflight",
-    label: "Route",
-    tags: ["image_first", "bold", "gradient"],
+    id: "fareupdate",
+    label: "Fare Update",
+    tags: ["dense", "light", "image_first"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      const rows = [
+        [content.date, content.subject || content.location],
+        [content.meta1, content.location],
+        [content.meta2, content.subject],
+      ].filter(([when]) => !!when) as [string, string][];
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: "#eaf2fb",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <div style={{ position: "relative", flex: "0 0 46%" }}>
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: "linear-gradient(to bottom, rgba(9,16,38,0.45), rgba(234,242,251,0.9))",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                left: px(5),
+                top: px(4.5),
+                right: px(5),
+                display: "flex",
+                justifyContent: "space-between",
+              }}
+            >
+              <BizRow ctx={ctx} tone="light" />
+            </div>
+            <div style={{ position: "absolute", left: px(5), right: px(5), bottom: px(3) }}>
+              <HeadlineTwoTone ctx={ctx} size={7.4} color="#0d1733" accent={accentColor(ctx)} />
+            </div>
+          </div>
+          <div
+            style={{
+              flex: 1,
+              padding: `${px(3)} ${px(5)} 0`,
+              display: "flex",
+              flexDirection: "column",
+              gap: px(1.6),
+            }}
+          >
+            {rows.slice(0, 3).map(([when, where], i) => (
+              <div
+                key={`${when}-${i}`}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: px(2),
+                  background: "#fff",
+                  borderRadius: px(2),
+                  padding: `${px(1.8)} ${px(2.6)}`,
+                  boxShadow: `0 ${px(0.8)} ${px(2)} rgba(13,23,51,0.08)`,
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: px(2.4),
+                    fontWeight: 800,
+                    color: brand.primary,
+                    fontFamily: font(brand),
+                    minWidth: px(16),
+                  }}
+                >
+                  {when}
+                </span>
+                <span style={{ flex: 1, height: px(0.3), background: "rgba(13,23,51,0.15)" }} />
+                <span
+                  style={{
+                    fontSize: px(2.4),
+                    fontWeight: 700,
+                    color: "#0d1733",
+                    fontFamily: fontSecondary(brand),
+                  }}
+                >
+                  {where}
+                </span>
+                <span
+                  style={{
+                    fontSize: px(3),
+                    fontWeight: 800,
+                    color: accentColor(ctx),
+                    fontFamily: font(brand),
+                  }}
+                >
+                  {formatPrice(content.price, brand.currency)}
+                </span>
+              </div>
+            ))}
+            <div style={{ marginTop: "auto", paddingBottom: px(3.5) }}>
+              <CtaBar ctx={ctx} tone="dark" />
+            </div>
+          </div>
+          <ContactBar ctx={ctx} ground={brand.primary} />
+        </div>
+      );
+    },
+  },
+  {
+    id: "ticketcut",
+    label: "Ticket",
+    tags: ["dark", "bold", "image_first"],
     render: (ctx) => {
       const { content, brand } = ctx;
       return (
-        <div style={{ ...base(brand), background: "#0d0a18" }}>
-          <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+        <div style={{ ...base(brand), background: deepGround(brand) }}>
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} style={{ opacity: 0.7 }} />
           <div
             style={{
               position: "absolute",
               inset: 0,
-              background: `linear-gradient(to top, ${brand.primary}f2 10%, ${brand.primary}55 44%, transparent 70%)`,
+              background: "linear-gradient(to bottom, rgba(7,12,30,0.5), rgba(7,12,30,0.92))",
             }}
           />
           <div
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6),
+              padding: px(5.5),
               display: "flex",
               flexDirection: "column",
-              justifyContent: "space-between",
+              gap: px(3),
             }}
           >
             <BizRow ctx={ctx} tone="light" />
-            <div style={{ display: "flex", flexDirection: "column", gap: px(3) }}>
-              <RouteLine
-                from={codeOf(ctx.businessName, "OUT")}
-                to={codeOf(content.subject || content.location, "DXB")}
-                color="#fff"
-              />
-              <OfferStack ctx={ctx} tone="light" titleSize={8} />
+            <HeadlineTwoTone ctx={ctx} size={7.8} color="#fff" accent={brand.accent} />
+            {/* the ticket itself, tilted the way these posters lay it on the sky */}
+            <div
+              style={{
+                marginTop: "auto",
+                marginBottom: px(2),
+                transform: "rotate(-2.5deg)",
+                background: "#fff",
+                borderRadius: px(2.4),
+                overflow: "hidden",
+                boxShadow: `0 ${px(2)} ${px(5)} rgba(0,0,0,0.35)`,
+              }}
+            >
+              <div style={{ padding: `${px(3)} ${px(3.4)} ${px(2)}` }}>
+                <RouteCodes ctx={ctx} color="#0d1733" muted="rgba(13,23,51,0.45)" />
+              </div>
+              <Perforation color={deepGround(brand)} count={24} />
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: px(2.4),
+                  padding: `${px(2)} ${px(3.4)} ${px(3)}`,
+                }}
+              >
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  <span
+                    style={{
+                      fontSize: px(1.9),
+                      fontWeight: 700,
+                      letterSpacing: "0.18em",
+                      color: "rgba(13,23,51,0.5)",
+                      fontFamily: fontSecondary(brand),
+                    }}
+                  >
+                    {(content.date || "DATE").toUpperCase()}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: px(4.4),
+                      fontWeight: 800,
+                      color: accentColor(ctx),
+                      fontFamily: font(brand),
+                    }}
+                  >
+                    {formatPrice(content.price, brand.currency)}
+                  </span>
+                </div>
+                <span style={{ marginLeft: "auto" }}>
+                  <Barcode color="#0d1733" height={7} />
+                </span>
+              </div>
             </div>
+            <CtaBar ctx={ctx} tone="dark" />
+          </div>
+          <div style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}>
+            <ContactBar ctx={ctx} />
           </div>
         </div>
       );
     },
   },
   {
-    id: "departureboard",
-    label: "Departure Board",
-    tags: ["dark", "type_first", "dense"],
+    id: "cabinwindow",
+    label: "Cabin Window",
+    tags: ["luxury", "dark", "image_first"],
     render: (ctx) => {
       const { content, brand } = ctx;
-      const rows = [
-        ["Destination", content.subject || content.location],
-        ["Departs", content.date],
-        ["Nights", content.meta1],
-      ].filter(([, v]) => !!v) as [string, string][];
       return (
         <div
           style={{
             ...base(brand),
-            background: "#0b0d14",
-            padding: px(5),
+            background: deepGround(brand),
+            padding: px(5.5),
             display: "flex",
             flexDirection: "column",
             gap: px(3),
@@ -3229,339 +3771,98 @@ const engines: Engine[] = [
             <BizRow ctx={ctx} tone="light" />
             <span
               style={{
-                fontSize: px(2.1),
-                fontWeight: 800,
+                fontSize: px(2),
+                fontWeight: 700,
                 letterSpacing: "0.24em",
                 color: brand.accent,
                 fontFamily: fontSecondary(brand),
               }}
             >
-              DEPARTURES
+              {(content.subject || "").toUpperCase()}
             </span>
-          </div>
-          <div
-            style={{
-              position: "relative",
-              flex: "0 0 30%",
-              overflow: "hidden",
-              borderRadius: px(2),
-            }}
-          >
-            <Img
-              src={content.imageDataUrl}
-              video={content.videoDataUrl}
-              style={{ opacity: 0.75 }}
-            />
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: px(1.4) }}>
-            {rows.map(([label, value]) => (
-              <div
-                key={label}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "baseline",
-                  gap: px(2),
-                  borderBottom: "1px solid rgba(255,255,255,0.14)",
-                  paddingBottom: px(1.2),
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: px(2.1),
-                    fontWeight: 700,
-                    letterSpacing: "0.18em",
-                    textTransform: "uppercase",
-                    color: "rgba(255,255,255,0.55)",
-                    fontFamily: fontSecondary(brand),
-                  }}
-                >
-                  {label}
-                </span>
-                <span
-                  style={{
-                    fontSize: px(3.4),
-                    fontWeight: 800,
-                    letterSpacing: "0.06em",
-                    textTransform: "uppercase",
-                    color: brand.accent,
-                    fontFamily: font(brand),
-                  }}
-                >
-                  {value}
-                </span>
-              </div>
-            ))}
-          </div>
-          <OfferStack ctx={ctx} tone="light" titleSize={6.6} chips={false} />
-        </div>
-      );
-    },
-  },
-  {
-    id: "ticketstub",
-    label: "Ticket Stub",
-    tags: ["light", "image_first", "bold"],
-    render: (ctx) => {
-      const { content, brand } = ctx;
-      return (
-        <div
-          style={{
-            ...base(brand),
-            background: bgOr(brand, "#f4f1fb"),
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <div style={{ position: "relative", flex: "0 0 54%" }}>
-            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
-            <span
-              style={{
-                position: "absolute",
-                left: px(5),
-                top: px(5),
-                padding: `${px(1.2)} ${px(2.6)}`,
-                borderRadius: px(9),
-                background: "rgba(255,255,255,0.92)",
-                color: brand.primary,
-                fontWeight: 800,
-                fontSize: px(2.3),
-                letterSpacing: "0.16em",
-                fontFamily: fontSecondary(brand),
-              }}
-            >
-              FLIGHT DEAL
-            </span>
-          </div>
-          <Perforation color={bgOr(brand, "#f4f1fb")} />
-          <div style={{ flex: 1, padding: `${px(3)} ${px(5.5)} ${px(5)}` }}>
-            <OfferStack ctx={ctx} tone="dark" titleSize={7} />
-          </div>
-        </div>
-      );
-    },
-  },
-  {
-    id: "luggagetag",
-    label: "Luggage Tag",
-    tags: ["light", "minimal", "whitespace"],
-    render: (ctx) => {
-      const { content, brand } = ctx;
-      return (
-        <div
-          style={{
-            ...base(brand),
-            background: bgOr(brand, `linear-gradient(160deg, ${brand.secondary}22, #ffffff 60%)`),
-            padding: px(5),
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: px(2.6),
-          }}
-        >
-          {/* the hole and strap of a tag tied to a case */}
-          <span
-            style={{
-              width: px(3.4),
-              height: px(3.4),
-              borderRadius: "50%",
-              border: `${px(0.8)} solid ${brand.primary}`,
-            }}
-          />
-          <div
-            style={{
-              flex: 1,
-              width: "100%",
-              display: "flex",
-              flexDirection: "column",
-              borderRadius: px(4),
-              overflow: "hidden",
-              border: `${px(0.5)} solid ${brand.primary}44`,
-              background: "#fff",
-            }}
-          >
-            <div style={{ position: "relative", flex: "0 0 46%" }}>
-              <Img src={content.imageDataUrl} video={content.videoDataUrl} />
-            </div>
-            <div
-              style={{
-                flex: 1,
-                padding: px(4),
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-              }}
-            >
-              <OfferStack ctx={ctx} tone="dark" titleSize={6.4} chips={false} />
-            </div>
-          </div>
-          <BizRow ctx={ctx} tone="dark" />
-        </div>
-      );
-    },
-  },
-  {
-    id: "farebarcode",
-    label: "Fare",
-    tags: ["minimal", "light", "type_first"],
-    render: (ctx) => {
-      const { content, brand } = ctx;
-      return (
-        <div
-          style={{
-            ...base(brand),
-            background: bgOr(brand, "#ffffff"),
-            padding: px(6),
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-          }}
-        >
-          <div
-            style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}
-          >
-            <BizRow ctx={ctx} tone="dark" />
-            <Barcode color={brand.primary} height={8} />
-          </div>
-          <div
-            style={{
-              position: "relative",
-              flex: "0 0 40%",
-              overflow: "hidden",
-              borderRadius: px(2.5),
-              margin: `${px(3)} 0`,
-            }}
-          >
-            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
-          </div>
-          <OfferStack ctx={ctx} tone="dark" titleSize={7.4} />
-        </div>
-      );
-    },
-  },
-  {
-    id: "gateblocks",
-    label: "Gate",
-    tags: ["dense", "light", "bold"],
-    render: (ctx) => {
-      const { content, brand } = ctx;
-      const cells = [
-        ["Gate", codeOf(content.subject || content.location, "A12")],
-        ["Date", content.date],
-        ["Nights", content.meta1],
-        ["Hotel", content.location],
-      ].filter(([, v]) => !!v) as [string, string][];
-      return (
-        <div
-          style={{
-            ...base(brand),
-            background: bgOr(brand, "#f6f4fd"),
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <div style={{ position: "relative", flex: "0 0 40%" }}>
-            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
-            <div style={{ position: "absolute", left: px(5), bottom: px(4) }}>
-              <BizRow ctx={ctx} tone="light" />
-            </div>
-          </div>
-          <div
-            style={{
-              flex: 1,
-              padding: px(5),
-              display: "flex",
-              flexDirection: "column",
-              gap: px(3),
-            }}
-          >
-            <OfferStack ctx={ctx} tone="dark" titleSize={6.8} chips={false} contact={false} />
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: px(1.6) }}>
-              {cells.slice(0, 4).map(([label, value]) => (
-                <div
-                  key={label}
-                  style={{
-                    background: "#fff",
-                    borderRadius: px(2),
-                    padding: `${px(1.8)} ${px(2.4)}`,
-                    border: `1px solid ${brand.primary}22`,
-                  }}
-                >
-                  <TicketField ctx={ctx} label={label} value={value} tone="dark" />
-                </div>
-              ))}
-            </div>
-            <ContactLine ctx={ctx} tone="dark" />
-          </div>
-        </div>
-      );
-    },
-  },
-  {
-    id: "skytrail",
-    label: "Sky Trail",
-    tags: ["gradient", "light", "image_first"],
-    render: (ctx) => {
-      const { content, brand } = ctx;
-      return (
-        <div
-          style={{
-            ...base(brand),
-            background: `linear-gradient(180deg, ${brand.secondary}, ${brand.primary}dd 58%, ${brand.primary})`,
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          {/* a vapour trail arcing away from the plane */}
-          <div
-            style={{
-              position: "absolute",
-              left: `-${px(4)}`,
-              right: px(10),
-              top: "20%",
-              height: px(0.6),
-              background:
-                "repeating-linear-gradient(90deg, rgba(255,255,255,0.75) 0 3%, transparent 3% 6%)",
-              transform: "rotate(-8deg)",
-            }}
-          />
-          <span
-            style={{
-              position: "absolute",
-              right: px(8),
-              top: "17%",
-              width: 0,
-              height: 0,
-              borderTop: `${px(1.4)} solid transparent`,
-              borderBottom: `${px(1.4)} solid transparent`,
-              borderLeft: `${px(3)} solid #ffffff`,
-              transform: "rotate(-8deg)",
-            }}
-          />
-          <div style={{ padding: `${px(5)} ${px(5)} 0` }}>
-            <BizRow ctx={ctx} tone="light" />
           </div>
           <div
             style={{
               position: "relative",
               flex: "0 0 44%",
-              margin: `${px(6)} ${px(5)} ${px(4)}`,
+              borderRadius: "44% 44% 44% 44% / 30% 30% 30% 30%",
               overflow: "hidden",
-              borderRadius: px(5),
+              border: `${px(1.2)} solid rgba(255,255,255,0.9)`,
+              boxShadow: `0 ${px(2)} ${px(5)} rgba(0,0,0,0.4)`,
             }}
           >
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           </div>
-          <div style={{ flex: 1, padding: `0 ${px(5)} ${px(5)}` }}>
-            <OfferStack ctx={ctx} tone="light" titleSize={7} align="center" />
+          <HeadlineTwoTone ctx={ctx} size={7.2} color="#fff" accent={brand.accent} align="center" />
+          <FeatureBoxes ctx={ctx} tone="light" columns={2} limit={2} />
+          <div
+            style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: px(1.8) }}
+          >
+            <CtaBar ctx={ctx} tone="light" />
+            <ContactLine ctx={ctx} tone="light" />
           </div>
         </div>
       );
     },
   },
   {
-    id: "windowseat",
-    label: "Window Seat",
+    id: "lesssearching",
+    label: "Less Searching",
+    tags: ["light", "type_first", "whitespace"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: "#f4f1ea",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <div
+            style={{
+              padding: `${px(5)} ${px(5.5)} ${px(3)}`,
+              display: "flex",
+              flexDirection: "column",
+              gap: px(2),
+            }}
+          >
+            <BizRow ctx={ctx} tone="dark" />
+            <HeadlineTwoTone ctx={ctx} size={8.4} color="#12182c" accent={accentColor(ctx)} />
+          </div>
+          <div style={{ position: "relative", flex: 1 }}>
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: "linear-gradient(to top, rgba(7,12,30,0.8) 18%, transparent 55%)",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                left: px(5.5),
+                right: px(5.5),
+                bottom: px(4),
+                display: "flex",
+                flexDirection: "column",
+                gap: px(1.8),
+              }}
+            >
+              <FeatureBoxes ctx={ctx} tone="light" columns={2} limit={2} />
+              <CtaBar ctx={ctx} tone="light" />
+            </div>
+          </div>
+          <ContactBar ctx={ctx} ground={brand.primary} />
+        </div>
+      );
+    },
+  },
+  {
+    id: "bluepanel",
+    label: "Blue Panel",
     tags: ["light", "minimal", "image_first"],
     render: (ctx) => {
       const { content, brand } = ctx;
@@ -3569,76 +3870,239 @@ const engines: Engine[] = [
         <div
           style={{
             ...base(brand),
-            background: bgOr(brand, "#e9e6f3"),
-            padding: px(5.5),
+            background: brand.primary,
+            padding: px(4.5),
             display: "flex",
             flexDirection: "column",
-            gap: px(3.4),
+            gap: px(3),
           }}
         >
-          {/* the view through a cabin window */}
+          <BizRow ctx={ctx} tone="light" />
           <div
             style={{
-              position: "relative",
-              flex: "0 0 50%",
-              overflow: "hidden",
-              borderRadius: "42% 42% 42% 42% / 30% 30% 30% 30%",
-              border: `${px(1.4)} solid #ffffff`,
-              boxShadow: `0 ${px(1.6)} ${px(4)} rgba(24,16,44,0.18)`,
+              background: "#fff",
+              borderRadius: px(4),
+              padding: px(3.4),
+              display: "flex",
+              flexDirection: "column",
+              gap: px(2.4),
             }}
           >
-            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+            <HeadlineTwoTone ctx={ctx} size={6.8} color="#101a36" accent={accentColor(ctx)} />
+            <div
+              style={{
+                position: "relative",
+                height: px(46),
+                overflow: "hidden",
+                borderRadius: px(2.6),
+              }}
+            >
+              <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+            </div>
+            <FeatureBoxes ctx={ctx} tone="dark" columns={2} />
           </div>
-          <OfferStack ctx={ctx} tone="dark" titleSize={6.8} align="center" />
+          <div
+            style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: px(1.8) }}
+          >
+            <CtaBar ctx={ctx} tone="light" />
+            <ContactLine ctx={ctx} tone="light" />
+          </div>
         </div>
       );
     },
   },
   {
-    id: "lastcall",
-    label: "Last Call",
-    tags: ["bold", "dark", "type_first"],
+    id: "onewayticket",
+    label: "One Way",
+    tags: ["dark", "image_first", "editorial"],
     render: (ctx) => {
       const { content, brand } = ctx;
       return (
-        <div style={{ ...base(brand), background: "#120d1f" }}>
-          <Img src={content.imageDataUrl} video={content.videoDataUrl} style={{ opacity: 0.5 }} />
+        <div style={{ ...base(brand), background: "#08101f" }}>
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           <div
             style={{
               position: "absolute",
               inset: 0,
-              background: `linear-gradient(140deg, ${brand.primary}cc, rgba(18,13,31,0.92))`,
+              background:
+                "linear-gradient(to bottom, rgba(8,16,31,0.9) 8%, rgba(8,16,31,0.15) 45%, rgba(8,16,31,0.92))",
             }}
           />
           <div
             style={{
               position: "absolute",
               inset: 0,
+              padding: px(5.5),
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                paddingBottom: px(2.4),
+                borderBottom: "1px solid rgba(255,255,255,0.25)",
+              }}
+            >
+              <BizRow ctx={ctx} tone="light" />
+              <span
+                style={{
+                  fontSize: px(2),
+                  fontWeight: 700,
+                  letterSpacing: "0.2em",
+                  color: "rgba(255,255,255,0.75)",
+                  fontFamily: fontSecondary(brand),
+                }}
+              >
+                {(content.date || "").toUpperCase()}
+              </span>
+            </div>
+            <div
+              style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: px(2.4) }}
+            >
+              <span
+                style={{
+                  fontSize: px(2.2),
+                  fontWeight: 700,
+                  letterSpacing: "0.3em",
+                  color: brand.accent,
+                  fontFamily: fontSecondary(brand),
+                }}
+              >
+                ONE WAY TICKET
+              </span>
+              <RouteCodes ctx={ctx} color="#fff" muted="rgba(255,255,255,0.6)" />
+              <HeadlineTwoTone ctx={ctx} size={6.6} color="#fff" accent={brand.accent} />
+              <CtaBar ctx={ctx} tone="dark" />
+              <ContactLine ctx={ctx} tone="light" />
+            </div>
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "bookflight",
+    label: "Book Now",
+    tags: ["bold", "centered", "gradient"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: deepGround(brand),
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <div style={{ position: "absolute", inset: 0 }}>
+            <Img
+              src={content.imageDataUrl}
+              video={content.videoDataUrl}
+              style={{ opacity: 0.95 }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: `linear-gradient(180deg, rgba(7,12,30,0.72) 0%, ${brand.primary}aa 46%, rgba(7,12,30,0.9) 100%)`,
+              }}
+            />
+          </div>
+          <div
+            style={{
+              position: "relative",
+              flex: 1,
               padding: px(6),
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: px(2.6),
+              textAlign: "center",
+            }}
+          >
+            <BizRow ctx={ctx} tone="light" />
+            <DashedArc color="rgba(255,255,255,0.75)" />
+            <HeadlineTwoTone ctx={ctx} size={9} color="#fff" accent={brand.accent} align="center" />
+            <AdditionalText
+              ctx={ctx}
+              size={2.6}
+              opacity={0.85}
+              style={{ color: "#fff", textAlign: "center" }}
+            />
+            <FeatureBoxes ctx={ctx} tone="light" columns={2} limit={2} />
+            <CtaBar ctx={ctx} tone="light" />
+          </div>
+          <ContactBar ctx={ctx} ground={brand.primary} />
+        </div>
+      );
+    },
+  },
+  {
+    id: "goldroute",
+    label: "Gold Route",
+    tags: ["luxury", "dark", "image_first"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div style={{ ...base(brand), background: "#070c1e" }}>
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} style={{ opacity: 0.72 }} />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "linear-gradient(to top, rgba(7,12,30,0.95) 22%, rgba(7,12,30,0.25) 70%)",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: px(3.6),
+              border: `${px(0.35)} solid ${brand.accent}88`,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              padding: px(7),
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div
+              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: px(1) }}
+            >
               <BizRow ctx={ctx} tone="light" />
               <span
                 style={{
-                  padding: `${px(1)} ${px(2.4)}`,
-                  borderRadius: px(9),
-                  background: brand.accent,
-                  color: "#1a1226",
-                  fontWeight: 800,
-                  fontSize: px(2.2),
-                  letterSpacing: "0.16em",
+                  fontSize: px(1.9),
+                  fontWeight: 700,
+                  letterSpacing: "0.34em",
+                  color: brand.accent,
                   fontFamily: fontSecondary(brand),
                 }}
               >
-                LAST SEATS
+                FLIGHT TICKET
               </span>
             </div>
-            <OfferStack ctx={ctx} tone="light" titleSize={9.6} gap={2.2} />
-            <Barcode color="rgba(255,255,255,0.7)" height={5} />
+            <div style={{ display: "flex", flexDirection: "column", gap: px(2.6) }}>
+              <RouteCodes ctx={ctx} color="#fff" muted={`${brand.accent}cc`} />
+              <HeadlineTwoTone ctx={ctx} size={7} color="#fff" accent={brand.accent} />
+              <ServiceLine ctx={ctx} tone="light" />
+              <div
+                style={{ display: "flex", alignItems: "center", gap: px(2.4), flexWrap: "wrap" }}
+              >
+                <PriceBadge ctx={ctx} tone="light" />
+                <CtaTag ctx={ctx} tone="dark" />
+              </div>
+              <ContactLine ctx={ctx} tone="light" />
+            </div>
           </div>
         </div>
       );
@@ -5139,16 +5603,16 @@ const ENGINE_STYLE: Record<string, string> = {
   halfmoon: "Half Moon",
   gridlines: "Grid Lines",
   stickerprice: "Sticker",
-  boardingpass: "Boarding Pass",
-  routeflight: "Route",
-  departureboard: "Departure Board",
-  ticketstub: "Ticket Stub",
-  luggagetag: "Luggage Tag",
-  farebarcode: "Fare",
-  gateblocks: "Gate",
-  skytrail: "Sky Trail",
-  windowseat: "Window Seat",
-  lastcall: "Last Call",
+  skycall: "Sky Call",
+  agencysweep: "Agency Sweep",
+  fareupdate: "Fare Update",
+  ticketcut: "Ticket",
+  cabinwindow: "Cabin Window",
+  lesssearching: "Less Searching",
+  bluepanel: "Blue Panel",
+  onewayticket: "One Way",
+  bookflight: "Book Now",
+  goldroute: "Gold Route",
   wavecut: "Wave",
   sunarc: "Sun",
   beachlabel: "Beach Label",
@@ -5475,16 +5939,16 @@ function buildSignatureTemplates(): Template[] {
  * group in the picker, so a set can grow without touching the ids of another. */
 const CATEGORY_ENGINES: Record<TemplateCategory, string[]> = {
   flights: [
-    "boardingpass",
-    "routeflight",
-    "departureboard",
-    "ticketstub",
-    "luggagetag",
-    "farebarcode",
-    "gateblocks",
-    "skytrail",
-    "windowseat",
-    "lastcall",
+    "skycall",
+    "agencysweep",
+    "fareupdate",
+    "ticketcut",
+    "cabinwindow",
+    "lesssearching",
+    "bluepanel",
+    "onewayticket",
+    "bookflight",
+    "goldroute",
   ],
   sea: [
     "wavecut",
