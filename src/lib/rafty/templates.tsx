@@ -1,4 +1,5 @@
 import { formatPrice, FORMAT_SPECS, labelledValue } from "./constants";
+import { Briefcase, Building2, MapPin, Plane } from "lucide-react";
 import { FitText } from "@/components/rafty/FitText";
 import type {
   BrandProfile,
@@ -1043,6 +1044,406 @@ function RouteCodes({ ctx, color, muted }: { ctx: RenderCtx; color: string; mute
         <DashedArc color={muted} />
       </div>
       {cell(to, content.subject || content.location || "", "flex-end")}
+    </div>
+  );
+}
+
+/* ---------------------------- booking app parts ---------------------------- */
+
+/**
+ * The pieces of a travel booking app screen.
+ *
+ * A post built to look like an app is a real format agencies use, and it is
+ * reproducible: the status row, the search field, the category strip, the deal
+ * card, the destination cards and the tab bar are all boxes and type. What the
+ * reference render adds around it - a hand, a photographed aircraft breaking
+ * out of the screen, volumetric cloud - is photography, and nothing drawn in a
+ * browser will stand in for it.
+ */
+
+/** The status row at the top of a phone screen. */
+function PhoneStatus({ ctx, ink }: { ctx: RenderCtx; ink: string }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <span
+        style={{
+          fontSize: px(2.2),
+          fontWeight: 700,
+          color: ink,
+          fontFamily: fontSecondary(ctx.brand),
+        }}
+      >
+        9:41
+      </span>
+      <div style={{ display: "flex", alignItems: "flex-end", gap: px(0.5) }}>
+        {[1, 1.5, 2, 2.5].map((h) => (
+          <span
+            key={h}
+            style={{ width: px(0.6), height: px(h), borderRadius: px(0.3), background: ink }}
+          />
+        ))}
+        <span
+          style={{
+            width: px(3),
+            height: px(1.6),
+            marginLeft: px(0.8),
+            borderRadius: px(0.5),
+            border: `${px(0.25)} solid ${ink}`,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** The search field the screen opens with. */
+function SearchField({ ctx }: { ctx: RenderCtx }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: px(1.8),
+        background: "#fff",
+        borderRadius: px(9),
+        padding: `${px(2)} ${px(3)}`,
+        boxShadow: `0 ${px(1)} ${px(2.6)} rgba(13,32,48,0.1)`,
+      }}
+    >
+      <span
+        style={{
+          width: px(2.4),
+          height: px(2.4),
+          borderRadius: "50%",
+          border: `${px(0.4)} solid ${ctx.brand.primary}`,
+          flex: "0 0 auto",
+        }}
+      />
+      <span
+        style={{
+          fontSize: px(2.3),
+          fontWeight: 600,
+          color: "rgba(13,32,48,0.5)",
+          fontFamily: fontSecondary(ctx.brand),
+        }}
+      >
+        {ctx.content.location || ctx.content.subject || "Kërko fluturime, hotele, vende…"}
+      </span>
+    </div>
+  );
+}
+
+/** The row of category tiles, filled with what the post says is included. */
+function CategoryRow({ ctx }: { ctx: RenderCtx }) {
+  const items = ctx.content.services.filter(Boolean).slice(0, 4);
+  if (!items.length) return null;
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`,
+        gap: px(1.6),
+      }}
+    >
+      {items.map((item) => (
+        <div
+          key={item}
+          style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: px(0.9) }}
+        >
+          <span
+            style={{
+              width: px(8),
+              height: px(8),
+              borderRadius: px(2.4),
+              background: `${ctx.brand.primary}1f`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {(() => {
+              // A different mark per tile, cycled by position: the labels are
+              // free text in any language, so reading meaning out of them would
+              // be guesswork.
+              const Icon = [Plane, Building2, Briefcase, MapPin][items.indexOf(item) % 4]!;
+              return (
+                <Icon
+                  color={ctx.brand.primary}
+                  strokeWidth={2.2}
+                  style={{ width: px(4), height: px(4) }}
+                />
+              );
+            })()}
+          </span>
+          <span
+            style={{
+              fontSize: px(1.8),
+              fontWeight: 600,
+              textAlign: "center",
+              lineHeight: 1.15,
+              color: "rgba(13,32,48,0.75)",
+              fontFamily: fontSecondary(ctx.brand),
+            }}
+          >
+            {item}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** The hero deal card, the one the screen sells with. */
+function DealCard({ ctx, heading }: { ctx: RenderCtx; heading: string }) {
+  const { content, brand } = ctx;
+  return (
+    <div
+      style={{
+        position: "relative",
+        flex: 1,
+        borderRadius: px(3),
+        overflow: "hidden",
+        minHeight: px(30),
+      }}
+    >
+      <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: `linear-gradient(100deg, ${brand.primary}f2 34%, ${brand.primary}55 62%, transparent)`,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          padding: px(3),
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          gap: px(1),
+          width: "62%",
+        }}
+      >
+        <span
+          style={{
+            fontSize: px(2.4),
+            fontStyle: "italic",
+            fontWeight: 600,
+            color: brand.accent,
+            fontFamily: fontSecondary(brand),
+          }}
+        >
+          {content.subject || ctx.businessName}
+        </span>
+        <FitText
+          as="div"
+          text={heading}
+          maxSize={4.6}
+          minSize={2.6}
+          maxLines={2}
+          lineHeight={1.05}
+          style={{
+            fontWeight: 800,
+            color: "#fff",
+            fontFamily: font(brand),
+            letterSpacing: "-0.02em",
+          }}
+        />
+        {content.additionalText ? (
+          <span
+            style={{
+              fontSize: px(2),
+              color: "rgba(255,255,255,0.86)",
+              lineHeight: 1.3,
+              fontFamily: fontSecondary(brand),
+            }}
+          >
+            {content.additionalText}
+          </span>
+        ) : null}
+        {content.cta ? (
+          <span
+            style={{
+              alignSelf: "flex-start",
+              marginTop: px(0.8),
+              padding: `${px(1.2)} ${px(2.4)}`,
+              borderRadius: px(9),
+              background: "#0d2030",
+              color: "#fff",
+              fontSize: px(2),
+              fontWeight: 700,
+              fontFamily: fontSecondary(brand),
+            }}
+          >
+            {content.cta}
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/** The destination cards under the deal, priced the way a listing prints them. */
+function DestinationCards({ ctx }: { ctx: RenderCtx }) {
+  const { content, brand } = ctx;
+  const meta = metaItems(content, ctx.businessType);
+  const cards = [
+    {
+      where: content.subject || content.location,
+      note: meta[0] ?? "",
+      price: true,
+      pos: "left center",
+    },
+    { where: meta[0] || content.location, note: meta[1] ?? "", price: false, pos: "center" },
+    { where: meta[1] || content.date, note: meta[2] ?? "", price: false, pos: "right center" },
+  ].filter((c, i, all) => !!c.where && all.findIndex((x) => x.where === c.where) === i);
+  if (!cards.length) return null;
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: `repeat(${cards.length}, minmax(0, 1fr))`,
+        gap: px(1.6),
+      }}
+    >
+      {cards.map((card, i) => (
+        <div
+          key={`${card.where}-${i}`}
+          style={{ display: "flex", flexDirection: "column", gap: px(0.9) }}
+        >
+          <div
+            style={{
+              position: "relative",
+              height: px(14),
+              borderRadius: px(2),
+              overflow: "hidden",
+            }}
+          >
+            <Img
+              src={content.imageDataUrl}
+              video={content.videoDataUrl}
+              style={{ objectPosition: card.pos }}
+            />
+          </div>
+          <span
+            style={{
+              fontSize: px(1.9),
+              fontWeight: 700,
+              color: "#0d2030",
+              fontFamily: fontSecondary(brand),
+            }}
+          >
+            {card.where}
+          </span>
+          {card.price ? (
+            <span
+              style={{
+                fontSize: px(2.4),
+                fontWeight: 800,
+                color: brand.primary,
+                fontFamily: font(brand),
+              }}
+            >
+              {formatPrice(content.price, brand.currency)}
+            </span>
+          ) : null}
+          {card.note ? (
+            <span
+              style={{
+                fontSize: px(1.7),
+                color: "rgba(13,32,48,0.55)",
+                fontFamily: fontSecondary(brand),
+              }}
+            >
+              {card.note}
+            </span>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** The tab bar the screen sits on. */
+function TabBar({ ctx }: { ctx: RenderCtx }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: `${px(1.8)} ${px(4)}`,
+        borderTop: "1px solid rgba(13,32,48,0.08)",
+        background: "#fff",
+      }}
+    >
+      {[0, 1, 2, 3, 4].map((i) => (
+        <span
+          key={i}
+          style={{
+            width: px(3),
+            height: px(3),
+            borderRadius: i === 0 ? px(0.8) : "50%",
+            background: i === 0 ? ctx.brand.primary : "rgba(13,32,48,0.18)",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** The whole screen, so both the flat design and the one inside a drawn phone
+ * are the same layout rather than two that drift apart. */
+function AppScreen({ ctx, compact = false }: { ctx: RenderCtx; compact?: boolean }) {
+  const { content, brand } = ctx;
+  return (
+    <div
+      style={{
+        position: "relative",
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        gap: px(compact ? 1.6 : 2.4),
+        padding: `${px(compact ? 2.6 : 4)} ${px(compact ? 2.6 : 4.5)} 0`,
+        background: `linear-gradient(180deg, ${brand.primary}14, #ffffff 42%)`,
+        overflow: "hidden",
+      }}
+    >
+      <PhoneStatus ctx={ctx} ink="#0d2030" />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <BizRow ctx={ctx} tone="dark" />
+        <span
+          style={{
+            fontSize: px(1.9),
+            fontWeight: 600,
+            color: "rgba(13,32,48,0.55)",
+            fontFamily: fontSecondary(brand),
+          }}
+        >
+          {content.date}
+        </span>
+      </div>
+      <HeadlineTwoTone
+        ctx={ctx}
+        size={compact ? 5.2 : 6.4}
+        color="#0d2030"
+        accent={brand.primary}
+      />
+      <SearchField ctx={ctx} />
+      <CategoryRow ctx={ctx} />
+      <DealCard ctx={ctx} heading={content.location || content.subject || content.title} />
+      {compact ? null : <DestinationCards ctx={ctx} />}
+      <div
+        style={{
+          marginTop: "auto",
+          marginLeft: `-${px(compact ? 2.6 : 4.5)}`,
+          marginRight: `-${px(compact ? 2.6 : 4.5)}`,
+        }}
+      >
+        <TabBar ctx={ctx} />
+      </div>
     </div>
   );
 }
@@ -5428,6 +5829,97 @@ const engines: Engine[] = [
       );
     },
   },
+  {
+    id: "appscreen",
+    label: "App Screen",
+    tags: ["light", "dense", "minimal"],
+    render: (ctx) => (
+      <div
+        style={{ ...base(ctx.brand), background: "#fff", display: "flex", flexDirection: "column" }}
+      >
+        <AppScreen ctx={ctx} />
+      </div>
+    ),
+  },
+  {
+    id: "phonemock",
+    label: "Phone",
+    tags: ["light", "image_first", "whitespace"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: `linear-gradient(165deg, ${brand.primary}26, ${brand.secondary}14 46%, #ffffff)`,
+            padding: `${px(5)} ${px(5)} 0`,
+            display: "flex",
+            flexDirection: "column",
+            gap: px(2.6),
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <BizRow ctx={ctx} tone="dark" />
+            <span
+              style={{
+                fontSize: px(1.9),
+                fontWeight: 700,
+                letterSpacing: "0.2em",
+                color: brand.primary,
+                fontFamily: fontSecondary(brand),
+              }}
+            >
+              {(content.date || "").toUpperCase()}
+            </span>
+          </div>
+          <HeadlineTwoTone ctx={ctx} size={7.2} color="#0d2030" accent={brand.primary} />
+          <ServiceLine ctx={ctx} tone="dark" />
+          {/* the handset itself: bezel, notch and a screen with the same layout */}
+          <div
+            style={{
+              position: "relative",
+              flex: 1,
+              margin: `0 ${px(7)}`,
+              marginBottom: `-${px(6)}`,
+              background: "#0d1218",
+              borderRadius: `${px(7)} ${px(7)} 0 0`,
+              padding: px(1),
+              paddingBottom: 0,
+              boxShadow: `0 ${px(3)} ${px(8)} rgba(13,32,48,0.32)`,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                position: "relative",
+                height: "100%",
+                background: "#fff",
+                borderRadius: `${px(6.2)} ${px(6.2)} 0 0`,
+                overflow: "hidden",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <span
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  top: px(1.2),
+                  marginLeft: `-${px(6)}`,
+                  width: px(12),
+                  height: px(2.6),
+                  borderRadius: px(9),
+                  background: "#0d1218",
+                  zIndex: 2,
+                }}
+              />
+              <AppScreen ctx={ctx} compact />
+            </div>
+          </div>
+        </div>
+      );
+    },
+  },
 ];
 
 export const engineIds = [...engines.map((e) => e.id), "custom"];
@@ -5613,6 +6105,8 @@ const ENGINE_STYLE: Record<string, string> = {
   onewayticket: "One Way",
   bookflight: "Book Now",
   goldroute: "Gold Route",
+  appscreen: "App Screen",
+  phonemock: "Phone",
   wavecut: "Wave",
   sunarc: "Sun",
   beachlabel: "Beach Label",
@@ -5949,6 +6443,8 @@ const CATEGORY_ENGINES: Record<TemplateCategory, string[]> = {
     "onewayticket",
     "bookflight",
     "goldroute",
+    "appscreen",
+    "phonemock",
   ],
   sea: [
     "wavecut",
