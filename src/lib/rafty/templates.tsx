@@ -1,4 +1,5 @@
 import { formatPrice, FORMAT_SPECS, labelledValue } from "./constants";
+import { INK } from "./tokens";
 import { Briefcase, Building2, MapPin, Plane } from "lucide-react";
 import { FitText } from "@/components/rafty/FitText";
 import type {
@@ -164,15 +165,15 @@ export function metaItems(content: PostContent, type: BusinessType): string[] {
 function Chips({ items, tone }: { items: string[]; tone: "light" | "dark" }) {
   if (!items.length) return null;
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: px(1.3) }}>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: px(1.2) }}>
       {items.slice(0, 6).map((s) => (
         <span
           key={s}
           style={{
-            fontSize: px(2.4),
+            fontSize: px(2.2),
             fontWeight: 600,
-            padding: `${px(0.9)} ${px(2.2)}`,
-            borderRadius: px(10),
+            padding: `${px(0.8)} ${px(2.2)}`,
+            borderRadius: px(9),
             color: tone === "light" ? "#fff" : "#221a33",
             background: tone === "light" ? "rgba(255,255,255,0.18)" : "rgba(24,12,45,0.06)",
             border: `1px solid ${tone === "light" ? "rgba(255,255,255,0.34)" : "rgba(24,12,45,0.08)"}`,
@@ -195,7 +196,7 @@ function PriceBadge({ ctx, tone }: { ctx: RenderCtx; tone: "light" | "dark" }) {
       style={{
         display: "inline-block",
         alignSelf: "flex-start",
-        padding: `${px(1.6)} ${px(3.4)}`,
+        padding: `${px(1.8)} ${px(3.4)}`,
         borderRadius: square ? px(1.6) : px(10),
         fontWeight: 800,
         fontSize: px(4.2),
@@ -223,7 +224,7 @@ function CtaTag({ ctx, tone }: { ctx: RenderCtx; tone: "light" | "dark" }) {
         fontSize: px(2.6),
         fontWeight: 700,
         letterSpacing: "0.02em",
-        padding: `${px(1.1)} ${px(2.6)}`,
+        padding: `${px(1.2)} ${px(2.6)}`,
         borderRadius: px(9),
         fontFamily: fontSecondary(ctx.brand),
         color: tone === "light" ? "#0f0a1a" : "#fff",
@@ -241,7 +242,7 @@ function Kicker({ ctx, color }: { ctx: RenderCtx; color: string }) {
   return (
     <span
       style={{
-        fontSize: px(2.7),
+        fontSize: px(2.6),
         fontWeight: 700,
         letterSpacing: "0.2em",
         textTransform: "uppercase",
@@ -316,7 +317,7 @@ function ServiceLine({ ctx, tone }: { ctx: RenderCtx; tone: "light" | "dark" }) 
   return (
     <div
       style={{
-        fontSize: px(2.3),
+        fontSize: px(2.2),
         fontWeight: 600,
         lineHeight: 1.4,
         letterSpacing: "0.02em",
@@ -346,7 +347,7 @@ function ContactLine({ ctx, tone }: { ctx: RenderCtx; tone: "light" | "dark" }) 
   return (
     <div
       style={{
-        fontSize: px(2.1),
+        fontSize: px(2.2),
         fontWeight: 500,
         lineHeight: 1.4,
         fontFamily: fontSecondary(ctx.brand),
@@ -363,12 +364,12 @@ function BizRow({ ctx, tone }: { ctx: RenderCtx; tone: "light" | "dark" }) {
   const hasLogo = !!ctx.brand.logoDataUrl;
   if (!showName && !hasLogo) return null;
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: px(2.2) }}>
+    <div style={{ display: "flex", alignItems: "center", gap: px(2.6) }}>
       <Logo ctx={ctx} />
       {showName ? (
         <span
           style={{
-            fontSize: px(2.9),
+            fontSize: px(2.6),
             fontWeight: 700,
             fontFamily: fontSecondary(ctx.brand),
             color: tone === "light" ? "#fff" : "#1a1225",
@@ -409,7 +410,7 @@ function Perforation({ color, count = 22 }: { color: string; count?: number }) {
 /** Departure to arrival, as a dotted line with a plane sitting on it. */
 function RouteLine({ from, to, color }: { from: string; to: string; color: string }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: px(2), width: "100%" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: px(1.8), width: "100%" }}>
       <span style={{ fontSize: px(5.4), fontWeight: 800, letterSpacing: "-0.02em", color }}>
         {from}
       </span>
@@ -417,23 +418,23 @@ function RouteLine({ from, to, color }: { from: string; to: string; color: strin
         style={{
           flex: 1,
           height: px(0.4),
-          background: `repeating-linear-gradient(90deg, ${color} 0 ${px(1)}, transparent ${px(1)} ${px(2)})`,
+          background: `repeating-linear-gradient(90deg, ${color} 0 ${px(1)}, transparent ${px(0.8)} ${px(1.8)})`,
         }}
       />
       <span
         style={{
           width: 0,
           height: 0,
-          borderTop: `${px(1.1)} solid transparent`,
-          borderBottom: `${px(1.1)} solid transparent`,
-          borderLeft: `${px(2.2)} solid ${color}`,
+          borderTop: `${px(1.2)} solid transparent`,
+          borderBottom: `${px(1.2)} solid transparent`,
+          borderLeft: `${px(2.6)} solid ${color}`,
         }}
       />
       <span
         style={{
           flex: 1,
           height: px(0.4),
-          background: `repeating-linear-gradient(90deg, ${color} 0 ${px(1)}, transparent ${px(1)} ${px(2)})`,
+          background: `repeating-linear-gradient(90deg, ${color} 0 ${px(1)}, transparent ${px(0.8)} ${px(1.8)})`,
         }}
       />
       <span style={{ fontSize: px(5.4), fontWeight: 800, letterSpacing: "-0.02em", color }}>
@@ -447,7 +448,7 @@ function RouteLine({ from, to, color }: { from: string; to: string; color: strin
 function Barcode({ color, height = 6 }: { color: string; height?: number }) {
   const widths = [0.5, 0.9, 0.4, 1.3, 0.5, 0.7, 1.1, 0.4, 0.8, 0.5, 1.2, 0.6, 0.4, 1, 0.7, 0.5];
   return (
-    <div style={{ display: "flex", alignItems: "flex-end", gap: px(0.5), height: px(height) }}>
+    <div style={{ display: "flex", alignItems: "flex-end", gap: px(0.4), height: px(height) }}>
       {widths.map((w, i) => (
         <span key={i} style={{ width: px(w), height: "100%", background: color, opacity: 0.9 }} />
       ))}
@@ -470,10 +471,10 @@ function TicketField({
   if (!value) return null;
   const ink = tone === "light" ? "#fff" : "#191128";
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: px(0.5) }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: px(0.4) }}>
       <span
         style={{
-          fontSize: px(1.9),
+          fontSize: px(1.8),
           fontWeight: 700,
           letterSpacing: "0.18em",
           textTransform: "uppercase",
@@ -486,7 +487,7 @@ function TicketField({
       </span>
       <span
         style={{
-          fontSize: px(3),
+          fontSize: px(3.2),
           fontWeight: 800,
           fontFamily: font(ctx.brand),
           color: ink,
@@ -584,8 +585,8 @@ function Stamp({
       style={{
         width: px(size),
         height: px(size * 0.72),
-        border: `${px(0.7)} dashed ${color}`,
-        borderRadius: px(1.6),
+        border: `${px(0.8)} dashed ${color}`,
+        borderRadius: px(1.2),
         transform: `rotate(${rotate}deg)`,
         display: "flex",
         flexDirection: "column",
@@ -594,13 +595,13 @@ function Stamp({
         gap: px(0.4),
         color,
         textAlign: "center",
-        padding: px(1),
+        padding: px(0.8),
       }}
     >
-      <span style={{ fontSize: px(1.7), letterSpacing: "0.2em", opacity: 0.85 }}>VISITED</span>
+      <span style={{ fontSize: px(1.8), letterSpacing: "0.2em", opacity: 0.85 }}>VISITED</span>
       <span
         style={{
-          fontSize: px(2.8),
+          fontSize: px(2.6),
           fontWeight: 800,
           letterSpacing: "0.06em",
           fontFamily: fontSecondary(ctx.brand),
@@ -646,17 +647,17 @@ function StopList({ ctx, tone }: { ctx: RenderCtx; tone: "light" | "dark" }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: px(1.2), width: "100%" }}>
       {stops.map((stop, i) => (
-        <div key={stop} style={{ display: "flex", alignItems: "center", gap: px(2) }}>
+        <div key={stop} style={{ display: "flex", alignItems: "center", gap: px(1.8) }}>
           <span
             style={{
               width: px(4.4),
               height: px(4.4),
               borderRadius: "50%",
-              border: `${px(0.35)} solid ${ink}`,
+              border: `${px(0.4)} solid ${ink}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: px(2.1),
+              fontSize: px(2.2),
               fontWeight: 800,
               color: ink,
               opacity: 0.85,
@@ -739,8 +740,8 @@ function Tick({ color, size = 2.2 }: { color: string; size?: number }) {
       style={{
         width: px(size),
         height: px(size * 1.7),
-        borderRight: `${px(0.42)} solid ${color}`,
-        borderBottom: `${px(0.42)} solid ${color}`,
+        borderRight: `${px(0.4)} solid ${color}`,
+        borderBottom: `${px(0.4)} solid ${color}`,
         transform: "rotate(45deg)",
         marginTop: `-${px(size * 0.35)}`,
         flex: "0 0 auto",
@@ -772,7 +773,7 @@ function FeatureBoxes({
       style={{
         display: "grid",
         gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-        gap: px(1.4),
+        gap: px(1.2),
         width: "100%",
       }}
     >
@@ -782,9 +783,9 @@ function FeatureBoxes({
           style={{
             display: "flex",
             alignItems: "center",
-            gap: px(1.6),
-            padding: `${px(1.4)} ${px(2)}`,
-            borderRadius: px(1.6),
+            gap: px(1.8),
+            padding: `${px(1.2)} ${px(2)}`,
+            borderRadius: px(1.2),
             background: tone === "light" ? "rgba(255,255,255,0.12)" : "rgba(15,23,49,0.06)",
             border: `1px solid ${tone === "light" ? "rgba(255,255,255,0.28)" : "rgba(15,23,49,0.12)"}`,
           }}
@@ -818,9 +819,9 @@ function CtaBar({ ctx, tone }: { ctx: RenderCtx; tone: "light" | "dark" }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        gap: px(2.4),
+        gap: px(2.6),
         width: "100%",
-        padding: `${px(2)} ${px(3)}`,
+        padding: `${px(1.8)} ${px(3)}`,
         borderRadius: px(9),
         background: tone === "light" ? "#ffffff" : accentColor(ctx),
         color: tone === "light" ? accentColor(ctx) : "#ffffff",
@@ -828,7 +829,7 @@ function CtaBar({ ctx, tone }: { ctx: RenderCtx; tone: "light" | "dark" }) {
     >
       <span
         style={{
-          fontSize: px(2.9),
+          fontSize: px(2.6),
           fontWeight: 800,
           letterSpacing: "0.04em",
           textTransform: "uppercase",
@@ -838,7 +839,7 @@ function CtaBar({ ctx, tone }: { ctx: RenderCtx; tone: "light" | "dark" }) {
         {label}
       </span>
       {price ? (
-        <span style={{ fontSize: px(3.4), fontWeight: 800, fontFamily: font(ctx.brand) }}>
+        <span style={{ fontSize: px(3.2), fontWeight: 800, fontFamily: font(ctx.brand) }}>
           {price}
         </span>
       ) : null}
@@ -861,7 +862,7 @@ function ContactBar({ ctx, ground }: { ctx: RenderCtx; ground?: string }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        gap: px(3),
+        gap: px(2.6),
         flexWrap: "wrap",
         padding: `${px(1.8)} ${px(3)}`,
         background: ground ?? "rgba(7,12,30,0.9)",
@@ -872,9 +873,9 @@ function ContactBar({ ctx, ground }: { ctx: RenderCtx; ground?: string }) {
         <span
           key={part}
           style={{
-            fontSize: px(2.1),
+            fontSize: px(2.2),
             fontWeight: 600,
-            color: "rgba(255,255,255,0.9)",
+            color: INK.onDarkBody,
             fontFamily: fontSecondary(ctx.brand),
           }}
         >
@@ -984,7 +985,7 @@ function DashedArc({ color }: { color: string }) {
           right: 0,
           top: px(3),
           height: px(7),
-          borderTop: `${px(0.35)} dashed ${color}`,
+          borderTop: `${px(0.4)} dashed ${color}`,
           borderRadius: "50% 50% 0 0 / 100% 100% 0 0",
         }}
       />
@@ -1011,10 +1012,10 @@ function RouteCodes({ ctx, color, muted }: { ctx: RenderCtx; color: string; mute
   const from = codeOf(ctx.businessName, "OUT");
   const to = codeOf(content.subject || content.location, "DXB");
   const cell = (code: string, label: string, align: "flex-start" | "flex-end") => (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: align, gap: px(0.3) }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: align, gap: px(0.4) }}>
       <span
         style={{
-          fontSize: px(6.6),
+          fontSize: px(7),
           fontWeight: 800,
           letterSpacing: "-0.02em",
           color,
@@ -1025,7 +1026,7 @@ function RouteCodes({ ctx, color, muted }: { ctx: RenderCtx; color: string; mute
       </span>
       <span
         style={{
-          fontSize: px(2),
+          fontSize: px(1.8),
           fontWeight: 600,
           letterSpacing: "0.16em",
           textTransform: "uppercase",
@@ -1075,7 +1076,7 @@ function PhoneStatus({ ctx, ink }: { ctx: RenderCtx; ink: string }) {
       >
         9:41
       </span>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: px(0.5) }}>
+      <div style={{ display: "flex", alignItems: "flex-end", gap: px(0.4) }}>
         {[1, 1.5, 2, 2.5].map((h) => (
           <span
             key={h}
@@ -1087,7 +1088,7 @@ function PhoneStatus({ ctx, ink }: { ctx: RenderCtx; ink: string }) {
             width: px(3),
             height: px(1.6),
             marginLeft: px(0.8),
-            borderRadius: px(0.5),
+            borderRadius: px(0.6),
             border: `${px(0.25)} solid ${ink}`,
           }}
         />
@@ -1106,8 +1107,8 @@ function SearchField({ ctx }: { ctx: RenderCtx }) {
         gap: px(1.8),
         background: "#fff",
         borderRadius: px(9),
-        padding: `${px(2)} ${px(3)}`,
-        boxShadow: `0 ${px(1)} ${px(2.6)} rgba(13,32,48,0.1)`,
+        padding: `${px(1.8)} ${px(3)}`,
+        boxShadow: `0 ${px(0.8)} ${px(2.6)} rgba(13,32,48,0.1)`,
       }}
     >
       <span
@@ -1121,9 +1122,9 @@ function SearchField({ ctx }: { ctx: RenderCtx }) {
       />
       <span
         style={{
-          fontSize: px(2.3),
+          fontSize: px(2.2),
           fontWeight: 600,
-          color: "rgba(13,32,48,0.5)",
+          color: INK.muted,
           fontFamily: fontSecondary(ctx.brand),
         }}
       >
@@ -1142,13 +1143,13 @@ function CategoryRow({ ctx }: { ctx: RenderCtx }) {
       style={{
         display: "grid",
         gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`,
-        gap: px(1.6),
+        gap: px(1.8),
       }}
     >
       {items.map((item) => (
         <div
           key={item}
-          style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: px(0.9) }}
+          style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: px(0.8) }}
         >
           <span
             style={{
@@ -1181,7 +1182,7 @@ function CategoryRow({ ctx }: { ctx: RenderCtx }) {
               fontWeight: 600,
               textAlign: "center",
               lineHeight: 1.15,
-              color: "rgba(13,32,48,0.75)",
+              color: INK.body,
               fontFamily: fontSecondary(ctx.brand),
             }}
           >
@@ -1201,7 +1202,7 @@ function DealCard({ ctx, heading }: { ctx: RenderCtx; heading: string }) {
       style={{
         position: "relative",
         flex: 1,
-        borderRadius: px(3),
+        borderRadius: px(2.4),
         overflow: "hidden",
         minHeight: px(30),
       }}
@@ -1218,17 +1219,17 @@ function DealCard({ ctx, heading }: { ctx: RenderCtx; heading: string }) {
         style={{
           position: "absolute",
           inset: 0,
-          padding: px(3),
+          padding: px(2.6),
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          gap: px(1),
+          gap: px(0.8),
           width: "62%",
         }}
       >
         <span
           style={{
-            fontSize: px(2.4),
+            fontSize: px(2.2),
             fontStyle: "italic",
             fontWeight: 600,
             color: brand.accent,
@@ -1246,7 +1247,7 @@ function DealCard({ ctx, heading }: { ctx: RenderCtx; heading: string }) {
           lineHeight={1.05}
           style={{
             fontWeight: 800,
-            color: "#fff",
+            color: INK.onDark,
             fontFamily: font(brand),
             letterSpacing: "-0.02em",
           }}
@@ -1254,8 +1255,8 @@ function DealCard({ ctx, heading }: { ctx: RenderCtx; heading: string }) {
         {content.additionalText ? (
           <span
             style={{
-              fontSize: px(2),
-              color: "rgba(255,255,255,0.86)",
+              fontSize: px(1.8),
+              color: INK.onDarkBody,
               lineHeight: 1.3,
               fontFamily: fontSecondary(brand),
             }}
@@ -1271,8 +1272,8 @@ function DealCard({ ctx, heading }: { ctx: RenderCtx; heading: string }) {
               padding: `${px(1.2)} ${px(2.4)}`,
               borderRadius: px(9),
               background: "#0d2030",
-              color: "#fff",
-              fontSize: px(2),
+              color: INK.onDark,
+              fontSize: px(1.8),
               fontWeight: 700,
               fontFamily: fontSecondary(brand),
             }}
@@ -1305,19 +1306,19 @@ function DestinationCards({ ctx }: { ctx: RenderCtx }) {
       style={{
         display: "grid",
         gridTemplateColumns: `repeat(${cards.length}, minmax(0, 1fr))`,
-        gap: px(1.6),
+        gap: px(1.8),
       }}
     >
       {cards.map((card, i) => (
         <div
           key={`${card.where}-${i}`}
-          style={{ display: "flex", flexDirection: "column", gap: px(0.9) }}
+          style={{ display: "flex", flexDirection: "column", gap: px(0.8) }}
         >
           <div
             style={{
               position: "relative",
               height: px(14),
-              borderRadius: px(2),
+              borderRadius: px(2.4),
               overflow: "hidden",
             }}
           >
@@ -1329,9 +1330,9 @@ function DestinationCards({ ctx }: { ctx: RenderCtx }) {
           </div>
           <span
             style={{
-              fontSize: px(1.9),
+              fontSize: px(1.8),
               fontWeight: 700,
-              color: "#0d2030",
+              color: INK.strong,
               fontFamily: fontSecondary(brand),
             }}
           >
@@ -1340,7 +1341,7 @@ function DestinationCards({ ctx }: { ctx: RenderCtx }) {
           {card.price ? (
             <span
               style={{
-                fontSize: px(2.4),
+                fontSize: px(2.2),
                 fontWeight: 800,
                 color: brand.primary,
                 fontFamily: font(brand),
@@ -1352,8 +1353,8 @@ function DestinationCards({ ctx }: { ctx: RenderCtx }) {
           {card.note ? (
             <span
               style={{
-                fontSize: px(1.7),
-                color: "rgba(13,32,48,0.55)",
+                fontSize: px(1.8),
+                color: INK.muted,
                 fontFamily: fontSecondary(brand),
               }}
             >
@@ -1416,9 +1417,9 @@ function AppScreen({ ctx, compact = false }: { ctx: RenderCtx; compact?: boolean
         <BizRow ctx={ctx} tone="dark" />
         <span
           style={{
-            fontSize: px(1.9),
+            fontSize: px(1.8),
             fontWeight: 600,
-            color: "rgba(13,32,48,0.55)",
+            color: INK.muted,
             fontFamily: fontSecondary(brand),
           }}
         >
@@ -1428,7 +1429,7 @@ function AppScreen({ ctx, compact = false }: { ctx: RenderCtx; compact?: boolean
       <HeadlineTwoTone
         ctx={ctx}
         size={compact ? 5.2 : 6.4}
-        color="#0d2030"
+        color={INK.strong}
         accent={brand.primary}
       />
       <SearchField ctx={ctx} />
@@ -1507,7 +1508,7 @@ function OfferStack({
       <div
         style={{
           display: "flex",
-          gap: px(2),
+          gap: px(1.8),
           alignItems: "center",
           flexWrap: "wrap",
           justifyContent: align === "center" ? "center" : undefined,
@@ -1546,7 +1547,7 @@ const engines: Engine[] = [
       const { content, brand, variant } = ctx;
       const align = variant.align === "center" ? "center" : "flex-start";
       return (
-        <div style={{ ...base(brand), color: "#fff" }}>
+        <div style={{ ...base(brand), color: INK.onDark }}>
           <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           <div
             style={{
@@ -1559,7 +1560,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
@@ -1567,7 +1568,7 @@ const engines: Engine[] = [
               textAlign: variant.align,
             }}
           >
-            <div style={{ display: "flex", width: "100%", alignItems: "center", gap: px(2.2) }}>
+            <div style={{ display: "flex", width: "100%", alignItems: "center", gap: px(2.6) }}>
               <BizRow ctx={ctx} tone="light" />
             </div>
             <AdjustBox
@@ -1575,19 +1576,21 @@ const engines: Engine[] = [
               style={{
                 display: "flex",
                 flexDirection: "column",
-                gap: px(2.2),
+                gap: px(2.6),
                 alignItems: align,
                 width: "100%",
               }}
             >
               <Kicker ctx={ctx} color="rgba(255,255,255,0.92)" />
-              <Title ctx={ctx} size={9.4} color="#fff" />
+              <Title ctx={ctx} size={9.4} color={INK.onDark} />
               <AdditionalText ctx={ctx} size={2.9} opacity={0.9} />
               <Chips
                 items={[...metaItems(content, ctx.businessType), ...content.services]}
                 tone="light"
               />
-              <div style={{ display: "flex", gap: px(2), alignItems: "center", flexWrap: "wrap" }}>
+              <div
+                style={{ display: "flex", gap: px(1.8), alignItems: "center", flexWrap: "wrap" }}
+              >
                 <PriceBadge ctx={ctx} tone="light" />
                 <CtaTag ctx={ctx} tone="light" />
               </div>
@@ -1613,24 +1616,24 @@ const engines: Engine[] = [
             flexDirection: "column",
           }}
         >
-          <div style={{ position: "relative", flex: "0 0 58%" }}>
+          <div style={{ position: "relative", flex: "0 1 58%", minHeight: 0 }}>
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           </div>
           <AdjustBox
             ctx={ctx}
             style={{
               flex: 1,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
-              gap: px(2),
-              color: "#1a1225",
+              gap: px(1.8),
+              color: INK.strong,
               textAlign: variant.align,
               alignItems: variant.align === "center" ? "center" : "flex-start",
             }}
           >
             <Kicker ctx={ctx} color={accentColor(ctx)} />
-            <Title ctx={ctx} size={7.4} color="#1a1225" />
+            <Title ctx={ctx} size={7.4} color={INK.strong} />
             <AdditionalText ctx={ctx} size={2.8} opacity={0.62} />
             <Chips
               items={[...metaItems(content, ctx.businessType), ...content.services]}
@@ -1642,12 +1645,12 @@ const engines: Engine[] = [
                 display: "flex",
                 width: "100%",
                 alignItems: "center",
-                gap: px(2.2),
+                gap: px(2.6),
               }}
             >
               <BizRow ctx={ctx} tone="dark" />
               <span
-                style={{ marginLeft: "auto", display: "flex", gap: px(1.6), alignItems: "center" }}
+                style={{ marginLeft: "auto", display: "flex", gap: px(1.8), alignItems: "center" }}
               >
                 <CtaTag ctx={ctx} tone="dark" />
                 <PriceBadge ctx={ctx} tone="dark" />
@@ -1682,7 +1685,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               gap: px(3.6),
@@ -1693,7 +1696,7 @@ const engines: Engine[] = [
               style={{
                 position: "relative",
                 flex: 1,
-                borderRadius: px(5),
+                borderRadius: px(4),
                 overflow: "hidden",
                 boxShadow: "0 30px 60px -30px rgba(0,0,0,.5)",
               }}
@@ -1703,24 +1706,24 @@ const engines: Engine[] = [
             <AdjustBox
               ctx={ctx}
               style={{
-                borderRadius: px(5),
-                padding: px(4.4),
+                borderRadius: px(4),
+                padding: px(5),
                 background: "rgba(255,255,255,0.85)",
                 border: "1px solid rgba(255,255,255,0.6)",
                 backdropFilter: "blur(20px)",
                 display: "flex",
                 flexDirection: "column",
-                gap: px(1.7),
-                color: "#181026",
+                gap: px(1.8),
+                color: INK.strong,
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: px(2) }}>
+              <div style={{ display: "flex", alignItems: "center", gap: px(1.8) }}>
                 <Kicker ctx={ctx} color={accentColor(ctx)} />
                 <span style={{ marginLeft: "auto" }}>
                   <PriceBadge ctx={ctx} tone="dark" />
                 </span>
               </div>
-              <Title ctx={ctx} size={6.2} color="#181026" />
+              <Title ctx={ctx} size={6.2} color={INK.strong} />
               <AdditionalText ctx={ctx} size={2.6} opacity={0.62} />
               <Chips
                 items={[...metaItems(content, ctx.businessType), ...content.services]}
@@ -1742,22 +1745,23 @@ const engines: Engine[] = [
         <div style={{ ...base(brand), display: "flex" }}>
           <div
             style={{
-              flex: "0 0 46%",
+              flex: "0 1 46%",
+              minHeight: 0,
               padding: px(5),
               display: "flex",
               flexDirection: "column",
-              gap: px(2),
-              color: "#fff",
+              gap: px(1.8),
+              color: INK.onDark,
               background: `linear-gradient(170deg, ${brand.primary}, ${brand.secondary})`,
             }}
           >
             <BizRow ctx={ctx} tone="light" />
             <AdjustBox
               ctx={ctx}
-              style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: px(2) }}
+              style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: px(1.8) }}
             >
               <Kicker ctx={ctx} color="rgba(255,255,255,0.85)" />
-              <Title ctx={ctx} size={6.6} color="#fff" />
+              <Title ctx={ctx} size={6.6} color={INK.onDark} />
               <AdditionalText ctx={ctx} size={2.5} opacity={0.85} />
               <PriceBadge ctx={ctx} tone="light" />
               <CtaTag ctx={ctx} tone="light" />
@@ -1776,7 +1780,7 @@ const engines: Engine[] = [
               style={{
                 position: "absolute",
                 inset: 0,
-                padding: px(4),
+                padding: px(3.6),
                 display: "flex",
                 alignItems: "flex-end",
               }}
@@ -1802,10 +1806,10 @@ const engines: Engine[] = [
           style={{
             ...base(brand),
             background: bgOr(brand, "#faf8ff"),
-            padding: px(4.5),
+            padding: px(5),
             display: "flex",
             flexDirection: "column",
-            gap: px(3),
+            gap: px(2.6),
           }}
         >
           <div
@@ -1814,7 +1818,7 @@ const engines: Engine[] = [
               flex: 1,
               borderRadius: px(4),
               overflow: "hidden",
-              border: `${px(0.9)} solid ${brand.primary}`,
+              border: `${px(0.8)} solid ${brand.primary}`,
             }}
           >
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
@@ -1834,14 +1838,14 @@ const engines: Engine[] = [
                 bottom: px(4),
                 display: "flex",
                 flexDirection: "column",
-                gap: px(1.6),
+                gap: px(1.8),
               }}
             >
               <Kicker ctx={ctx} color="rgba(255,255,255,0.9)" />
-              <Title ctx={ctx} size={7} color="#fff" />
+              <Title ctx={ctx} size={7} color={INK.onDark} />
             </AdjustBox>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: px(2.4), color: "#1a1225" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: px(2.6), color: INK.strong }}>
             <BizRow ctx={ctx} tone="dark" />
             <span style={{ marginLeft: "auto" }}>
               <PriceBadge ctx={ctx} tone="dark" />
@@ -1862,7 +1866,7 @@ const engines: Engine[] = [
     render: (ctx) => {
       const { content, brand, variant } = ctx;
       return (
-        <div style={{ ...base(brand), background: brand.primary, color: "#fff" }}>
+        <div style={{ ...base(brand), background: brand.primary, color: INK.onDark }}>
           <Img
             src={content.imageDataUrl}
             video={content.videoDataUrl}
@@ -1880,17 +1884,17 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               justifyContent: "center",
-              gap: px(2.4),
+              gap: px(2.6),
               textAlign: variant.align,
               alignItems: variant.align === "center" ? "center" : "flex-start",
             }}
           >
             <Kicker ctx={ctx} color="rgba(255,255,255,0.8)" />
-            <Title ctx={ctx} size={10.5} color="#fff" />
+            <Title ctx={ctx} size={10.5} color={INK.onDark} />
             <AdditionalText ctx={ctx} size={2.9} opacity={0.86} />
             <Chips
               items={[...metaItems(content, ctx.businessType), ...content.services]}
@@ -1920,7 +1924,7 @@ const engines: Engine[] = [
             flexDirection: "column",
           }}
         >
-          <div style={{ position: "relative", flex: "0 0 52%" }}>
+          <div style={{ position: "relative", flex: "0 1 52%", minHeight: 0 }}>
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
             <div
               style={{
@@ -1933,20 +1937,20 @@ const engines: Engine[] = [
               <BizRow ctx={ctx} tone="light" />
             </div>
           </div>
-          <div style={{ height: 0, borderTop: `${px(0.5)} dashed ${brand.primary}55` }} />
+          <div style={{ height: 0, borderTop: `${px(0.4)} dashed ${brand.primary}55` }} />
           <AdjustBox
             ctx={ctx}
             style={{
               flex: 1,
-              padding: px(5.5),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               gap: px(1.8),
-              color: "#181026",
+              color: INK.strong,
             }}
           >
             <Kicker ctx={ctx} color={accentColor(ctx)} />
-            <Title ctx={ctx} size={6.8} color="#181026" />
+            <Title ctx={ctx} size={6.8} color={INK.strong} />
             <Chips
               items={[...metaItems(content, ctx.businessType), ...content.services]}
               tone="dark"
@@ -1976,15 +1980,16 @@ const engines: Engine[] = [
             padding: px(7),
             display: "flex",
             flexDirection: "column",
-            gap: px(3.4),
+            gap: px(3.6),
           }}
         >
           <BizRow ctx={ctx} tone="dark" />
           <div
             style={{
               position: "relative",
-              flex: "0 0 44%",
-              borderRadius: px(3),
+              flex: "0 1 44%",
+              minHeight: 0,
+              borderRadius: px(2.4),
               overflow: "hidden",
             }}
           >
@@ -1992,13 +1997,13 @@ const engines: Engine[] = [
           </div>
           <AdjustBox
             ctx={ctx}
-            style={{ display: "flex", flexDirection: "column", gap: px(1.8), color: "#131020" }}
+            style={{ display: "flex", flexDirection: "column", gap: px(1.8), color: INK.strong }}
           >
             <Kicker ctx={ctx} color={accentColor(ctx)} />
-            <Title ctx={ctx} size={7.2} color="#131020" />
+            <Title ctx={ctx} size={7.2} color={INK.strong} />
             <AdditionalText ctx={ctx} size={2.7} opacity={0.55} />
           </AdjustBox>
-          <div style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: px(2) }}>
+          <div style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: px(1.8) }}>
             <Chips
               items={[...metaItems(content, ctx.businessType), ...content.services]}
               tone="dark"
@@ -2019,7 +2024,7 @@ const engines: Engine[] = [
     render: (ctx) => {
       const { content, brand } = ctx;
       return (
-        <div style={{ ...base(brand), color: "#fff" }}>
+        <div style={{ ...base(brand), color: INK.onDark }}>
           <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           <div
             style={{
@@ -2032,24 +2037,24 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
             }}
           >
-            <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(2) }}>
+            <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(1.8) }}>
               <Kicker ctx={ctx} color="rgba(255,255,255,0.88)" />
-              <Title ctx={ctx} size={10} color="#fff" />
+              <Title ctx={ctx} size={10} color={INK.onDark} />
               <AdditionalText ctx={ctx} size={2.9} opacity={0.9} />
             </AdjustBox>
             <div
-              style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: px(2.4) }}
+              style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: px(2.6) }}
             >
               <Chips
                 items={[...metaItems(content, ctx.businessType), ...content.services]}
                 tone="light"
               />
-              <div style={{ display: "flex", alignItems: "center", gap: px(2.2) }}>
+              <div style={{ display: "flex", alignItems: "center", gap: px(2.6) }}>
                 <BizRow ctx={ctx} tone="light" />
                 <span style={{ marginLeft: "auto" }}>
                   <PriceBadge ctx={ctx} tone="light" />
@@ -2079,18 +2084,19 @@ const engines: Engine[] = [
         >
           <div
             style={{
-              flex: "0 0 42%",
-              padding: px(5.5),
+              flex: "0 1 42%",
+              minHeight: 0,
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               gap: px(1.8),
-              color: "#fff",
+              color: INK.onDark,
               background: `linear-gradient(120deg, ${brand.primary}, ${brand.secondary})`,
             }}
           >
             <BizRow ctx={ctx} tone="light" />
             <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(1.8) }}>
-              <Title ctx={ctx} size={7.4} color="#fff" />
+              <Title ctx={ctx} size={7.4} color={INK.onDark} />
               <Kicker ctx={ctx} color="rgba(255,255,255,0.82)" />
             </AdjustBox>
           </div>
@@ -2111,7 +2117,7 @@ const engines: Engine[] = [
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "flex-end",
-                gap: px(2),
+                gap: px(1.8),
               }}
             >
               <Chips
@@ -2123,7 +2129,7 @@ const engines: Engine[] = [
                   ctx={ctx}
                   size={2.5}
                   opacity={0.85}
-                  style={{ maxWidth: "60%", color: "#fff" }}
+                  style={{ maxWidth: "60%", color: INK.onDark }}
                 />
                 <span style={{ marginLeft: "auto" }}>
                   <PriceBadge ctx={ctx} tone="light" />
@@ -2155,7 +2161,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
@@ -2171,7 +2177,7 @@ const engines: Engine[] = [
                 aspectRatio: "1 / 1",
                 borderRadius: "50%",
                 overflow: "hidden",
-                boxShadow: `0 ${px(4)} ${px(12)} -${px(4)} ${brand.primary}66`,
+                boxShadow: `0 ${px(3.6)} ${px(12)} -${px(3.6)} ${brand.primary}66`,
                 border: `${px(0.8)} solid #fff`,
               }}
             >
@@ -2187,7 +2193,7 @@ const engines: Engine[] = [
               }}
             >
               <Kicker ctx={ctx} color={accentColor(ctx)} />
-              <Title ctx={ctx} size={7} color="#141024" />
+              <Title ctx={ctx} size={7} color={INK.strong} />
               <Chips
                 items={[...metaItems(content, ctx.businessType), ...content.services]}
                 tone="dark"
@@ -2219,22 +2225,22 @@ const engines: Engine[] = [
           <AdjustBox
             ctx={ctx}
             style={{
-              padding: px(5.5),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
-              gap: px(1.6),
-              color: "#141024",
+              gap: px(1.8),
+              color: INK.strong,
             }}
           >
             <Kicker ctx={ctx} color={accentColor(ctx)} />
-            <Title ctx={ctx} size={6.6} color="#141024" />
+            <Title ctx={ctx} size={6.6} color={INK.strong} />
           </AdjustBox>
           <div
             style={{
               position: "relative",
               flex: 1,
               margin: `0 ${px(5.5)}`,
-              borderRadius: px(3.6),
+              borderRadius: px(4),
               overflow: "hidden",
             }}
           >
@@ -2250,12 +2256,12 @@ const engines: Engine[] = [
               <PriceBadge ctx={ctx} tone="light" />
             </div>
           </div>
-          <div style={{ padding: px(5.5), display: "flex", flexDirection: "column", gap: px(2) }}>
+          <div style={{ padding: px(5), display: "flex", flexDirection: "column", gap: px(1.8) }}>
             <Chips
               items={[...metaItems(content, ctx.businessType), ...content.services]}
               tone="dark"
             />
-            <div style={{ display: "flex", alignItems: "center", gap: px(2.2) }}>
+            <div style={{ display: "flex", alignItems: "center", gap: px(2.6) }}>
               <BizRow ctx={ctx} tone="dark" />
               <AdditionalText
                 ctx={ctx}
@@ -2290,7 +2296,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6.5),
+              padding: px(7),
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
@@ -2299,7 +2305,7 @@ const engines: Engine[] = [
             }}
           >
             <BizRow ctx={ctx} tone="light" />
-            <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(2.2) }}>
+            <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(2.6) }}>
               <Kicker ctx={ctx} color={brand.accent} />
               <Title ctx={ctx} size={8.4} color="#f6f1ff" />
               <AdditionalText ctx={ctx} size={2.6} opacity={0.7} />
@@ -2325,11 +2331,11 @@ const engines: Engine[] = [
             display: "flex",
             flexDirection: "column",
             padding: px(7),
-            gap: px(4),
+            gap: px(3.6),
           }}
         >
           <BizRow ctx={ctx} tone="dark" />
-          <div style={{ position: "relative", flex: 1, borderRadius: px(2), overflow: "hidden" }}>
+          <div style={{ position: "relative", flex: 1, borderRadius: px(2.4), overflow: "hidden" }}>
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           </div>
           <AdjustBox
@@ -2343,7 +2349,7 @@ const engines: Engine[] = [
             }}
           >
             <Kicker ctx={ctx} color={accentColor(ctx)} />
-            <Title ctx={ctx} size={6.4} color="#241c30" />
+            <Title ctx={ctx} size={6.4} color={INK.strong} />
             <ServiceLine ctx={ctx} tone="dark" />
             <PriceBadge ctx={ctx} tone="dark" />
           </AdjustBox>
@@ -2365,7 +2371,7 @@ const engines: Engine[] = [
           style={{
             ...base(brand),
             background: `linear-gradient(155deg, ${brand.primary}, #0c0716)`,
-            color: "#fff",
+            color: INK.onDark,
           }}
         >
           {hasMedia ? (
@@ -2384,24 +2390,24 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6.5),
+              padding: px(7),
               display: "flex",
               flexDirection: "column",
               justifyContent: "center",
-              gap: px(2.4),
+              gap: px(2.6),
               textAlign: variant.align,
               alignItems: variant.align === "center" ? "center" : "flex-start",
             }}
           >
             <BizRow ctx={ctx} tone="light" />
-            <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(2.4) }}>
+            <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(2.6) }}>
               <Kicker ctx={ctx} color={brand.accent} />
-              <Title ctx={ctx} size={13} color="#fff" />
+              <Title ctx={ctx} size={13} color={INK.onDark} />
               <Chips
                 items={[...metaItems(content, ctx.businessType), ...content.services]}
                 tone="light"
               />
-              <div style={{ display: "flex", gap: px(2) }}>
+              <div style={{ display: "flex", gap: px(1.8) }}>
                 <PriceBadge ctx={ctx} tone="light" />
                 <CtaTag ctx={ctx} tone="light" />
               </div>
@@ -2421,25 +2427,26 @@ const engines: Engine[] = [
         <div style={{ ...base(brand), background: bgOr(brand, "#ffffff"), display: "flex" }}>
           <div
             style={{
-              flex: "0 0 62%",
+              flex: "0 1 62%",
+              minHeight: 0,
               padding: px(7),
               display: "flex",
               flexDirection: "column",
               justifyContent: "center",
-              gap: px(2.4),
+              gap: px(2.6),
             }}
           >
             <BizRow ctx={ctx} tone="dark" />
-            <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(2.4) }}>
+            <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(2.6) }}>
               <Kicker ctx={ctx} color={accentColor(ctx)} />
-              <Title ctx={ctx} size={7.6} color="#181026" />
+              <Title ctx={ctx} size={7.6} color={INK.strong} />
               <AdditionalText ctx={ctx} size={2.6} opacity={0.6} />
               <ServiceLine ctx={ctx} tone="dark" />
               <PriceBadge ctx={ctx} tone="dark" />
               <ContactLine ctx={ctx} tone="dark" />
             </AdjustBox>
           </div>
-          <div style={{ position: "relative", flex: "0 0 38%" }}>
+          <div style={{ position: "relative", flex: "0 1 38%", minHeight: 0 }}>
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           </div>
         </div>
@@ -2461,7 +2468,7 @@ const engines: Engine[] = [
             flexDirection: "column",
           }}
         >
-          <div style={{ position: "relative", flex: "0 0 40%" }}>
+          <div style={{ position: "relative", flex: "0 1 40%", minHeight: 0 }}>
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           </div>
           <AdjustBox
@@ -2471,17 +2478,17 @@ const engines: Engine[] = [
               padding: px(5),
               display: "flex",
               flexDirection: "column",
-              gap: px(1.6),
-              color: "#151020",
+              gap: px(1.8),
+              color: INK.strong,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: px(2) }}>
+            <div style={{ display: "flex", alignItems: "center", gap: px(1.8) }}>
               <Kicker ctx={ctx} color={accentColor(ctx)} />
               <span style={{ marginLeft: "auto" }}>
                 <PriceBadge ctx={ctx} tone="dark" />
               </span>
             </div>
-            <Title ctx={ctx} size={6} color="#151020" />
+            <Title ctx={ctx} size={6} color={INK.strong} />
             <Chips
               items={[...metaItems(content, ctx.businessType), ...content.services]}
               tone="dark"
@@ -2524,7 +2531,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               justifyContent: "flex-end",
             }}
@@ -2535,14 +2542,14 @@ const engines: Engine[] = [
                 width: "56%",
                 display: "flex",
                 flexDirection: "column",
-                gap: px(2.2),
-                color: "#fff",
+                gap: px(2.6),
+                color: INK.onDark,
                 justifyContent: "center",
               }}
             >
               <BizRow ctx={ctx} tone="light" />
               <Kicker ctx={ctx} color={brand.accent} />
-              <Title ctx={ctx} size={7.6} color="#fff" />
+              <Title ctx={ctx} size={7.6} color={INK.onDark} />
               <ServiceLine ctx={ctx} tone="light" />
               <PriceBadge ctx={ctx} tone="light" />
               <CtaTag ctx={ctx} tone="light" />
@@ -2560,7 +2567,7 @@ const engines: Engine[] = [
       const { content, brand, variant } = ctx;
       const align = variant.align === "center" ? "center" : "flex-start";
       return (
-        <div style={{ ...base(brand), color: "#fff" }}>
+        <div style={{ ...base(brand), color: INK.onDark }}>
           <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           <div
             style={{
@@ -2573,7 +2580,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
@@ -2585,20 +2592,20 @@ const engines: Engine[] = [
               style={{
                 display: "flex",
                 flexDirection: "column",
-                gap: px(2.2),
+                gap: px(2.6),
                 alignItems: align,
                 textAlign: variant.align,
                 width: "100%",
               }}
             >
               <Kicker ctx={ctx} color={brand.accent} />
-              <Title ctx={ctx} size={9.8} color="#fff" />
+              <Title ctx={ctx} size={9.8} color={INK.onDark} />
               <AdditionalText ctx={ctx} size={2.8} opacity={0.88} />
               <Chips
                 items={[...metaItems(content, ctx.businessType), ...content.services]}
                 tone="light"
               />
-              <div style={{ display: "flex", gap: px(2), alignItems: "center" }}>
+              <div style={{ display: "flex", gap: px(1.8), alignItems: "center" }}>
                 <PriceBadge ctx={ctx} tone="light" />
                 <CtaTag ctx={ctx} tone="light" />
               </div>
@@ -2628,7 +2635,7 @@ const engines: Engine[] = [
               padding: px(5),
               display: "flex",
               flexDirection: "column",
-              gap: px(3),
+              gap: px(2.6),
             }}
           >
             <BizRow ctx={ctx} tone="light" />
@@ -2636,7 +2643,7 @@ const engines: Engine[] = [
               style={{
                 position: "relative",
                 flex: 1,
-                borderRadius: px(3),
+                borderRadius: px(2.4),
                 overflow: "hidden",
                 boxShadow: "0 40px 70px -30px rgba(0,0,0,.65)",
               }}
@@ -2662,12 +2669,12 @@ const engines: Engine[] = [
                 }}
               >
                 <Kicker ctx={ctx} color="rgba(255,255,255,0.88)" />
-                <Title ctx={ctx} size={7.4} color="#fff" />
+                <Title ctx={ctx} size={7.4} color={INK.onDark} />
                 <Chips
                   items={[...metaItems(content, ctx.businessType), ...content.services]}
                   tone="light"
                 />
-                <div style={{ display: "flex", gap: px(2), alignItems: "center" }}>
+                <div style={{ display: "flex", gap: px(1.8), alignItems: "center" }}>
                   <PriceBadge ctx={ctx} tone="light" />
                   <CtaTag ctx={ctx} tone="light" />
                 </div>
@@ -2699,7 +2706,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
@@ -2707,18 +2714,20 @@ const engines: Engine[] = [
           >
             <AdjustBox
               ctx={ctx}
-              style={{ display: "flex", flexDirection: "column", gap: px(2), color: "#fff" }}
+              style={{ display: "flex", flexDirection: "column", gap: px(1.8), color: INK.onDark }}
             >
               <BizRow ctx={ctx} tone="light" />
               <Kicker ctx={ctx} color="rgba(255,255,255,0.85)" />
-              <Title ctx={ctx} size={8.4} color="#fff" />
+              <Title ctx={ctx} size={8.4} color={INK.onDark} />
             </AdjustBox>
-            <div style={{ display: "flex", flexDirection: "column", gap: px(2), color: "#fff" }}>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: px(1.8), color: INK.onDark }}
+            >
               <Chips
                 items={[...metaItems(content, ctx.businessType), ...content.services]}
                 tone="light"
               />
-              <div style={{ display: "flex", gap: px(2), alignItems: "center" }}>
+              <div style={{ display: "flex", gap: px(1.8), alignItems: "center" }}>
                 <PriceBadge ctx={ctx} tone="light" />
                 <CtaTag ctx={ctx} tone="light" />
               </div>
@@ -2743,26 +2752,28 @@ const engines: Engine[] = [
             flexDirection: "column",
           }}
         >
-          <div style={{ position: "relative", flex: "0 0 62%" }}>
+          <div style={{ position: "relative", flex: "0 1 62%", minHeight: 0 }}>
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           </div>
           <AdjustBox
             ctx={ctx}
             style={{
               flex: 1,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
-              gap: px(4),
-              color: "#1a1225",
+              gap: px(3.6),
+              color: INK.strong,
             }}
           >
             <div style={{ width: px(0.4), background: accentColor(ctx), alignSelf: "stretch" }} />
             <div style={{ display: "flex", flexDirection: "column", gap: px(1.8), flex: 1 }}>
               <Kicker ctx={ctx} color={accentColor(ctx)} />
-              <Title ctx={ctx} size={6.8} color="#1a1225" />
+              <Title ctx={ctx} size={6.8} color={INK.strong} />
               <AdditionalText ctx={ctx} size={2.6} opacity={0.6} />
               <ServiceLine ctx={ctx} tone="dark" />
-              <div style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: px(2) }}>
+              <div
+                style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: px(1.8) }}
+              >
                 <BizRow ctx={ctx} tone="dark" />
                 <span style={{ marginLeft: "auto" }}>
                   <PriceBadge ctx={ctx} tone="dark" />
@@ -2820,7 +2831,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               justifyContent: "center",
@@ -2830,12 +2841,12 @@ const engines: Engine[] = [
           >
             <AdjustBox
               ctx={ctx}
-              style={{ display: "flex", flexDirection: "column", gap: px(2), color: "#fff" }}
+              style={{ display: "flex", flexDirection: "column", gap: px(1.8), color: INK.onDark }}
             >
               <Kicker ctx={ctx} color="rgba(255,255,255,0.85)" />
-              <Title ctx={ctx} size={8.6} color="#fff" />
+              <Title ctx={ctx} size={8.6} color={INK.onDark} />
               <ServiceLine ctx={ctx} tone="light" />
-              <div style={{ display: "flex", gap: px(2), alignItems: "center" }}>
+              <div style={{ display: "flex", gap: px(1.8), alignItems: "center" }}>
                 <PriceBadge ctx={ctx} tone="light" />
                 <CtaTag ctx={ctx} tone="light" />
               </div>
@@ -2855,7 +2866,7 @@ const engines: Engine[] = [
     render: (ctx) => {
       const { content, brand } = ctx;
       return (
-        <div style={{ ...base(brand), color: "#fff" }}>
+        <div style={{ ...base(brand), color: INK.onDark }}>
           <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           <div
             style={{
@@ -2868,7 +2879,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
@@ -2877,10 +2888,10 @@ const engines: Engine[] = [
             <BizRow ctx={ctx} tone="light" />
             <AdjustBox
               ctx={ctx}
-              style={{ display: "flex", flexDirection: "column", gap: px(2.2), width: "58%" }}
+              style={{ display: "flex", flexDirection: "column", gap: px(2.6), width: "58%" }}
             >
               <Kicker ctx={ctx} color="rgba(255,255,255,0.88)" />
-              <Title ctx={ctx} size={8} color="#fff" />
+              <Title ctx={ctx} size={8} color={INK.onDark} />
               <AdditionalText ctx={ctx} size={2.7} opacity={0.85} />
               <Chips
                 items={[...metaItems(content, ctx.businessType), ...content.services]}
@@ -2920,7 +2931,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
@@ -2929,15 +2940,15 @@ const engines: Engine[] = [
             <BizRow ctx={ctx} tone="light" />
             <AdjustBox
               ctx={ctx}
-              style={{ display: "flex", flexDirection: "column", gap: px(2), color: "#fff" }}
+              style={{ display: "flex", flexDirection: "column", gap: px(1.8), color: INK.onDark }}
             >
               <Kicker ctx={ctx} color={brand.accent} />
-              <Title ctx={ctx} size={7.6} color="#fff" />
+              <Title ctx={ctx} size={7.6} color={INK.onDark} />
               <Chips
                 items={[...metaItems(content, ctx.businessType), ...content.services]}
                 tone="light"
               />
-              <div style={{ display: "flex", gap: px(2), alignItems: "center" }}>
+              <div style={{ display: "flex", gap: px(1.8), alignItems: "center" }}>
                 <PriceBadge ctx={ctx} tone="light" />
                 <CtaTag ctx={ctx} tone="light" />
               </div>
@@ -2955,31 +2966,32 @@ const engines: Engine[] = [
       const { content, brand } = ctx;
       return (
         <div style={{ ...base(brand), display: "flex" }}>
-          <div style={{ position: "relative", flex: "0 0 50%" }}>
+          <div style={{ position: "relative", flex: "0 1 50%", minHeight: 0 }}>
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           </div>
           <AdjustBox
             ctx={ctx}
             style={{
-              flex: "0 0 50%",
+              flex: "0 1 50%",
+              minHeight: 0,
               padding: px(5),
               display: "flex",
               flexDirection: "column",
-              gap: px(1.7),
-              color: "#fff",
+              gap: px(1.8),
+              color: INK.onDark,
               background: `linear-gradient(165deg, ${brand.primary}, ${brand.secondary})`,
             }}
           >
             <BizRow ctx={ctx} tone="light" />
             <Kicker ctx={ctx} color="rgba(255,255,255,0.85)" />
-            <Title ctx={ctx} size={5.8} color="#fff" />
+            <Title ctx={ctx} size={5.8} color={INK.onDark} />
             <AdditionalText ctx={ctx} size={2.3} opacity={0.85} />
             <Chips
               items={[...metaItems(content, ctx.businessType), ...content.services]}
               tone="light"
             />
             <div
-              style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: px(1.4) }}
+              style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: px(1.2) }}
             >
               <PriceBadge ctx={ctx} tone="light" />
               <CtaTag ctx={ctx} tone="light" />
@@ -3016,16 +3028,16 @@ const engines: Engine[] = [
               background: "rgba(12,8,22,0.42)",
               backdropFilter: "blur(18px)",
               borderTop: "1px solid rgba(255,255,255,0.25)",
-              color: "#fff",
+              color: INK.onDark,
             }}
           >
             <Kicker ctx={ctx} color="rgba(255,255,255,0.85)" />
-            <Title ctx={ctx} size={6.6} color="#fff" />
+            <Title ctx={ctx} size={6.6} color={INK.onDark} />
             <Chips
               items={[...metaItems(content, ctx.businessType), ...content.services]}
               tone="light"
             />
-            <div style={{ display: "flex", gap: px(2), alignItems: "center" }}>
+            <div style={{ display: "flex", gap: px(1.8), alignItems: "center" }}>
               <PriceBadge ctx={ctx} tone="light" />
               <CtaTag ctx={ctx} tone="light" />
             </div>
@@ -3049,25 +3061,25 @@ const engines: Engine[] = [
             flexDirection: "column",
           }}
         >
-          <div style={{ position: "relative", flex: "0 0 58%" }}>
+          <div style={{ position: "relative", flex: "0 1 58%", minHeight: 0 }}>
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           </div>
           <AdjustBox
             ctx={ctx}
             style={{
               flex: 1,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
               textAlign: "center",
               justifyContent: "center",
-              gap: px(2),
-              color: "#181026",
+              gap: px(1.8),
+              color: INK.strong,
             }}
           >
             <Kicker ctx={ctx} color={accentColor(ctx)} />
-            <Title ctx={ctx} size={6.2} color="#181026" />
+            <Title ctx={ctx} size={6.2} color={INK.strong} />
             <ServiceLine ctx={ctx} tone="dark" />
             <PriceBadge ctx={ctx} tone="dark" />
           </AdjustBox>
@@ -3099,7 +3111,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6.5),
+              padding: px(7),
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
@@ -3114,7 +3126,7 @@ const engines: Engine[] = [
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                gap: px(2.2),
+                gap: px(2.6),
               }}
             >
               <Kicker ctx={ctx} color={brand.accent} />
@@ -3136,7 +3148,7 @@ const engines: Engine[] = [
     render: (ctx) => {
       const { content, brand } = ctx;
       return (
-        <div style={{ ...base(brand), color: "#fff" }}>
+        <div style={{ ...base(brand), color: INK.onDark }}>
           <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           <div
             style={{
@@ -3150,7 +3162,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
@@ -3162,7 +3174,7 @@ const engines: Engine[] = [
             </div>
             <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(1.8) }}>
               <Kicker ctx={ctx} color={brand.accent} />
-              <Title ctx={ctx} size={13.5} color="#fff" />
+              <Title ctx={ctx} size={13.5} color={INK.onDark} />
               <ServiceLine ctx={ctx} tone="light" />
               <PriceBadge ctx={ctx} tone="light" />
             </AdjustBox>
@@ -3179,7 +3191,7 @@ const engines: Engine[] = [
       const { content, brand } = ctx;
       return (
         <div style={{ ...base(brand), display: "flex", flexDirection: "column" }}>
-          <div style={{ position: "relative", flex: "0 0 72%" }}>
+          <div style={{ position: "relative", flex: "0 1 72%", minHeight: 0 }}>
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
             <div style={{ position: "absolute", left: px(4), top: px(4) }}>
               <BizRow ctx={ctx} tone="light" />
@@ -3189,24 +3201,24 @@ const engines: Engine[] = [
             ctx={ctx}
             style={{
               flex: 1,
-              padding: `${px(3.4)} ${px(5)}`,
+              padding: `${px(3.6)} ${px(5)}`,
               display: "flex",
               alignItems: "center",
-              gap: px(3),
-              color: "#fff",
+              gap: px(2.6),
+              color: INK.onDark,
               background: `linear-gradient(120deg, ${brand.primary}, ${brand.secondary})`,
             }}
           >
             <div style={{ display: "flex", flexDirection: "column", gap: px(0.8), flex: 1 }}>
               <Kicker ctx={ctx} color="rgba(255,255,255,0.85)" />
-              <Title ctx={ctx} size={5.2} color="#fff" />
+              <Title ctx={ctx} size={5.2} color={INK.onDark} />
               <ServiceLine ctx={ctx} tone="light" />
             </div>
             <div
               style={{
                 display: "flex",
                 flexDirection: "column",
-                gap: px(1),
+                gap: px(0.8),
                 alignItems: "flex-end",
               }}
             >
@@ -3226,7 +3238,7 @@ const engines: Engine[] = [
     render: (ctx) => {
       const { content, brand } = ctx;
       return (
-        <div style={{ ...base(brand), color: "#fff" }}>
+        <div style={{ ...base(brand), color: INK.onDark }}>
           <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           <div
             style={{
@@ -3240,7 +3252,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
@@ -3255,12 +3267,12 @@ const engines: Engine[] = [
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                gap: px(2.4),
+                gap: px(2.6),
                 width: "100%",
               }}
             >
               <Kicker ctx={ctx} color="rgba(255,255,255,0.9)" />
-              <Title ctx={ctx} size={9} color="#fff" />
+              <Title ctx={ctx} size={9} color={INK.onDark} />
               <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
                 <PriceBadge ctx={ctx} tone="light" />
               </div>
@@ -3270,7 +3282,7 @@ const engines: Engine[] = [
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                gap: px(1.6),
+                gap: px(1.8),
               }}
             >
               <Chips
@@ -3291,7 +3303,7 @@ const engines: Engine[] = [
     render: (ctx) => {
       const { content, brand } = ctx;
       return (
-        <div style={{ ...base(brand), color: "#fff" }}>
+        <div style={{ ...base(brand), color: INK.onDark }}>
           <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           <div
             style={{
@@ -3301,7 +3313,7 @@ const engines: Engine[] = [
               display: "flex",
               flexDirection: "column",
               justifyContent: "flex-end",
-              gap: px(2.4),
+              gap: px(2.6),
             }}
           >
             <AdjustBox
@@ -3309,20 +3321,20 @@ const engines: Engine[] = [
               style={{
                 display: "flex",
                 flexDirection: "column",
-                gap: px(2),
-                borderRadius: px(3),
-                padding: px(4),
+                gap: px(1.8),
+                borderRadius: px(2.4),
+                padding: px(3.6),
                 background: `${brand.primary}e6`,
                 backdropFilter: "blur(10px)",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: px(2.4) }}>
+              <div style={{ display: "flex", alignItems: "center", gap: px(2.6) }}>
                 <Logo ctx={ctx} />
                 <div style={{ marginLeft: "auto" }}>
                   <PriceBadge ctx={ctx} tone="light" />
                 </div>
               </div>
-              <Title ctx={ctx} size={7} color="#fff" />
+              <Title ctx={ctx} size={7} color={INK.onDark} />
               <Chips
                 items={[...metaItems(content, ctx.businessType), ...content.services]}
                 tone="light"
@@ -3341,13 +3353,13 @@ const engines: Engine[] = [
     render: (ctx) => {
       const { content, brand } = ctx;
       return (
-        <div style={{ ...base(brand), color: "#fff" }}>
+        <div style={{ ...base(brand), color: INK.onDark }}>
           <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           <div
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(5.5),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
@@ -3358,10 +3370,10 @@ const engines: Engine[] = [
             </div>
             <AdjustBox
               ctx={ctx}
-              style={{ display: "flex", alignItems: "flex-end", gap: px(3), width: "100%" }}
+              style={{ display: "flex", alignItems: "flex-end", gap: px(2.6), width: "100%" }}
             >
-              <div style={{ display: "flex", flexDirection: "column", gap: px(1.4), flex: 1 }}>
-                <Title ctx={ctx} size={6.4} color="#fff" />
+              <div style={{ display: "flex", flexDirection: "column", gap: px(1.2), flex: 1 }}>
+                <Title ctx={ctx} size={6.4} color={INK.onDark} />
                 <ServiceLine ctx={ctx} tone="light" />
                 <Kicker ctx={ctx} color="rgba(255,255,255,0.88)" />
                 <ContactLine ctx={ctx} tone="light" />
@@ -3385,17 +3397,18 @@ const engines: Engine[] = [
           style={{
             ...base(brand),
             background: bgOr(brand, "#f6f2ff"),
-            padding: px(5.5),
+            padding: px(5),
             display: "flex",
             flexDirection: "column",
-            gap: px(3.4),
+            gap: px(3.6),
           }}
         >
           <BizRow ctx={ctx} tone="dark" />
           <div
             style={{
               position: "relative",
-              flex: "0 0 52%",
+              flex: "0 1 52%",
+              minHeight: 0,
               overflow: "hidden",
               // An arch instead of a rectangle: a half ellipse across the top,
               // square at the base, so the picture reads as a window. The radius
@@ -3414,16 +3427,16 @@ const engines: Engine[] = [
               gap: px(1.8),
               alignItems: align,
               textAlign: variant.align,
-              color: "#1b1329",
+              color: INK.strong,
             }}
           >
             <Kicker ctx={ctx} color={accentColor(ctx)} />
-            <Title ctx={ctx} size={7} color="#1b1329" />
+            <Title ctx={ctx} size={7} color={INK.strong} />
             <Chips
               items={[...metaItems(content, ctx.businessType), ...content.services]}
               tone="dark"
             />
-            <div style={{ display: "flex", gap: px(2), alignItems: "center", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: px(1.8), alignItems: "center", flexWrap: "wrap" }}>
               <PriceBadge ctx={ctx} tone="dark" />
               <CtaTag ctx={ctx} tone="dark" />
             </div>
@@ -3444,20 +3457,21 @@ const engines: Engine[] = [
           style={{
             ...base(brand),
             background: bgOr(brand, `linear-gradient(160deg, ${brand.primary}1f, #ffffff 62%)`),
-            padding: px(6),
+            padding: px(5),
             display: "flex",
             flexDirection: "column",
-            gap: px(3.2),
+            gap: px(3.6),
           }}
         >
           <BizRow ctx={ctx} tone="dark" />
           <div
             style={{
               position: "relative",
-              flex: "0 0 48%",
+              flex: "0 1 48%",
+              minHeight: 0,
               overflow: "hidden",
-              borderRadius: px(4.5),
-              boxShadow: `0 ${px(2.4)} ${px(6)} rgba(24,16,44,0.16)`,
+              borderRadius: px(4),
+              boxShadow: `0 ${px(2.6)} ${px(5)} rgba(24,16,44,0.16)`,
             }}
           >
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
@@ -3470,14 +3484,14 @@ const engines: Engine[] = [
               flexDirection: "column",
               gap: px(1.8),
               justifyContent: "center",
-              color: "#191128",
+              color: INK.strong,
             }}
           >
             <Kicker ctx={ctx} color={accentColor(ctx)} />
-            <Title ctx={ctx} size={6.6} color="#191128" />
+            <Title ctx={ctx} size={6.6} color={INK.strong} />
             <AdditionalText ctx={ctx} size={2.6} opacity={0.66} />
             <ServiceLine ctx={ctx} tone="dark" />
-            <div style={{ display: "flex", gap: px(2), alignItems: "center", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: px(1.8), alignItems: "center", flexWrap: "wrap" }}>
               <PriceBadge ctx={ctx} tone="dark" />
               <CtaTag ctx={ctx} tone="dark" />
             </div>
@@ -3508,7 +3522,7 @@ const engines: Engine[] = [
             display: "flex",
             alignItems: "center",
             background: accentColor(ctx),
-            color: "#fff",
+            color: INK.onDark,
             overflow: "hidden",
             whiteSpace: "nowrap",
           }}
@@ -3548,20 +3562,23 @@ const engines: Engine[] = [
               style={{
                 position: "absolute",
                 inset: 0,
-                padding: px(6),
+                padding: px(5),
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "flex-end",
               }}
             >
-              <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(2) }}>
-                <Title ctx={ctx} size={9} color="#fff" />
+              <AdjustBox
+                ctx={ctx}
+                style={{ display: "flex", flexDirection: "column", gap: px(1.8) }}
+              >
+                <Title ctx={ctx} size={9} color={INK.onDark} />
                 <Chips
                   items={[...metaItems(content, ctx.businessType), ...content.services]}
                   tone="light"
                 />
                 <div
-                  style={{ display: "flex", gap: px(2), alignItems: "center", flexWrap: "wrap" }}
+                  style={{ display: "flex", gap: px(1.8), alignItems: "center", flexWrap: "wrap" }}
                 >
                   <PriceBadge ctx={ctx} tone="light" />
                   <CtaTag ctx={ctx} tone="light" />
@@ -3603,7 +3620,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
@@ -3618,15 +3635,15 @@ const engines: Engine[] = [
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                gap: px(2),
-                paddingTop: px(10),
+                gap: px(1.8),
+                paddingTop: px(7),
               }}
             >
               <Kicker ctx={ctx} color="rgba(255,255,255,0.9)" />
-              <Title ctx={ctx} size={7.8} color="#fff" />
+              <Title ctx={ctx} size={7.8} color={INK.onDark} />
               <AdditionalText ctx={ctx} size={2.6} opacity={0.82} />
               <ServiceLine ctx={ctx} tone="light" />
-              <div style={{ display: "flex", gap: px(2), alignItems: "center" }}>
+              <div style={{ display: "flex", gap: px(1.8), alignItems: "center" }}>
                 <PriceBadge ctx={ctx} tone="light" />
                 <CtaTag ctx={ctx} tone="light" />
               </div>
@@ -3681,7 +3698,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(8),
+              padding: px(7),
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
@@ -3692,18 +3709,18 @@ const engines: Engine[] = [
             <BizRow ctx={ctx} tone="light" />
             <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(1.8) }}>
               <Kicker ctx={ctx} color={brand.accent} />
-              <Title ctx={ctx} size={7.4} color="#fff" />
+              <Title ctx={ctx} size={7.4} color={INK.onDark} />
               <div
                 style={{
                   display: "flex",
-                  gap: px(3),
+                  gap: px(2.6),
                   flexWrap: "wrap",
-                  fontSize: px(2.4),
+                  fontSize: px(2.2),
                   fontWeight: 600,
                   letterSpacing: "0.12em",
                   textTransform: "uppercase",
                   fontFamily: fontSecondary(brand),
-                  color: "rgba(255,255,255,0.82)",
+                  color: INK.onDarkBody,
                 }}
               >
                 {[...metaItems(content, ctx.businessType), ...content.services]
@@ -3712,7 +3729,9 @@ const engines: Engine[] = [
                     <span key={item}>{item}</span>
                   ))}
               </div>
-              <div style={{ display: "flex", gap: px(2), alignItems: "center", flexWrap: "wrap" }}>
+              <div
+                style={{ display: "flex", gap: px(1.8), alignItems: "center", flexWrap: "wrap" }}
+              >
                 <PriceBadge ctx={ctx} tone="light" />
                 <CtaTag ctx={ctx} tone="light" />
               </div>
@@ -3738,15 +3757,16 @@ const engines: Engine[] = [
             padding: px(5),
             display: "flex",
             flexDirection: "column",
-            gap: px(3),
+            gap: px(2.6),
           }}
         >
           <div
             style={{
               position: "relative",
-              flex: "0 0 60%",
+              flex: "0 1 60%",
+              minHeight: 0,
               overflow: "hidden",
-              borderRadius: px(3),
+              borderRadius: px(2.4),
             }}
           >
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
@@ -3758,15 +3778,15 @@ const engines: Engine[] = [
                   right: px(4),
                   top: px(4),
                   transform: "rotate(-8deg)",
-                  padding: `${px(2)} ${px(3.2)}`,
-                  borderRadius: px(2),
+                  padding: `${px(1.8)} ${px(3.2)}`,
+                  borderRadius: px(2.4),
                   background: accentColor(ctx),
-                  color: "#fff",
+                  color: INK.onDark,
                   fontWeight: 800,
-                  fontSize: px(4.6),
+                  fontSize: px(4.2),
                   letterSpacing: "-0.02em",
                   fontFamily: font(brand),
-                  boxShadow: `0 ${px(1.2)} ${px(3)} rgba(20,12,36,0.28)`,
+                  boxShadow: `0 ${px(1.2)} ${px(2.6)} rgba(20,12,36,0.28)`,
                 }}
               >
                 {price}
@@ -3779,18 +3799,18 @@ const engines: Engine[] = [
               flex: 1,
               display: "flex",
               flexDirection: "column",
-              gap: px(1.6),
+              gap: px(1.8),
               justifyContent: "center",
-              color: "#1a1226",
+              color: INK.strong,
             }}
           >
             <Kicker ctx={ctx} color={accentColor(ctx)} />
-            <Title ctx={ctx} size={7.2} color="#1a1226" />
+            <Title ctx={ctx} size={7.2} color={INK.strong} />
             <Chips
               items={[...metaItems(content, ctx.businessType), ...content.services]}
               tone="dark"
             />
-            <div style={{ display: "flex", gap: px(2), alignItems: "center", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: px(1.8), alignItems: "center", flexWrap: "wrap" }}>
               <CtaTag ctx={ctx} tone="dark" />
               <BizRow ctx={ctx} tone="dark" />
             </div>
@@ -3829,22 +3849,22 @@ const engines: Engine[] = [
             style={{
               position: "relative",
               flex: 1,
-              padding: `${px(5.5)} ${px(5.5)} 0`,
+              padding: `${px(5)} ${px(5)} 0`,
               display: "flex",
               flexDirection: "column",
-              gap: px(2.4),
+              gap: px(2.6),
             }}
           >
             <BizRow ctx={ctx} tone="light" />
-            <HeadlineTwoTone ctx={ctx} size={8.6} color="#fff" accent={brand.accent} />
-            <AdditionalText ctx={ctx} size={2.6} opacity={0.85} style={{ color: "#fff" }} />
+            <HeadlineTwoTone ctx={ctx} size={8.6} color={INK.onDark} accent={brand.accent} />
+            <AdditionalText ctx={ctx} size={2.6} opacity={0.85} style={{ color: INK.onDark }} />
             <div
               style={{
                 marginTop: "auto",
                 display: "flex",
                 flexDirection: "column",
-                gap: px(2),
-                paddingBottom: px(4),
+                gap: px(1.8),
+                paddingBottom: px(3.6),
               }}
             >
               <FeatureBoxes ctx={ctx} tone="light" columns={2} />
@@ -3871,7 +3891,7 @@ const engines: Engine[] = [
             flexDirection: "column",
           }}
         >
-          <div style={{ position: "relative", flex: "0 0 42%" }}>
+          <div style={{ position: "relative", flex: "0 1 42%", minHeight: 0 }}>
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
             <div
               style={{
@@ -3894,7 +3914,7 @@ const engines: Engine[] = [
               <BizRow ctx={ctx} tone="light" />
               <span
                 style={{
-                  fontSize: px(2),
+                  fontSize: px(1.8),
                   fontWeight: 700,
                   letterSpacing: "0.22em",
                   color: brand.accent,
@@ -3909,7 +3929,7 @@ const engines: Engine[] = [
           <div
             style={{
               background: brand.accent,
-              padding: `0 ${px(5.5)} ${px(2.6)}`,
+              padding: `0 ${px(5)} ${px(2.6)}`,
               display: "flex",
               justifyContent: "center",
             }}
@@ -3919,7 +3939,7 @@ const engines: Engine[] = [
                 fontSize: px(2.2),
                 fontWeight: 800,
                 letterSpacing: "0.3em",
-                color: "#0a0f22",
+                color: INK.strong,
                 fontFamily: fontSecondary(brand),
               }}
             >
@@ -3929,21 +3949,21 @@ const engines: Engine[] = [
           <div
             style={{
               flex: 1,
-              padding: `${px(4)} ${px(5.5)} 0`,
+              padding: `${px(3.6)} ${px(5)} 0`,
               display: "flex",
               flexDirection: "column",
-              gap: px(2.4),
+              gap: px(2.6),
             }}
           >
             <HeadlineTwoTone
               ctx={ctx}
               size={7.6}
-              color="#fff"
+              color={INK.onDark}
               accent={brand.accent}
               align="center"
             />
             <FeatureBoxes ctx={ctx} tone="light" columns={2} />
-            <div style={{ marginTop: "auto", paddingBottom: px(4) }}>
+            <div style={{ marginTop: "auto", paddingBottom: px(3.6) }}>
               <CtaBar ctx={ctx} tone="dark" />
             </div>
           </div>
@@ -3972,7 +3992,7 @@ const engines: Engine[] = [
             flexDirection: "column",
           }}
         >
-          <div style={{ position: "relative", flex: "0 0 46%" }}>
+          <div style={{ position: "relative", flex: "0 1 46%", minHeight: 0 }}>
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
             <div
               style={{
@@ -3994,16 +4014,16 @@ const engines: Engine[] = [
               <BizRow ctx={ctx} tone="light" />
             </div>
             <div style={{ position: "absolute", left: px(5), right: px(5), bottom: px(3) }}>
-              <HeadlineTwoTone ctx={ctx} size={7.4} color="#0d1733" accent={accentColor(ctx)} />
+              <HeadlineTwoTone ctx={ctx} size={7.4} color={INK.strong} accent={accentColor(ctx)} />
             </div>
           </div>
           <div
             style={{
               flex: 1,
-              padding: `${px(3)} ${px(5)} 0`,
+              padding: `${px(2.6)} ${px(5)} 0`,
               display: "flex",
               flexDirection: "column",
-              gap: px(1.6),
+              gap: px(1.8),
             }}
           >
             {rows.slice(0, 3).map(([when, where], i) => (
@@ -4012,16 +4032,16 @@ const engines: Engine[] = [
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: px(2),
+                  gap: px(1.8),
                   background: "#fff",
-                  borderRadius: px(2),
+                  borderRadius: px(2.4),
                   padding: `${px(1.8)} ${px(2.6)}`,
-                  boxShadow: `0 ${px(0.8)} ${px(2)} rgba(13,23,51,0.08)`,
+                  boxShadow: `0 ${px(0.8)} ${px(1.8)} rgba(13,23,51,0.08)`,
                 }}
               >
                 <span
                   style={{
-                    fontSize: px(2.4),
+                    fontSize: px(2.2),
                     fontWeight: 800,
                     color: brand.primary,
                     fontFamily: font(brand),
@@ -4033,9 +4053,9 @@ const engines: Engine[] = [
                 <span style={{ flex: 1, height: px(0.3), background: "rgba(13,23,51,0.15)" }} />
                 <span
                   style={{
-                    fontSize: px(2.4),
+                    fontSize: px(2.2),
                     fontWeight: 700,
-                    color: "#0d1733",
+                    color: INK.strong,
                     fontFamily: fontSecondary(brand),
                   }}
                 >
@@ -4043,7 +4063,7 @@ const engines: Engine[] = [
                 </span>
                 <span
                   style={{
-                    fontSize: px(3),
+                    fontSize: px(3.2),
                     fontWeight: 800,
                     color: accentColor(ctx),
                     fontFamily: font(brand),
@@ -4053,7 +4073,7 @@ const engines: Engine[] = [
                 </span>
               </div>
             ))}
-            <div style={{ marginTop: "auto", paddingBottom: px(3.5) }}>
+            <div style={{ marginTop: "auto", paddingBottom: px(3.6) }}>
               <CtaBar ctx={ctx} tone="dark" />
             </div>
           </div>
@@ -4082,45 +4102,45 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(5.5),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
-              gap: px(3),
+              gap: px(2.6),
             }}
           >
             <BizRow ctx={ctx} tone="light" />
-            <HeadlineTwoTone ctx={ctx} size={7.8} color="#fff" accent={brand.accent} />
+            <HeadlineTwoTone ctx={ctx} size={7.8} color={INK.onDark} accent={brand.accent} />
             {/* the ticket itself, tilted the way these posters lay it on the sky */}
             <div
               style={{
                 marginTop: "auto",
-                marginBottom: px(2),
+                marginBottom: px(1.8),
                 transform: "rotate(-2.5deg)",
                 background: "#fff",
                 borderRadius: px(2.4),
                 overflow: "hidden",
-                boxShadow: `0 ${px(2)} ${px(5)} rgba(0,0,0,0.35)`,
+                boxShadow: `0 ${px(1.8)} ${px(5)} rgba(0,0,0,0.35)`,
               }}
             >
-              <div style={{ padding: `${px(3)} ${px(3.4)} ${px(2)}` }}>
-                <RouteCodes ctx={ctx} color="#0d1733" muted="rgba(13,23,51,0.45)" />
+              <div style={{ padding: `${px(2.6)} ${px(3.6)} ${px(2)}` }}>
+                <RouteCodes ctx={ctx} color={INK.strong} muted="rgba(13,23,51,0.45)" />
               </div>
               <Perforation color={deepGround(brand)} count={24} />
               <div
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: px(2.4),
-                  padding: `${px(2)} ${px(3.4)} ${px(3)}`,
+                  gap: px(2.6),
+                  padding: `${px(1.8)} ${px(3.6)} ${px(3)}`,
                 }}
               >
                 <div style={{ display: "flex", flexDirection: "column" }}>
                   <span
                     style={{
-                      fontSize: px(1.9),
+                      fontSize: px(1.8),
                       fontWeight: 700,
                       letterSpacing: "0.18em",
-                      color: "rgba(13,23,51,0.5)",
+                      color: INK.muted,
                       fontFamily: fontSecondary(brand),
                     }}
                   >
@@ -4128,7 +4148,7 @@ const engines: Engine[] = [
                   </span>
                   <span
                     style={{
-                      fontSize: px(4.4),
+                      fontSize: px(4.2),
                       fontWeight: 800,
                       color: accentColor(ctx),
                       fontFamily: font(brand),
@@ -4138,7 +4158,7 @@ const engines: Engine[] = [
                   </span>
                 </div>
                 <span style={{ marginLeft: "auto" }}>
-                  <Barcode color="#0d1733" height={7} />
+                  <Barcode color={INK.strong} height={7} />
                 </span>
               </div>
             </div>
@@ -4162,17 +4182,17 @@ const engines: Engine[] = [
           style={{
             ...base(brand),
             background: deepGround(brand),
-            padding: px(5.5),
+            padding: px(5),
             display: "flex",
             flexDirection: "column",
-            gap: px(3),
+            gap: px(2.6),
           }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <BizRow ctx={ctx} tone="light" />
             <span
               style={{
-                fontSize: px(2),
+                fontSize: px(1.8),
                 fontWeight: 700,
                 letterSpacing: "0.24em",
                 color: brand.accent,
@@ -4185,16 +4205,23 @@ const engines: Engine[] = [
           <div
             style={{
               position: "relative",
-              flex: "0 0 44%",
+              flex: "0 1 44%",
+              minHeight: 0,
               borderRadius: "44% 44% 44% 44% / 30% 30% 30% 30%",
               overflow: "hidden",
               border: `${px(1.2)} solid rgba(255,255,255,0.9)`,
-              boxShadow: `0 ${px(2)} ${px(5)} rgba(0,0,0,0.4)`,
+              boxShadow: `0 ${px(1.8)} ${px(5)} rgba(0,0,0,0.4)`,
             }}
           >
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           </div>
-          <HeadlineTwoTone ctx={ctx} size={7.2} color="#fff" accent={brand.accent} align="center" />
+          <HeadlineTwoTone
+            ctx={ctx}
+            size={7.2}
+            color={INK.onDark}
+            accent={brand.accent}
+            align="center"
+          />
           <FeatureBoxes ctx={ctx} tone="light" columns={2} limit={2} />
           <div
             style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: px(1.8) }}
@@ -4223,14 +4250,14 @@ const engines: Engine[] = [
         >
           <div
             style={{
-              padding: `${px(5)} ${px(5.5)} ${px(3)}`,
+              padding: `${px(5)} ${px(5)} ${px(3)}`,
               display: "flex",
               flexDirection: "column",
-              gap: px(2),
+              gap: px(1.8),
             }}
           >
             <BizRow ctx={ctx} tone="dark" />
-            <HeadlineTwoTone ctx={ctx} size={8.4} color="#12182c" accent={accentColor(ctx)} />
+            <HeadlineTwoTone ctx={ctx} size={8.4} color={INK.strong} accent={accentColor(ctx)} />
           </div>
           <div style={{ position: "relative", flex: 1 }}>
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
@@ -4272,10 +4299,10 @@ const engines: Engine[] = [
           style={{
             ...base(brand),
             background: brand.primary,
-            padding: px(4.5),
+            padding: px(5),
             display: "flex",
             flexDirection: "column",
-            gap: px(3),
+            gap: px(2.6),
           }}
         >
           <BizRow ctx={ctx} tone="light" />
@@ -4283,19 +4310,19 @@ const engines: Engine[] = [
             style={{
               background: "#fff",
               borderRadius: px(4),
-              padding: px(3.4),
+              padding: px(3.6),
               display: "flex",
               flexDirection: "column",
-              gap: px(2.4),
+              gap: px(2.6),
             }}
           >
-            <HeadlineTwoTone ctx={ctx} size={6.8} color="#101a36" accent={accentColor(ctx)} />
+            <HeadlineTwoTone ctx={ctx} size={6.8} color={INK.strong} accent={accentColor(ctx)} />
             <div
               style={{
                 position: "relative",
                 height: px(46),
                 overflow: "hidden",
-                borderRadius: px(2.6),
+                borderRadius: px(2.4),
               }}
             >
               <Img src={content.imageDataUrl} video={content.videoDataUrl} />
@@ -4333,7 +4360,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(5.5),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
             }}
@@ -4343,17 +4370,17 @@ const engines: Engine[] = [
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                paddingBottom: px(2.4),
+                paddingBottom: px(2.6),
                 borderBottom: "1px solid rgba(255,255,255,0.25)",
               }}
             >
               <BizRow ctx={ctx} tone="light" />
               <span
                 style={{
-                  fontSize: px(2),
+                  fontSize: px(1.8),
                   fontWeight: 700,
                   letterSpacing: "0.2em",
-                  color: "rgba(255,255,255,0.75)",
+                  color: INK.onDarkMuted,
                   fontFamily: fontSecondary(brand),
                 }}
               >
@@ -4361,7 +4388,7 @@ const engines: Engine[] = [
               </span>
             </div>
             <div
-              style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: px(2.4) }}
+              style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: px(2.6) }}
             >
               <span
                 style={{
@@ -4374,8 +4401,8 @@ const engines: Engine[] = [
               >
                 ONE WAY TICKET
               </span>
-              <RouteCodes ctx={ctx} color="#fff" muted="rgba(255,255,255,0.6)" />
-              <HeadlineTwoTone ctx={ctx} size={6.6} color="#fff" accent={brand.accent} />
+              <RouteCodes ctx={ctx} color={INK.onDark} muted="rgba(255,255,255,0.6)" />
+              <HeadlineTwoTone ctx={ctx} size={6.6} color={INK.onDark} accent={brand.accent} />
               <CtaBar ctx={ctx} tone="dark" />
               <ContactLine ctx={ctx} tone="light" />
             </div>
@@ -4417,7 +4444,7 @@ const engines: Engine[] = [
             style={{
               position: "relative",
               flex: 1,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
@@ -4428,12 +4455,18 @@ const engines: Engine[] = [
           >
             <BizRow ctx={ctx} tone="light" />
             <DashedArc color="rgba(255,255,255,0.75)" />
-            <HeadlineTwoTone ctx={ctx} size={9} color="#fff" accent={brand.accent} align="center" />
+            <HeadlineTwoTone
+              ctx={ctx}
+              size={9}
+              color={INK.onDark}
+              accent={brand.accent}
+              align="center"
+            />
             <AdditionalText
               ctx={ctx}
               size={2.6}
               opacity={0.85}
-              style={{ color: "#fff", textAlign: "center" }}
+              style={{ color: INK.onDark, textAlign: "center" }}
             />
             <FeatureBoxes ctx={ctx} tone="light" columns={2} limit={2} />
             <CtaBar ctx={ctx} tone="light" />
@@ -4463,7 +4496,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: px(3.6),
-              border: `${px(0.35)} solid ${brand.accent}88`,
+              border: `${px(0.4)} solid ${brand.accent}88`,
             }}
           />
           <div
@@ -4477,12 +4510,17 @@ const engines: Engine[] = [
             }}
           >
             <div
-              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: px(1) }}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: px(0.8),
+              }}
             >
               <BizRow ctx={ctx} tone="light" />
               <span
                 style={{
-                  fontSize: px(1.9),
+                  fontSize: px(1.8),
                   fontWeight: 700,
                   letterSpacing: "0.34em",
                   color: brand.accent,
@@ -4493,11 +4531,11 @@ const engines: Engine[] = [
               </span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: px(2.6) }}>
-              <RouteCodes ctx={ctx} color="#fff" muted={`${brand.accent}cc`} />
-              <HeadlineTwoTone ctx={ctx} size={7} color="#fff" accent={brand.accent} />
+              <RouteCodes ctx={ctx} color={INK.onDark} muted={`${brand.accent}cc`} />
+              <HeadlineTwoTone ctx={ctx} size={7} color={INK.onDark} accent={brand.accent} />
               <ServiceLine ctx={ctx} tone="light" />
               <div
-                style={{ display: "flex", alignItems: "center", gap: px(2.4), flexWrap: "wrap" }}
+                style={{ display: "flex", alignItems: "center", gap: px(2.6), flexWrap: "wrap" }}
               >
                 <PriceBadge ctx={ctx} tone="light" />
                 <CtaTag ctx={ctx} tone="dark" />
@@ -4518,14 +4556,14 @@ const engines: Engine[] = [
       const sand = bgOr(brand, "#fdf3e3");
       return (
         <div style={{ ...base(brand), background: sand, display: "flex", flexDirection: "column" }}>
-          <div style={{ position: "relative", flex: "0 0 56%" }}>
+          <div style={{ position: "relative", flex: "0 1 56%", minHeight: 0 }}>
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
             <div style={{ position: "absolute", left: px(5), top: px(5) }}>
               <BizRow ctx={ctx} tone="light" />
             </div>
           </div>
           <Scallop color={sand} size={7} />
-          <div style={{ flex: 1, padding: `${px(2)} ${px(5.5)} ${px(5)}` }}>
+          <div style={{ flex: 1, padding: `${px(1.8)} ${px(5)} ${px(5)}` }}>
             <OfferStack ctx={ctx} tone="dark" titleSize={7.2} />
           </div>
         </div>
@@ -4574,7 +4612,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
@@ -4618,8 +4656,8 @@ const engines: Engine[] = [
               style={{
                 background: "rgba(255,255,255,0.94)",
                 borderRadius: px(4),
-                padding: px(4.5),
-                boxShadow: `0 ${px(2)} ${px(5)} rgba(6,20,28,0.22)`,
+                padding: px(5),
+                boxShadow: `0 ${px(1.8)} ${px(5)} rgba(6,20,28,0.22)`,
               }}
             >
               <OfferStack ctx={ctx} tone="dark" titleSize={6.4} />
@@ -4644,13 +4682,13 @@ const engines: Engine[] = [
             flexDirection: "column",
           }}
         >
-          <div style={{ position: "relative", flex: "0 0 38%" }}>
+          <div style={{ position: "relative", flex: "0 1 38%", minHeight: 0 }}>
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           </div>
           <div
             style={{
               flex: 1,
-              padding: px(5.5),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               justifyContent: "center",
@@ -4659,7 +4697,7 @@ const engines: Engine[] = [
           >
             <OfferStack ctx={ctx} tone="light" titleSize={7.8} />
           </div>
-          <div style={{ position: "relative", flex: "0 0 16%" }}>
+          <div style={{ position: "relative", flex: "0 1 16%", minHeight: 0 }}>
             <Img
               src={content.imageDataUrl}
               video={content.videoDataUrl}
@@ -4692,7 +4730,7 @@ const engines: Engine[] = [
               marginLeft: `-${px(20)}`,
               borderRadius: "50%",
               overflow: "hidden",
-              border: `${px(1)} solid rgba(255,255,255,0.8)`,
+              border: `${px(0.8)} solid rgba(255,255,255,0.8)`,
             }}
           >
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
@@ -4701,7 +4739,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
@@ -4725,17 +4763,18 @@ const engines: Engine[] = [
           style={{
             ...base(brand),
             background: bgOr(brand, "linear-gradient(160deg, #dff4f7, #ffffff 65%)"),
-            padding: px(5.5),
+            padding: px(5),
             display: "flex",
             flexDirection: "column",
-            gap: px(3),
+            gap: px(2.6),
           }}
         >
           <BizRow ctx={ctx} tone="dark" />
           <div
             style={{
               position: "relative",
-              flex: "0 0 46%",
+              flex: "0 1 46%",
+              minHeight: 0,
               overflow: "hidden",
               borderRadius: px(4),
             }}
@@ -4750,12 +4789,12 @@ const engines: Engine[] = [
                 height: px(16),
                 borderRadius: "50%",
                 background: brand.primary,
-                color: "#fff",
+                color: INK.onDark,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 fontWeight: 800,
-                fontSize: px(3.6),
+                fontSize: px(3.2),
                 fontFamily: font(brand),
               }}
             >
@@ -4778,7 +4817,7 @@ const engines: Engine[] = [
           style={{
             ...base(brand),
             background: bgOr(brand, "#f2ede2"),
-            padding: px(4),
+            padding: px(3.6),
             display: "flex",
           }}
         >
@@ -4786,14 +4825,16 @@ const engines: Engine[] = [
             style={{
               flex: 1,
               background: "#fff",
-              padding: px(3),
+              padding: px(2.6),
               display: "flex",
               flexDirection: "column",
-              gap: px(3),
-              boxShadow: `0 ${px(1.4)} ${px(3.4)} rgba(20,16,32,0.12)`,
+              gap: px(2.6),
+              boxShadow: `0 ${px(1.2)} ${px(3.6)} rgba(20,16,32,0.12)`,
             }}
           >
-            <div style={{ position: "relative", flex: "0 0 52%", overflow: "hidden" }}>
+            <div
+              style={{ position: "relative", flex: "0 1 52%", minHeight: 0, overflow: "hidden" }}
+            >
               <Img src={content.imageDataUrl} video={content.videoDataUrl} />
               {/* the stamp corner of a card sent home */}
               <span
@@ -4803,13 +4844,13 @@ const engines: Engine[] = [
                   top: px(2.4),
                   width: px(11),
                   height: px(13),
-                  border: `${px(0.6)} dashed rgba(255,255,255,0.9)`,
-                  borderRadius: px(1),
+                  border: `${px(0.4)} dashed rgba(255,255,255,0.9)`,
+                  borderRadius: px(1.2),
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  color: "#fff",
-                  fontSize: px(2),
+                  color: INK.onDark,
+                  fontSize: px(1.8),
                   fontWeight: 800,
                   letterSpacing: "0.12em",
                   textAlign: "center",
@@ -4848,7 +4889,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
@@ -4866,13 +4907,13 @@ const engines: Engine[] = [
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: px(0.6),
-                color: "#fff",
+                gap: px(0.4),
+                color: INK.onDark,
                 fontFamily: font(brand),
               }}
             >
-              <span style={{ fontSize: px(2), letterSpacing: "0.2em", opacity: 0.8 }}>NGA</span>
-              <span style={{ fontSize: px(6.4), fontWeight: 800 }}>
+              <span style={{ fontSize: px(1.8), letterSpacing: "0.2em", opacity: 0.8 }}>NGA</span>
+              <span style={{ fontSize: px(7), fontWeight: 800 }}>
                 {formatPrice(content.price, brand.currency)}
               </span>
             </div>
@@ -4913,7 +4954,7 @@ const engines: Engine[] = [
               display: "flex",
               flexDirection: "column",
               justifyContent: "flex-end",
-              gap: px(3),
+              gap: px(2.6),
             }}
           >
             <OfferStack ctx={ctx} tone="light" titleSize={8.2} chips={false} />
@@ -4934,10 +4975,10 @@ const engines: Engine[] = [
           style={{
             ...base(brand),
             background: bgOr(brand, "#f6ecdc"),
-            padding: px(6),
+            padding: px(5),
             display: "flex",
             flexDirection: "column",
-            gap: px(3),
+            gap: px(2.6),
           }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -4952,7 +4993,7 @@ const engines: Engine[] = [
             />
           </div>
           <OfferStack ctx={ctx} tone="dark" titleSize={7.6} chips={false} contact={false} />
-          <div style={{ position: "relative", flex: 1, overflow: "hidden", borderRadius: px(2) }}>
+          <div style={{ position: "relative", flex: 1, overflow: "hidden", borderRadius: px(2.4) }}>
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           </div>
           <ContactLine ctx={ctx} tone="dark" />
@@ -4974,7 +5015,7 @@ const engines: Engine[] = [
             padding: px(5),
             display: "flex",
             flexDirection: "column",
-            gap: px(3),
+            gap: px(2.6),
           }}
         >
           <div
@@ -4986,9 +5027,10 @@ const engines: Engine[] = [
           <div
             style={{
               position: "relative",
-              flex: "0 0 38%",
+              flex: "0 1 38%",
+              minHeight: 0,
               overflow: "hidden",
-              borderRadius: px(2),
+              borderRadius: px(2.4),
             }}
           >
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
@@ -5018,7 +5060,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
@@ -5049,7 +5091,7 @@ const engines: Engine[] = [
             flexDirection: "column",
           }}
         >
-          <div style={{ position: "relative", flex: "0 0 38%" }}>
+          <div style={{ position: "relative", flex: "0 1 38%", minHeight: 0 }}>
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
             <div style={{ position: "absolute", left: px(5), bottom: px(4) }}>
               <BizRow ctx={ctx} tone="light" />
@@ -5058,7 +5100,7 @@ const engines: Engine[] = [
           <div
             style={{
               flex: 1,
-              padding: px(5.5),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               gap: px(2.6),
@@ -5090,7 +5132,7 @@ const engines: Engine[] = [
           style={{
             ...base(brand),
             background: `linear-gradient(170deg, ${brand.primary}, #0d0a1e)`,
-            padding: px(6),
+            padding: px(5),
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -5132,7 +5174,7 @@ const engines: Engine[] = [
             gap: px(2.6),
           }}
         >
-          <div style={{ display: "flex", gap: px(2), justifyContent: "space-between" }}>
+          <div style={{ display: "flex", gap: px(1.8), justifyContent: "space-between" }}>
             <Stamp ctx={ctx} color={`${brand.primary}aa`} rotate={-7} size={17} />
             <Stamp ctx={ctx} color={`${brand.secondary}aa`} rotate={6} size={17} />
             <Stamp ctx={ctx} color={`${brand.accent}dd`} rotate={-3} size={17} />
@@ -5140,9 +5182,10 @@ const engines: Engine[] = [
           <div
             style={{
               position: "relative",
-              flex: "0 0 40%",
+              flex: "0 1 40%",
+              minHeight: 0,
               overflow: "hidden",
-              borderRadius: px(2),
+              borderRadius: px(2.4),
             }}
           >
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
@@ -5207,7 +5250,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
@@ -5233,10 +5276,10 @@ const engines: Engine[] = [
             background: bgOr(brand, "#101018"),
             display: "flex",
             flexDirection: "column",
-            gap: px(1),
+            gap: px(0.8),
           }}
         >
-          <div style={{ display: "flex", gap: px(1), flex: "0 0 46%" }}>
+          <div style={{ display: "flex", gap: px(0.8), flex: "0 1 46%", minHeight: 0 }}>
             {[0, 1, 2].map((i) => (
               <div key={i} style={{ position: "relative", flex: 1, overflow: "hidden" }}>
                 <Img
@@ -5250,11 +5293,11 @@ const engines: Engine[] = [
           <div
             style={{
               flex: 1,
-              padding: px(5.5),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               justifyContent: "center",
-              gap: px(2.4),
+              gap: px(2.6),
             }}
           >
             <OfferStack ctx={ctx} tone="light" titleSize={7.4} />
@@ -5274,7 +5317,7 @@ const engines: Engine[] = [
           style={{
             ...base(brand),
             background: bgOr(brand, "#fbf8f1"),
-            padding: px(6),
+            padding: px(5),
             display: "flex",
             flexDirection: "column",
             gap: px(2.6),
@@ -5283,7 +5326,7 @@ const engines: Engine[] = [
           <BizRow ctx={ctx} tone="dark" />
           <span style={{ height: px(0.3), background: `${brand.primary}44` }} />
           <OfferStack ctx={ctx} tone="dark" titleSize={7.8} chips={false} contact={false} />
-          <div style={{ position: "relative", flex: 1, overflow: "hidden", borderRadius: px(1.6) }}>
+          <div style={{ position: "relative", flex: 1, overflow: "hidden", borderRadius: px(1.2) }}>
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           </div>
           <DottedRoute color={`${brand.primary}88`} stops={5} />
@@ -5313,7 +5356,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
@@ -5331,7 +5374,7 @@ const engines: Engine[] = [
                 style={{
                   fontWeight: 800,
                   letterSpacing: "-0.02em",
-                  color: "rgba(255,255,255,0.16)",
+                  color: INK.onDarkFaint,
                   fontFamily: font(brand),
                 }}
               />
@@ -5371,7 +5414,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
@@ -5408,7 +5451,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
@@ -5445,8 +5488,8 @@ const engines: Engine[] = [
               style={{
                 background: "rgba(226,240,255,0.82)",
                 border: "1px solid rgba(255,255,255,0.7)",
-                borderRadius: px(3.4),
-                padding: px(4.4),
+                borderRadius: px(4),
+                padding: px(5),
                 backdropFilter: "blur(8px)",
               }}
             >
@@ -5466,13 +5509,13 @@ const engines: Engine[] = [
       const snow = bgOr(brand, "#eef5fb");
       return (
         <div style={{ ...base(brand), background: snow, display: "flex", flexDirection: "column" }}>
-          <div style={{ position: "relative", flex: "0 0 52%" }}>
+          <div style={{ position: "relative", flex: "0 1 52%", minHeight: 0 }}>
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
             <Snowfall count={18} color="rgba(255,255,255,0.9)" />
           </div>
           {/* a snow line running under the picture */}
           <Scallop color={snow} size={8} count={7} />
-          <div style={{ flex: 1, padding: `${px(2.4)} ${px(5.5)} ${px(5)}` }}>
+          <div style={{ flex: 1, padding: `${px(2.6)} ${px(5)} ${px(5)}` }}>
             <OfferStack ctx={ctx} tone="dark" titleSize={7} />
           </div>
         </div>
@@ -5510,7 +5553,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
@@ -5521,12 +5564,12 @@ const engines: Engine[] = [
             <span
               style={{
                 marginTop: "auto",
-                padding: `${px(1)} ${px(3)}`,
+                padding: `${px(0.8)} ${px(3)}`,
                 borderRadius: px(9),
                 background: "rgba(255,255,255,0.9)",
                 color: brand.primary,
                 fontWeight: 800,
-                fontSize: px(2.3),
+                fontSize: px(2.2),
                 letterSpacing: "0.16em",
                 fontFamily: fontSecondary(brand),
               }}
@@ -5564,7 +5607,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6.5),
+              padding: px(7),
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
@@ -5607,18 +5650,19 @@ const engines: Engine[] = [
           <div
             style={{
               position: "relative",
-              flex: "0 0 46%",
+              flex: "0 1 46%",
+              minHeight: 0,
               margin: `0 ${px(5)}`,
               overflow: "hidden",
-              borderRadius: px(3),
+              borderRadius: px(2.4),
             }}
           >
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
             <div style={{ position: "absolute", left: 0, right: 0, top: 0 }}>
-              <Scallop color="#ffffff" size={6} count={8} flip />
+              <Scallop color={INK.onDark} size={6} count={8} flip />
             </div>
           </div>
-          <div style={{ flex: 1, padding: `${px(3.5)} ${px(5)} ${px(5)}` }}>
+          <div style={{ flex: 1, padding: `${px(3.6)} ${px(5)} ${px(5)}` }}>
             <OfferStack ctx={ctx} tone="dark" titleSize={6.8} />
           </div>
         </div>
@@ -5636,7 +5680,7 @@ const engines: Engine[] = [
           style={{
             ...base(brand),
             background: bgOr(brand, "#e8f1f8"),
-            padding: px(4.5),
+            padding: px(5),
             display: "flex",
           }}
         >
@@ -5646,9 +5690,9 @@ const engines: Engine[] = [
               display: "flex",
               flexDirection: "column",
               background: "#fff",
-              borderRadius: px(3),
+              borderRadius: px(2.4),
               overflow: "hidden",
-              boxShadow: `0 ${px(2)} ${px(5)} rgba(12,32,54,0.16)`,
+              boxShadow: `0 ${px(1.8)} ${px(5)} rgba(12,32,54,0.16)`,
             }}
           >
             <div
@@ -5663,26 +5707,26 @@ const engines: Engine[] = [
               <BizRow ctx={ctx} tone="light" />
               <span
                 style={{
-                  fontSize: px(2.1),
+                  fontSize: px(2.2),
                   fontWeight: 800,
                   letterSpacing: "0.2em",
-                  color: "rgba(255,255,255,0.9)",
+                  color: INK.onDarkBody,
                   fontFamily: fontSecondary(brand),
                 }}
               >
                 SEASON PASS
               </span>
             </div>
-            <div style={{ position: "relative", flex: "0 0 40%" }}>
+            <div style={{ position: "relative", flex: "0 1 40%", minHeight: 0 }}>
               <Img src={content.imageDataUrl} video={content.videoDataUrl} />
               <Snowfall count={14} />
             </div>
             <div
               style={{
-                padding: `${px(3.4)} ${px(4)}`,
+                padding: `${px(3.6)} ${px(4)}`,
                 display: "flex",
                 flexDirection: "column",
-                gap: px(2.2),
+                gap: px(2.6),
               }}
             >
               <OfferStack
@@ -5693,7 +5737,7 @@ const engines: Engine[] = [
                 extra={false}
                 contact={false}
               />
-              <div style={{ display: "flex", gap: px(4), flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: px(3.6), flexWrap: "wrap" }}>
                 <TicketField ctx={ctx} label="Datat" value={content.date} tone="dark" />
                 <TicketField ctx={ctx} label="Netë" value={content.meta1} tone="dark" />
                 <TicketField ctx={ctx} label="Hotel" value={content.location} tone="dark" />
@@ -5711,7 +5755,7 @@ const engines: Engine[] = [
     tags: ["editorial", "light", "dense"],
     render: (ctx) => {
       const { content, brand } = ctx;
-      const band = `repeating-linear-gradient(135deg, ${brand.primary} 0 ${px(1.6)}, transparent ${px(1.6)} ${px(3.2)})`;
+      const band = `repeating-linear-gradient(135deg, ${brand.primary} 0 ${px(1.6)}, transparent ${px(1.8)} ${px(3.6)})`;
       return (
         <div
           style={{
@@ -5722,10 +5766,10 @@ const engines: Engine[] = [
           }}
         >
           <div style={{ height: px(4), background: band }} />
-          <div style={{ position: "relative", flex: "0 0 46%" }}>
+          <div style={{ position: "relative", flex: "0 1 46%", minHeight: 0 }}>
             <Img src={content.imageDataUrl} video={content.videoDataUrl} />
           </div>
-          <div style={{ flex: 1, padding: px(5.5) }}>
+          <div style={{ flex: 1, padding: px(5) }}>
             <OfferStack ctx={ctx} tone="dark" titleSize={7} />
           </div>
           <div style={{ height: px(4), background: band }} />
@@ -5753,8 +5797,8 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: px(4.5),
-              border: `${px(0.5)} solid rgba(255,255,255,0.85)`,
-              borderRadius: px(1),
+              border: `${px(0.4)} solid rgba(255,255,255,0.85)`,
+              borderRadius: px(1.2),
             }}
           />
           <Snowfall count={16} />
@@ -5762,7 +5806,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(7.5),
+              padding: px(7),
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
@@ -5794,7 +5838,7 @@ const engines: Engine[] = [
             style={{
               position: "absolute",
               inset: 0,
-              padding: px(6),
+              padding: px(5),
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
@@ -5804,8 +5848,8 @@ const engines: Engine[] = [
               <BizRow ctx={ctx} tone="light" />
               <span
                 style={{
-                  padding: `${px(1)} ${px(2.6)}`,
-                  borderRadius: px(1.4),
+                  padding: `${px(0.8)} ${px(2.6)}`,
+                  borderRadius: px(1.2),
                   border: `1px solid ${brand.accent}`,
                   color: brand.accent,
                   fontWeight: 800,
@@ -5862,7 +5906,7 @@ const engines: Engine[] = [
             <BizRow ctx={ctx} tone="dark" />
             <span
               style={{
-                fontSize: px(1.9),
+                fontSize: px(1.8),
                 fontWeight: 700,
                 letterSpacing: "0.2em",
                 color: brand.primary,
@@ -5872,7 +5916,7 @@ const engines: Engine[] = [
               {(content.date || "").toUpperCase()}
             </span>
           </div>
-          <HeadlineTwoTone ctx={ctx} size={7.2} color="#0d2030" accent={brand.primary} />
+          <HeadlineTwoTone ctx={ctx} size={7.2} color={INK.strong} accent={brand.primary} />
           <ServiceLine ctx={ctx} tone="dark" />
           {/* the handset itself: bezel, notch and a screen with the same layout */}
           <div
@@ -5883,9 +5927,9 @@ const engines: Engine[] = [
               marginBottom: `-${px(6)}`,
               background: "#0d1218",
               borderRadius: `${px(7)} ${px(7)} 0 0`,
-              padding: px(1),
+              padding: px(0.8),
               paddingBottom: 0,
-              boxShadow: `0 ${px(3)} ${px(8)} rgba(13,32,48,0.32)`,
+              boxShadow: `0 ${px(2.6)} ${px(7)} rgba(13,32,48,0.32)`,
               overflow: "hidden",
             }}
           >
@@ -5894,7 +5938,7 @@ const engines: Engine[] = [
                 position: "relative",
                 height: "100%",
                 background: "#fff",
-                borderRadius: `${px(6.2)} ${px(6.2)} 0 0`,
+                borderRadius: `${px(7)} ${px(7)} 0 0`,
                 overflow: "hidden",
                 display: "flex",
                 flexDirection: "column",
