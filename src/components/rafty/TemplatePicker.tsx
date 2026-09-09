@@ -12,10 +12,24 @@ import { PostCanvas } from "@/components/rafty/PostCanvas";
 import { LazyMount } from "@/components/rafty/LazyMount";
 import { placeholderContent } from "@/lib/rafty/placeholder";
 import { useRafty } from "@/lib/rafty/store";
-import type { BrandProfile, BusinessType, ContentFormat, Template } from "@/lib/rafty/types";
+import type {
+  BrandProfile,
+  BusinessType,
+  ContentFormat,
+  Template,
+  TemplateCategory,
+} from "@/lib/rafty/types";
 import { cn } from "@/lib/utils";
 
 type Filter = "all" | "favorites" | "used";
+
+/** The occasions a design can be made for, in the order they are offered. */
+const CATEGORIES: { key: TemplateCategory; label: string }[] = [
+  { key: "flights", label: "Flight tickets" },
+  { key: "sea", label: "Beach holidays" },
+  { key: "world", label: "World trips" },
+  { key: "winter", label: "Winter season" },
+];
 
 /**
  * Visual template chooser. Opens over the Create page, so the draft in the
@@ -43,34 +57,50 @@ export function TemplatePicker({
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
   const [preview, setPreview] = useState<Template | null>(null);
+  const [category, setCategory] = useState<TemplateCategory | "all">("all");
 
   const content = useMemo(() => placeholderContent(businessType), [businessType]);
 
   const selected = templates.find((x) => x.id === value) ?? templates[0];
 
   const list = useMemo(() => {
-    if (filter === "favorites") return templates.filter((x) => favorites.includes(x.id));
+    const scoped =
+      category === "all" ? templates : templates.filter((x) => x.category === category);
+    if (filter === "favorites") return scoped.filter((x) => favorites.includes(x.id));
     if (filter === "used")
-      return templates
+      return scoped
         .filter((x) => (templateUsage[x.id] ?? 0) > 0)
         .sort((a, b) => (templateUsage[b.id] ?? 0) - (templateUsage[a.id] ?? 0));
-    return templates;
-  }, [templates, filter, favorites, templateUsage]);
+    return scoped;
+  }, [templates, filter, category, favorites, templateUsage]);
 
   /** The named sets lead, each under its own heading, then the standard
    * library. Filtering by favourites or usage answers a different question, so
    * those views stay one flat list in their own order. */
   const groups = useMemo(() => {
-    if (filter !== "all") return [{ key: "flat", label: null as string | null, items: list }];
-    const fresh = list.filter((x) => x.collection === "signature");
-    const rest = list.filter((x) => !x.collection);
+    if (filter !== "all" || category !== "all")
+      return [{ key: "flat", label: null as string | null, items: list }];
+    const byCategory = CATEGORIES.map((c) => ({
+      key: c.key as string,
+      label: c.label as string | null,
+      items: list.filter((x) => x.category === c.key),
+    })).filter((g) => g.items.length > 0);
+    const fresh = list.filter((x) => !x.category && x.collection === "signature");
+    const rest = list.filter((x) => !x.category && !x.collection);
     return [
+      ...byCategory,
       ...(fresh.length ? [{ key: "signature", label: "New designs", items: fresh }] : []),
       ...(rest.length
-        ? [{ key: "library", label: fresh.length ? "All templates" : null, items: rest }]
+        ? [
+            {
+              key: "library",
+              label: byCategory.length || fresh.length ? "All templates" : null,
+              items: rest,
+            },
+          ]
         : []),
     ];
-  }, [list, filter]);
+  }, [list, filter, category]);
 
   const tabs: { key: Filter; label: string }[] = [
     { key: "all", label: "All" },
@@ -170,7 +200,25 @@ export function TemplatePicker({
               ))}
             </div>
 
-            <div className="max-h-[66vh] overflow-y-auto px-4 pb-4 pt-3">
+            <div className="flex flex-wrap gap-2 px-4 pt-2">
+              {[{ key: "all" as const, label: "All occasions" }, ...CATEGORIES].map((c) => (
+                <button
+                  key={c.key}
+                  type="button"
+                  onClick={() => setCategory(c.key)}
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-[11px] font-semibold transition",
+                    category === c.key
+                      ? "border-primary bg-primary-soft"
+                      : "border-border bg-card text-muted-foreground",
+                  )}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="max-h-[62vh] overflow-y-auto px-4 pb-4 pt-3">
               {list.length === 0 ? (
                 <p className="py-8 text-center text-sm text-muted-foreground">
                   {filter === "favorites"

@@ -225,6 +225,11 @@ export type TemplateScope = "global" | "custom";
 /** Template sets that are grouped and labelled separately in the picker. */
 export type TemplateCollection = "signature";
 
+/** What a design is made for. A category is the occasion the post is about, not
+ * the kind of business: a travel agency sells flights in January and beaches in
+ * June, and wants a different looking design for each. */
+export type TemplateCategory = "flights" | "sea" | "world" | "winter";
+
 /** Visual families. The library is not locked to an industry. */
 export type TemplateTag =
   | "editorial"
@@ -294,6 +299,9 @@ export type Template = {
   /** Named set this template belongs to. A set is shown as its own group at the
    * top of the picker, ahead of the standard library, which carries none. */
   collection?: TemplateCollection | undefined;
+  /** The occasion this design is built for. Categories are shown as their own
+   * groups in the picker, ahead of the general library. */
+  category?: TemplateCategory | undefined;
   /** Which content format this template renders. Defaults to post. */
   format?: ContentFormat;
   /** Multi card formats: how many slides the design supports. */

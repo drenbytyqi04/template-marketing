@@ -8,6 +8,7 @@ import type {
   PostContent,
   Template,
   TemplateTag,
+  TemplateCategory,
   TemplateVariant,
   TemplateZone,
   ZoneKey,
@@ -376,6 +377,415 @@ function BizRow({ ctx, tone }: { ctx: RenderCtx; tone: "light" | "dark" }) {
         </span>
       ) : null}
     </div>
+  );
+}
+
+/* ------------------------------ flight designs ----------------------------- */
+
+/** A three letter code out of whatever the post names, the way a ticket prints
+ * a destination. Falls back to the first letters it can find. */
+const codeOf = (value: string, fallback: string) => {
+  const clean = value.replace(/[^\p{L}\p{N} ]/gu, " ").trim();
+  const words = clean.split(/\s+/).filter(Boolean);
+  const source = words.length > 1 ? words.map((w) => w[0]).join("") : (words[0] ?? fallback);
+  return (source || fallback).slice(0, 3).toUpperCase();
+};
+
+/** The torn edge of a ticket: a row of half circles punched out of the seam. */
+function Perforation({ color, count = 22 }: { color: string; count?: number }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", padding: `0 ${px(2)}` }}>
+      {Array.from({ length: count }, (_, i) => (
+        <span
+          key={i}
+          style={{ width: px(1.2), height: px(1.2), borderRadius: "50%", background: color }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** Departure to arrival, as a dotted line with a plane sitting on it. */
+function RouteLine({ from, to, color }: { from: string; to: string; color: string }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: px(2), width: "100%" }}>
+      <span style={{ fontSize: px(5.4), fontWeight: 800, letterSpacing: "-0.02em", color }}>
+        {from}
+      </span>
+      <span
+        style={{
+          flex: 1,
+          height: px(0.4),
+          background: `repeating-linear-gradient(90deg, ${color} 0 ${px(1)}, transparent ${px(1)} ${px(2)})`,
+        }}
+      />
+      <span
+        style={{
+          width: 0,
+          height: 0,
+          borderTop: `${px(1.1)} solid transparent`,
+          borderBottom: `${px(1.1)} solid transparent`,
+          borderLeft: `${px(2.2)} solid ${color}`,
+        }}
+      />
+      <span
+        style={{
+          flex: 1,
+          height: px(0.4),
+          background: `repeating-linear-gradient(90deg, ${color} 0 ${px(1)}, transparent ${px(1)} ${px(2)})`,
+        }}
+      />
+      <span style={{ fontSize: px(5.4), fontWeight: 800, letterSpacing: "-0.02em", color }}>
+        {to}
+      </span>
+    </div>
+  );
+}
+
+/** Uneven bars, the way a fare barcode prints under a ticket. */
+function Barcode({ color, height = 6 }: { color: string; height?: number }) {
+  const widths = [0.5, 0.9, 0.4, 1.3, 0.5, 0.7, 1.1, 0.4, 0.8, 0.5, 1.2, 0.6, 0.4, 1, 0.7, 0.5];
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", gap: px(0.5), height: px(height) }}>
+      {widths.map((w, i) => (
+        <span key={i} style={{ width: px(w), height: "100%", background: color, opacity: 0.9 }} />
+      ))}
+    </div>
+  );
+}
+
+/** One labelled cell of a ticket: GATE, SEAT, DATE. */
+function TicketField({
+  ctx,
+  label,
+  value,
+  tone,
+}: {
+  ctx: RenderCtx;
+  label: string;
+  value: string;
+  tone: "light" | "dark";
+}) {
+  if (!value) return null;
+  const ink = tone === "light" ? "#fff" : "#191128";
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: px(0.5) }}>
+      <span
+        style={{
+          fontSize: px(1.9),
+          fontWeight: 700,
+          letterSpacing: "0.18em",
+          textTransform: "uppercase",
+          opacity: 0.6,
+          fontFamily: fontSecondary(ctx.brand),
+          color: ink,
+        }}
+      >
+        {label}
+      </span>
+      <span
+        style={{
+          fontSize: px(3),
+          fontWeight: 800,
+          fontFamily: font(ctx.brand),
+          color: ink,
+        }}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+/* ------------------------------- sea designs ------------------------------- */
+
+/** A scalloped edge: overlapping discs that read as a wave where two colours
+ * meet, or as snow where the colour is white. */
+function Scallop({
+  color,
+  size = 6,
+  flip = false,
+  count = 9,
+}: {
+  color: string;
+  size?: number;
+  flip?: boolean;
+  count?: number;
+}) {
+  return (
+    <div
+      style={{
+        position: "relative",
+        height: px(size / 2),
+        display: "flex",
+        justifyContent: "space-between",
+        marginTop: flip ? 0 : `-${px(size / 2)}`,
+        marginBottom: flip ? `-${px(size / 2)}` : 0,
+      }}
+    >
+      {Array.from({ length: count }, (_, i) => (
+        <span
+          key={i}
+          style={{
+            width: `${100 / count}%`,
+            height: px(size),
+            borderRadius: "50%",
+            background: color,
+            marginTop: flip ? `-${px(size / 2)}` : 0,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** The sun, as a plain disc the design can place where it likes. */
+function SunDisc({
+  color,
+  size,
+  style,
+}: {
+  color: string;
+  size: number;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <span
+      style={{
+        position: "absolute",
+        width: px(size),
+        height: px(size),
+        borderRadius: "50%",
+        background: color,
+        ...style,
+      }}
+    />
+  );
+}
+
+/* ------------------------- world and winter designs ------------------------ */
+
+/** A passport stamp: a rotated dashed box with the destination inside it. */
+function Stamp({
+  ctx,
+  color,
+  rotate = -9,
+  size = 22,
+}: {
+  ctx: RenderCtx;
+  color: string;
+  rotate?: number;
+  size?: number;
+}) {
+  const word = (ctx.content.subject || ctx.content.location || ctx.businessName).toUpperCase();
+  return (
+    <span
+      style={{
+        width: px(size),
+        height: px(size * 0.72),
+        border: `${px(0.7)} dashed ${color}`,
+        borderRadius: px(1.6),
+        transform: `rotate(${rotate}deg)`,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: px(0.4),
+        color,
+        textAlign: "center",
+        padding: px(1),
+      }}
+    >
+      <span style={{ fontSize: px(1.7), letterSpacing: "0.2em", opacity: 0.85 }}>VISITED</span>
+      <span
+        style={{
+          fontSize: px(2.8),
+          fontWeight: 800,
+          letterSpacing: "0.06em",
+          fontFamily: fontSecondary(ctx.brand),
+          lineHeight: 1.05,
+        }}
+      >
+        {word.slice(0, 12)}
+      </span>
+    </span>
+  );
+}
+
+/** Pins joined by a dotted line, the way a route is drawn on a map. */
+function DottedRoute({ color, stops = 4 }: { color: string; stops?: number }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
+      {Array.from({ length: stops }, (_, i) => (
+        <div
+          key={i}
+          style={{ display: "flex", alignItems: "center", flex: i === stops - 1 ? "0 0 auto" : 1 }}
+        >
+          <span style={{ width: px(2), height: px(2), borderRadius: "50%", background: color }} />
+          {i < stops - 1 ? (
+            <span
+              style={{
+                flex: 1,
+                height: px(0.35),
+                background: `repeating-linear-gradient(90deg, ${color} 0 ${px(0.8)}, transparent ${px(0.8)} ${px(1.8)})`,
+              }}
+            />
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** The stops of a trip, numbered, taken from what the post says is included. */
+function StopList({ ctx, tone }: { ctx: RenderCtx; tone: "light" | "dark" }) {
+  const stops = ctx.content.services.filter(Boolean).slice(0, 5);
+  if (!stops.length) return null;
+  const ink = tone === "light" ? "#fff" : "#191128";
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: px(1.2), width: "100%" }}>
+      {stops.map((stop, i) => (
+        <div key={stop} style={{ display: "flex", alignItems: "center", gap: px(2) }}>
+          <span
+            style={{
+              width: px(4.4),
+              height: px(4.4),
+              borderRadius: "50%",
+              border: `${px(0.35)} solid ${ink}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: px(2.1),
+              fontWeight: 800,
+              color: ink,
+              opacity: 0.85,
+              fontFamily: font(ctx.brand),
+            }}
+          >
+            {i + 1}
+          </span>
+          <span
+            style={{
+              fontSize: px(2.6),
+              fontWeight: 600,
+              color: ink,
+              fontFamily: fontSecondary(ctx.brand),
+            }}
+          >
+            {stop}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Scattered dots that read as falling snow. Fixed positions, so the design
+ * exports exactly as it previews. */
+function Snowfall({
+  count = 26,
+  color = "rgba(255,255,255,0.85)",
+}: {
+  count?: number;
+  color?: string;
+}) {
+  const flakes = Array.from({ length: count }, (_, i) => {
+    const x = (i * 37) % 100;
+    const y = (i * 61) % 100;
+    const size = 0.6 + ((i * 13) % 10) / 10;
+    return { x, y, size, key: i };
+  });
+  return (
+    <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
+      {flakes.map((f) => (
+        <span
+          key={f.key}
+          style={{
+            position: "absolute",
+            left: `${f.x}%`,
+            top: `${f.y}%`,
+            width: px(f.size),
+            height: px(f.size),
+            borderRadius: "50%",
+            background: color,
+            opacity: 0.5 + (f.size % 1) * 0.5,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * The offer block every design ends up needing: what it is, what it costs, what
+ * is included and how to reach the business, in the order a reader scans them.
+ *
+ * The category designs differ in their staging - a boarding pass, a wave, a
+ * stamp - not in how an offer reads, so the wording lives here once and each
+ * engine spends its lines on the picture it is making.
+ */
+function OfferStack({
+  ctx,
+  tone,
+  titleSize,
+  align = "left",
+  titleColor,
+  kickerColor,
+  chips = true,
+  extra = true,
+  contact = true,
+  gap = 1.8,
+}: {
+  ctx: RenderCtx;
+  tone: "light" | "dark";
+  titleSize: number;
+  align?: "left" | "center" | "right";
+  titleColor?: string;
+  kickerColor?: string;
+  chips?: boolean;
+  extra?: boolean;
+  contact?: boolean;
+  gap?: number;
+}) {
+  const { content } = ctx;
+  const ink = titleColor ?? (tone === "light" ? "#ffffff" : "#181026");
+  return (
+    <AdjustBox
+      ctx={ctx}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: px(gap),
+        alignItems: align === "center" ? "center" : align === "right" ? "flex-end" : "flex-start",
+        textAlign: align,
+        width: "100%",
+      }}
+    >
+      <Kicker
+        ctx={ctx}
+        color={kickerColor ?? (tone === "light" ? "rgba(255,255,255,0.9)" : accentColor(ctx))}
+      />
+      <Title ctx={ctx} size={titleSize} color={ink} />
+      {extra ? <AdditionalText ctx={ctx} size={2.5} opacity={0.78} /> : null}
+      {chips ? (
+        <Chips items={[...metaItems(content, ctx.businessType), ...content.services]} tone={tone} />
+      ) : (
+        <ServiceLine ctx={ctx} tone={tone} />
+      )}
+      <div
+        style={{
+          display: "flex",
+          gap: px(2),
+          alignItems: "center",
+          flexWrap: "wrap",
+          justifyContent: align === "center" ? "center" : undefined,
+        }}
+      >
+        <PriceBadge ctx={ctx} tone={tone} />
+        <CtaTag ctx={ctx} tone={tone} />
+      </div>
+      {contact ? <ContactLine ctx={ctx} tone={tone} /> : null}
+    </AdjustBox>
   );
 }
 
@@ -2658,6 +3068,1902 @@ const engines: Engine[] = [
       );
     },
   },
+  {
+    id: "boardingpass",
+    label: "Boarding Pass",
+    tags: ["bold", "light", "dense"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      const from = codeOf(ctx.businessName, "OUT");
+      const to = codeOf(content.subject || content.location, "DXB");
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: bgOr(brand, "#eef0f7"),
+            padding: px(4.5),
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              background: "#fff",
+              borderRadius: px(3),
+              overflow: "hidden",
+              boxShadow: `0 ${px(2)} ${px(5)} rgba(20,14,38,0.14)`,
+            }}
+          >
+            <div
+              style={{
+                background: brand.primary,
+                padding: `${px(3)} ${px(4)}`,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <BizRow ctx={ctx} tone="light" />
+              <span
+                style={{
+                  fontSize: px(2.2),
+                  fontWeight: 800,
+                  letterSpacing: "0.2em",
+                  color: "rgba(255,255,255,0.86)",
+                  fontFamily: fontSecondary(brand),
+                }}
+              >
+                BOARDING PASS
+              </span>
+            </div>
+            <div style={{ position: "relative", flex: "0 0 34%" }}>
+              <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+            </div>
+            <div
+              style={{
+                padding: `${px(3.5)} ${px(4)}`,
+                display: "flex",
+                flexDirection: "column",
+                gap: px(2.4),
+              }}
+            >
+              <RouteLine from={from} to={to} color={brand.primary} />
+              <div style={{ display: "flex", gap: px(5), flexWrap: "wrap" }}>
+                <TicketField ctx={ctx} label="Flight" value={content.title} tone="dark" />
+                <TicketField ctx={ctx} label="Date" value={content.date} tone="dark" />
+                <TicketField ctx={ctx} label="Nights" value={content.meta1} tone="dark" />
+              </div>
+            </div>
+            <Perforation color={bgOr(brand, "#eef0f7")} />
+            <div
+              style={{
+                padding: `${px(3)} ${px(4)} ${px(3.5)}`,
+                display: "flex",
+                flexDirection: "column",
+                gap: px(1.6),
+              }}
+            >
+              <ServiceLine ctx={ctx} tone="dark" />
+              <div
+                style={{ display: "flex", alignItems: "center", gap: px(2.4), flexWrap: "wrap" }}
+              >
+                <PriceBadge ctx={ctx} tone="dark" />
+                <CtaTag ctx={ctx} tone="dark" />
+                <span style={{ marginLeft: "auto" }}>
+                  <Barcode color={brand.primary} />
+                </span>
+              </div>
+              <ContactLine ctx={ctx} tone="dark" />
+            </div>
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "routeflight",
+    label: "Route",
+    tags: ["image_first", "bold", "gradient"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div style={{ ...base(brand), background: "#0d0a18" }}>
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: `linear-gradient(to top, ${brand.primary}f2 10%, ${brand.primary}55 44%, transparent 70%)`,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              padding: px(6),
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
+            <BizRow ctx={ctx} tone="light" />
+            <div style={{ display: "flex", flexDirection: "column", gap: px(3) }}>
+              <RouteLine
+                from={codeOf(ctx.businessName, "OUT")}
+                to={codeOf(content.subject || content.location, "DXB")}
+                color="#fff"
+              />
+              <OfferStack ctx={ctx} tone="light" titleSize={8} />
+            </div>
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "departureboard",
+    label: "Departure Board",
+    tags: ["dark", "type_first", "dense"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      const rows = [
+        ["Destination", content.subject || content.location],
+        ["Departs", content.date],
+        ["Nights", content.meta1],
+      ].filter(([, v]) => !!v) as [string, string][];
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: "#0b0d14",
+            padding: px(5),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(3),
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <BizRow ctx={ctx} tone="light" />
+            <span
+              style={{
+                fontSize: px(2.1),
+                fontWeight: 800,
+                letterSpacing: "0.24em",
+                color: brand.accent,
+                fontFamily: fontSecondary(brand),
+              }}
+            >
+              DEPARTURES
+            </span>
+          </div>
+          <div
+            style={{
+              position: "relative",
+              flex: "0 0 30%",
+              overflow: "hidden",
+              borderRadius: px(2),
+            }}
+          >
+            <Img
+              src={content.imageDataUrl}
+              video={content.videoDataUrl}
+              style={{ opacity: 0.75 }}
+            />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: px(1.4) }}>
+            {rows.map(([label, value]) => (
+              <div
+                key={label}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "baseline",
+                  gap: px(2),
+                  borderBottom: "1px solid rgba(255,255,255,0.14)",
+                  paddingBottom: px(1.2),
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: px(2.1),
+                    fontWeight: 700,
+                    letterSpacing: "0.18em",
+                    textTransform: "uppercase",
+                    color: "rgba(255,255,255,0.55)",
+                    fontFamily: fontSecondary(brand),
+                  }}
+                >
+                  {label}
+                </span>
+                <span
+                  style={{
+                    fontSize: px(3.4),
+                    fontWeight: 800,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    color: brand.accent,
+                    fontFamily: font(brand),
+                  }}
+                >
+                  {value}
+                </span>
+              </div>
+            ))}
+          </div>
+          <OfferStack ctx={ctx} tone="light" titleSize={6.6} chips={false} />
+        </div>
+      );
+    },
+  },
+  {
+    id: "ticketstub",
+    label: "Ticket Stub",
+    tags: ["light", "image_first", "bold"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: bgOr(brand, "#f4f1fb"),
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <div style={{ position: "relative", flex: "0 0 54%" }}>
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+            <span
+              style={{
+                position: "absolute",
+                left: px(5),
+                top: px(5),
+                padding: `${px(1.2)} ${px(2.6)}`,
+                borderRadius: px(9),
+                background: "rgba(255,255,255,0.92)",
+                color: brand.primary,
+                fontWeight: 800,
+                fontSize: px(2.3),
+                letterSpacing: "0.16em",
+                fontFamily: fontSecondary(brand),
+              }}
+            >
+              FLIGHT DEAL
+            </span>
+          </div>
+          <Perforation color={bgOr(brand, "#f4f1fb")} />
+          <div style={{ flex: 1, padding: `${px(3)} ${px(5.5)} ${px(5)}` }}>
+            <OfferStack ctx={ctx} tone="dark" titleSize={7} />
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "luggagetag",
+    label: "Luggage Tag",
+    tags: ["light", "minimal", "whitespace"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: bgOr(brand, `linear-gradient(160deg, ${brand.secondary}22, #ffffff 60%)`),
+            padding: px(5),
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: px(2.6),
+          }}
+        >
+          {/* the hole and strap of a tag tied to a case */}
+          <span
+            style={{
+              width: px(3.4),
+              height: px(3.4),
+              borderRadius: "50%",
+              border: `${px(0.8)} solid ${brand.primary}`,
+            }}
+          />
+          <div
+            style={{
+              flex: 1,
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              borderRadius: px(4),
+              overflow: "hidden",
+              border: `${px(0.5)} solid ${brand.primary}44`,
+              background: "#fff",
+            }}
+          >
+            <div style={{ position: "relative", flex: "0 0 46%" }}>
+              <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+            </div>
+            <div
+              style={{
+                flex: 1,
+                padding: px(4),
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+              }}
+            >
+              <OfferStack ctx={ctx} tone="dark" titleSize={6.4} chips={false} />
+            </div>
+          </div>
+          <BizRow ctx={ctx} tone="dark" />
+        </div>
+      );
+    },
+  },
+  {
+    id: "farebarcode",
+    label: "Fare",
+    tags: ["minimal", "light", "type_first"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: bgOr(brand, "#ffffff"),
+            padding: px(6),
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+          }}
+        >
+          <div
+            style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}
+          >
+            <BizRow ctx={ctx} tone="dark" />
+            <Barcode color={brand.primary} height={8} />
+          </div>
+          <div
+            style={{
+              position: "relative",
+              flex: "0 0 40%",
+              overflow: "hidden",
+              borderRadius: px(2.5),
+              margin: `${px(3)} 0`,
+            }}
+          >
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+          </div>
+          <OfferStack ctx={ctx} tone="dark" titleSize={7.4} />
+        </div>
+      );
+    },
+  },
+  {
+    id: "gateblocks",
+    label: "Gate",
+    tags: ["dense", "light", "bold"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      const cells = [
+        ["Gate", codeOf(content.subject || content.location, "A12")],
+        ["Date", content.date],
+        ["Nights", content.meta1],
+        ["Hotel", content.location],
+      ].filter(([, v]) => !!v) as [string, string][];
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: bgOr(brand, "#f6f4fd"),
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <div style={{ position: "relative", flex: "0 0 40%" }}>
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+            <div style={{ position: "absolute", left: px(5), bottom: px(4) }}>
+              <BizRow ctx={ctx} tone="light" />
+            </div>
+          </div>
+          <div
+            style={{
+              flex: 1,
+              padding: px(5),
+              display: "flex",
+              flexDirection: "column",
+              gap: px(3),
+            }}
+          >
+            <OfferStack ctx={ctx} tone="dark" titleSize={6.8} chips={false} contact={false} />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: px(1.6) }}>
+              {cells.slice(0, 4).map(([label, value]) => (
+                <div
+                  key={label}
+                  style={{
+                    background: "#fff",
+                    borderRadius: px(2),
+                    padding: `${px(1.8)} ${px(2.4)}`,
+                    border: `1px solid ${brand.primary}22`,
+                  }}
+                >
+                  <TicketField ctx={ctx} label={label} value={value} tone="dark" />
+                </div>
+              ))}
+            </div>
+            <ContactLine ctx={ctx} tone="dark" />
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "skytrail",
+    label: "Sky Trail",
+    tags: ["gradient", "light", "image_first"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: `linear-gradient(180deg, ${brand.secondary}, ${brand.primary}dd 58%, ${brand.primary})`,
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          {/* a vapour trail arcing away from the plane */}
+          <div
+            style={{
+              position: "absolute",
+              left: `-${px(4)}`,
+              right: px(10),
+              top: "20%",
+              height: px(0.6),
+              background:
+                "repeating-linear-gradient(90deg, rgba(255,255,255,0.75) 0 3%, transparent 3% 6%)",
+              transform: "rotate(-8deg)",
+            }}
+          />
+          <span
+            style={{
+              position: "absolute",
+              right: px(8),
+              top: "17%",
+              width: 0,
+              height: 0,
+              borderTop: `${px(1.4)} solid transparent`,
+              borderBottom: `${px(1.4)} solid transparent`,
+              borderLeft: `${px(3)} solid #ffffff`,
+              transform: "rotate(-8deg)",
+            }}
+          />
+          <div style={{ padding: `${px(5)} ${px(5)} 0` }}>
+            <BizRow ctx={ctx} tone="light" />
+          </div>
+          <div
+            style={{
+              position: "relative",
+              flex: "0 0 44%",
+              margin: `${px(6)} ${px(5)} ${px(4)}`,
+              overflow: "hidden",
+              borderRadius: px(5),
+            }}
+          >
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+          </div>
+          <div style={{ flex: 1, padding: `0 ${px(5)} ${px(5)}` }}>
+            <OfferStack ctx={ctx} tone="light" titleSize={7} align="center" />
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "windowseat",
+    label: "Window Seat",
+    tags: ["light", "minimal", "image_first"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: bgOr(brand, "#e9e6f3"),
+            padding: px(5.5),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(3.4),
+          }}
+        >
+          {/* the view through a cabin window */}
+          <div
+            style={{
+              position: "relative",
+              flex: "0 0 50%",
+              overflow: "hidden",
+              borderRadius: "42% 42% 42% 42% / 30% 30% 30% 30%",
+              border: `${px(1.4)} solid #ffffff`,
+              boxShadow: `0 ${px(1.6)} ${px(4)} rgba(24,16,44,0.18)`,
+            }}
+          >
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+          </div>
+          <OfferStack ctx={ctx} tone="dark" titleSize={6.8} align="center" />
+        </div>
+      );
+    },
+  },
+  {
+    id: "lastcall",
+    label: "Last Call",
+    tags: ["bold", "dark", "type_first"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div style={{ ...base(brand), background: "#120d1f" }}>
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} style={{ opacity: 0.5 }} />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: `linear-gradient(140deg, ${brand.primary}cc, rgba(18,13,31,0.92))`,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              padding: px(6),
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <BizRow ctx={ctx} tone="light" />
+              <span
+                style={{
+                  padding: `${px(1)} ${px(2.4)}`,
+                  borderRadius: px(9),
+                  background: brand.accent,
+                  color: "#1a1226",
+                  fontWeight: 800,
+                  fontSize: px(2.2),
+                  letterSpacing: "0.16em",
+                  fontFamily: fontSecondary(brand),
+                }}
+              >
+                LAST SEATS
+              </span>
+            </div>
+            <OfferStack ctx={ctx} tone="light" titleSize={9.6} gap={2.2} />
+            <Barcode color="rgba(255,255,255,0.7)" height={5} />
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "wavecut",
+    label: "Wave",
+    tags: ["light", "image_first", "gradient"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      const sand = bgOr(brand, "#fdf3e3");
+      return (
+        <div style={{ ...base(brand), background: sand, display: "flex", flexDirection: "column" }}>
+          <div style={{ position: "relative", flex: "0 0 56%" }}>
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+            <div style={{ position: "absolute", left: px(5), top: px(5) }}>
+              <BizRow ctx={ctx} tone="light" />
+            </div>
+          </div>
+          <Scallop color={sand} size={7} />
+          <div style={{ flex: 1, padding: `${px(2)} ${px(5.5)} ${px(5)}` }}>
+            <OfferStack ctx={ctx} tone="dark" titleSize={7.2} />
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "sunarc",
+    label: "Sun",
+    tags: ["gradient", "centered", "bold"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: `linear-gradient(180deg, #ffd79a, ${brand.primary} 78%)`,
+          }}
+        >
+          <SunDisc
+            color="#fff1cd"
+            size={52}
+            style={{ left: "50%", top: "16%", marginLeft: `-${px(26)}` }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              left: px(6),
+              right: px(6),
+              top: "34%",
+              bottom: 0,
+              overflow: "hidden",
+              borderRadius: `${px(24)} ${px(24)} 0 0`,
+            }}
+          >
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: `linear-gradient(to top, ${brand.primary}f0 18%, transparent 62%)`,
+              }}
+            />
+          </div>
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              padding: px(6),
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
+            <BizRow ctx={ctx} tone="light" />
+            <OfferStack ctx={ctx} tone="light" titleSize={7.6} align="center" />
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "beachlabel",
+    label: "Beach Label",
+    tags: ["image_first", "light", "minimal"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div style={{ ...base(brand), background: "#0d1a24" }}>
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "linear-gradient(to bottom, rgba(6,20,28,.35), transparent 40%)",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              padding: px(5),
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
+            <BizRow ctx={ctx} tone="light" />
+            <div
+              style={{
+                background: "rgba(255,255,255,0.94)",
+                borderRadius: px(4),
+                padding: px(4.5),
+                boxShadow: `0 ${px(2)} ${px(5)} rgba(6,20,28,0.22)`,
+              }}
+            >
+              <OfferStack ctx={ctx} tone="dark" titleSize={6.4} />
+            </div>
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "seahorizon",
+    label: "Horizon",
+    tags: ["image_first", "bold", "gradient"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: "#08303f",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <div style={{ position: "relative", flex: "0 0 38%" }}>
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+          </div>
+          <div
+            style={{
+              flex: 1,
+              padding: px(5.5),
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              background: `linear-gradient(180deg, ${brand.primary}, #06222c)`,
+            }}
+          >
+            <OfferStack ctx={ctx} tone="light" titleSize={7.8} />
+          </div>
+          <div style={{ position: "relative", flex: "0 0 16%" }}>
+            <Img
+              src={content.imageDataUrl}
+              video={content.videoDataUrl}
+              style={{ opacity: 0.55 }}
+            />
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "sunsetbands",
+    label: "Sunset",
+    tags: ["gradient", "bold", "light"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      const bands = ["#ffd08a", "#ffb07c", "#f08a7d", brand.secondary, brand.primary];
+      return (
+        <div style={{ ...base(brand), display: "flex", flexDirection: "column" }}>
+          {bands.map((c, i) => (
+            <div key={c + i} style={{ flex: 1, background: c }} />
+          ))}
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "8%",
+              width: px(40),
+              height: px(40),
+              marginLeft: `-${px(20)}`,
+              borderRadius: "50%",
+              overflow: "hidden",
+              border: `${px(1)} solid rgba(255,255,255,0.8)`,
+            }}
+          >
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+          </div>
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              padding: px(6),
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
+            <BizRow ctx={ctx} tone="light" />
+            <OfferStack ctx={ctx} tone="light" titleSize={7.4} align="center" />
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "poolside",
+    label: "Poolside",
+    tags: ["light", "whitespace", "minimal"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: bgOr(brand, "linear-gradient(160deg, #dff4f7, #ffffff 65%)"),
+            padding: px(5.5),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(3),
+          }}
+        >
+          <BizRow ctx={ctx} tone="dark" />
+          <div
+            style={{
+              position: "relative",
+              flex: "0 0 46%",
+              overflow: "hidden",
+              borderRadius: px(4),
+            }}
+          >
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+            <span
+              style={{
+                position: "absolute",
+                right: px(3),
+                bottom: px(3),
+                width: px(16),
+                height: px(16),
+                borderRadius: "50%",
+                background: brand.primary,
+                color: "#fff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: 800,
+                fontSize: px(3.6),
+                fontFamily: font(brand),
+              }}
+            >
+              {formatPrice(content.price, brand.currency)}
+            </span>
+          </div>
+          <OfferStack ctx={ctx} tone="dark" titleSize={6.6} />
+        </div>
+      );
+    },
+  },
+  {
+    id: "postcard",
+    label: "Postcard",
+    tags: ["editorial", "light", "whitespace"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: bgOr(brand, "#f2ede2"),
+            padding: px(4),
+            display: "flex",
+          }}
+        >
+          <div
+            style={{
+              flex: 1,
+              background: "#fff",
+              padding: px(3),
+              display: "flex",
+              flexDirection: "column",
+              gap: px(3),
+              boxShadow: `0 ${px(1.4)} ${px(3.4)} rgba(20,16,32,0.12)`,
+            }}
+          >
+            <div style={{ position: "relative", flex: "0 0 52%", overflow: "hidden" }}>
+              <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+              {/* the stamp corner of a card sent home */}
+              <span
+                style={{
+                  position: "absolute",
+                  right: px(2.4),
+                  top: px(2.4),
+                  width: px(11),
+                  height: px(13),
+                  border: `${px(0.6)} dashed rgba(255,255,255,0.9)`,
+                  borderRadius: px(1),
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#fff",
+                  fontSize: px(2),
+                  fontWeight: 800,
+                  letterSpacing: "0.12em",
+                  textAlign: "center",
+                  fontFamily: fontSecondary(brand),
+                }}
+              >
+                {(content.subject || "TRAVEL").slice(0, 8).toUpperCase()}
+              </span>
+            </div>
+            <div style={{ flex: 1, paddingLeft: px(1.5) }}>
+              <OfferStack ctx={ctx} tone="dark" titleSize={6.2} chips={false} />
+            </div>
+            <BizRow ctx={ctx} tone="dark" />
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "shellbadge",
+    label: "Shell Badge",
+    tags: ["image_first", "bold", "centered"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div style={{ ...base(brand), background: "#0a2430" }}>
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: `radial-gradient(90% 70% at 50% 62%, ${brand.primary}d9, rgba(8,30,40,0.55))`,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              padding: px(6),
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <BizRow ctx={ctx} tone="light" />
+            <div
+              style={{
+                width: px(34),
+                height: px(34),
+                borderRadius: "50%",
+                border: `${px(0.8)} solid rgba(255,255,255,0.75)`,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: px(0.6),
+                color: "#fff",
+                fontFamily: font(brand),
+              }}
+            >
+              <span style={{ fontSize: px(2), letterSpacing: "0.2em", opacity: 0.8 }}>NGA</span>
+              <span style={{ fontSize: px(6.4), fontWeight: 800 }}>
+                {formatPrice(content.price, brand.currency)}
+              </span>
+            </div>
+            <OfferStack ctx={ctx} tone="light" titleSize={7} align="center" />
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "azuredeep",
+    label: "Azure",
+    tags: ["dark", "luxury", "image_first"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div style={{ ...base(brand), background: "#04222e" }}>
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} style={{ opacity: 0.7 }} />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "linear-gradient(to top, rgba(4,34,46,.95) 22%, rgba(4,34,46,.25) 62%)",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: px(4.5),
+              border: `1px solid rgba(255,255,255,0.35)`,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              padding: px(7),
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "flex-end",
+              gap: px(3),
+            }}
+          >
+            <OfferStack ctx={ctx} tone="light" titleSize={8.2} chips={false} />
+            <BizRow ctx={ctx} tone="light" />
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "sandnote",
+    label: "Sand Note",
+    tags: ["editorial", "light", "whitespace"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: bgOr(brand, "#f6ecdc"),
+            padding: px(6),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(3),
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <BizRow ctx={ctx} tone="dark" />
+            <span
+              style={{
+                height: px(0.4),
+                flex: 1,
+                marginLeft: px(3),
+                background: `${brand.primary}55`,
+              }}
+            />
+          </div>
+          <OfferStack ctx={ctx} tone="dark" titleSize={7.6} chips={false} contact={false} />
+          <div style={{ position: "relative", flex: 1, overflow: "hidden", borderRadius: px(2) }}>
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+          </div>
+          <ContactLine ctx={ctx} tone="dark" />
+        </div>
+      );
+    },
+  },
+  {
+    id: "passportstamp",
+    label: "Passport",
+    tags: ["editorial", "light", "image_first"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: bgOr(brand, "#f4f1e9"),
+            padding: px(5),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(3),
+          }}
+        >
+          <div
+            style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}
+          >
+            <BizRow ctx={ctx} tone="dark" />
+            <Stamp ctx={ctx} color={`${brand.primary}cc`} />
+          </div>
+          <div
+            style={{
+              position: "relative",
+              flex: "0 0 38%",
+              overflow: "hidden",
+              borderRadius: px(2),
+            }}
+          >
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+          </div>
+          <OfferStack ctx={ctx} tone="dark" titleSize={6.4} />
+        </div>
+      );
+    },
+  },
+  {
+    id: "maproute",
+    label: "Map Route",
+    tags: ["image_first", "bold", "dense"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div style={{ ...base(brand), background: "#101426" }}>
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} style={{ opacity: 0.85 }} />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: `linear-gradient(to top, ${brand.primary}f2 14%, rgba(16,20,38,0.3) 60%)`,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              padding: px(6),
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
+            <BizRow ctx={ctx} tone="light" />
+            <div style={{ display: "flex", flexDirection: "column", gap: px(2.6) }}>
+              <DottedRoute color="rgba(255,255,255,0.9)" stops={4} />
+              <OfferStack ctx={ctx} tone="light" titleSize={7.8} />
+            </div>
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "itinerary",
+    label: "Itinerary",
+    tags: ["dense", "light", "editorial"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: bgOr(brand, "#ffffff"),
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <div style={{ position: "relative", flex: "0 0 38%" }}>
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+            <div style={{ position: "absolute", left: px(5), bottom: px(4) }}>
+              <BizRow ctx={ctx} tone="light" />
+            </div>
+          </div>
+          <div
+            style={{
+              flex: 1,
+              padding: px(5.5),
+              display: "flex",
+              flexDirection: "column",
+              gap: px(2.6),
+            }}
+          >
+            <OfferStack
+              ctx={ctx}
+              tone="dark"
+              titleSize={6.8}
+              chips={false}
+              extra={false}
+              contact={false}
+            />
+            <StopList ctx={ctx} tone="dark" />
+            <ContactLine ctx={ctx} tone="dark" />
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "globering",
+    label: "Globe",
+    tags: ["centered", "gradient", "bold"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: `linear-gradient(170deg, ${brand.primary}, #0d0a1e)`,
+            padding: px(6),
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <BizRow ctx={ctx} tone="light" />
+          <div
+            style={{
+              position: "relative",
+              width: px(56),
+              height: px(56),
+              borderRadius: "50%",
+              overflow: "hidden",
+              border: `${px(0.8)} solid ${brand.accent}`,
+            }}
+          >
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+          </div>
+          <OfferStack ctx={ctx} tone="light" titleSize={7.2} align="center" />
+        </div>
+      );
+    },
+  },
+  {
+    id: "stampgrid",
+    label: "Stamp Grid",
+    tags: ["dense", "light", "editorial"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: bgOr(brand, "#f7f4ee"),
+            padding: px(5),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(2.6),
+          }}
+        >
+          <div style={{ display: "flex", gap: px(2), justifyContent: "space-between" }}>
+            <Stamp ctx={ctx} color={`${brand.primary}aa`} rotate={-7} size={17} />
+            <Stamp ctx={ctx} color={`${brand.secondary}aa`} rotate={6} size={17} />
+            <Stamp ctx={ctx} color={`${brand.accent}dd`} rotate={-3} size={17} />
+          </div>
+          <div
+            style={{
+              position: "relative",
+              flex: "0 0 40%",
+              overflow: "hidden",
+              borderRadius: px(2),
+            }}
+          >
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+          </div>
+          <OfferStack ctx={ctx} tone="dark" titleSize={6.6} />
+        </div>
+      );
+    },
+  },
+  {
+    id: "compassrose",
+    label: "Compass",
+    tags: ["dark", "minimal", "image_first"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      const ring = "rgba(255,255,255,0.5)";
+      return (
+        <div style={{ ...base(brand), background: "#0c1020" }}>
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} style={{ opacity: 0.8 }} />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "linear-gradient(to top, rgba(12,16,32,.95) 20%, rgba(12,16,32,.2) 66%)",
+            }}
+          />
+          {/* the cross of a compass, drawn as two rules and a ring */}
+          <span
+            style={{
+              position: "absolute",
+              left: px(6),
+              right: px(6),
+              top: "32%",
+              height: 1,
+              background: ring,
+            }}
+          />
+          <span
+            style={{
+              position: "absolute",
+              top: "18%",
+              bottom: "44%",
+              left: "50%",
+              width: 1,
+              background: ring,
+            }}
+          />
+          <span
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "32%",
+              width: px(14),
+              height: px(14),
+              marginLeft: `-${px(7)}`,
+              marginTop: `-${px(7)}`,
+              borderRadius: "50%",
+              border: `1px solid ${ring}`,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              padding: px(6),
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
+            <BizRow ctx={ctx} tone="light" />
+            <OfferStack ctx={ctx} tone="light" titleSize={7.6} chips={false} />
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "triptych",
+    label: "Triptych",
+    tags: ["editorial", "dense", "image_first"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: bgOr(brand, "#101018"),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(1),
+          }}
+        >
+          <div style={{ display: "flex", gap: px(1), flex: "0 0 46%" }}>
+            {[0, 1, 2].map((i) => (
+              <div key={i} style={{ position: "relative", flex: 1, overflow: "hidden" }}>
+                <Img
+                  src={content.imageDataUrl}
+                  video={content.videoDataUrl}
+                  style={{ objectPosition: ["left center", "center", "right center"][i] }}
+                />
+              </div>
+            ))}
+          </div>
+          <div
+            style={{
+              flex: 1,
+              padding: px(5.5),
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              gap: px(2.4),
+            }}
+          >
+            <OfferStack ctx={ctx} tone="light" titleSize={7.4} />
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "journal",
+    label: "Journal",
+    tags: ["editorial", "light", "whitespace"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: bgOr(brand, "#fbf8f1"),
+            padding: px(6),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(2.6),
+          }}
+        >
+          <BizRow ctx={ctx} tone="dark" />
+          <span style={{ height: px(0.3), background: `${brand.primary}44` }} />
+          <OfferStack ctx={ctx} tone="dark" titleSize={7.8} chips={false} contact={false} />
+          <div style={{ position: "relative", flex: 1, overflow: "hidden", borderRadius: px(1.6) }}>
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+          </div>
+          <DottedRoute color={`${brand.primary}88`} stops={5} />
+          <ContactLine ctx={ctx} tone="dark" />
+        </div>
+      );
+    },
+  },
+  {
+    id: "coordinates",
+    label: "Coordinates",
+    tags: ["type_first", "dark", "minimal"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      const word = (content.subject || content.location || "").toUpperCase();
+      return (
+        <div style={{ ...base(brand), background: "#0e0b18" }}>
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} style={{ opacity: 0.42 }} />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: `linear-gradient(160deg, ${brand.primary}bb, rgba(14,11,24,0.92))`,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              padding: px(6),
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
+            <BizRow ctx={ctx} tone="light" />
+            {word ? (
+              <FitText
+                as="div"
+                text={word}
+                maxSize={11}
+                minSize={5}
+                maxLines={2}
+                lineHeight={0.98}
+                style={{
+                  fontWeight: 800,
+                  letterSpacing: "-0.02em",
+                  color: "rgba(255,255,255,0.16)",
+                  fontFamily: font(brand),
+                }}
+              />
+            ) : null}
+            <OfferStack ctx={ctx} tone="light" titleSize={7.4} />
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "atlasgrid",
+    label: "Atlas",
+    tags: ["dense", "dark", "image_first"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      const line = "rgba(255,255,255,0.16)";
+      return (
+        <div style={{ ...base(brand), background: "#0a1220" }}>
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} style={{ opacity: 0.8 }} />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "linear-gradient(to top, rgba(10,18,32,.94) 18%, rgba(10,18,32,.25) 64%)",
+            }}
+          />
+          {/* a map grid laid over the picture */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: `repeating-linear-gradient(0deg, ${line} 0 1px, transparent 1px 12%), repeating-linear-gradient(90deg, ${line} 0 1px, transparent 1px 20%)`,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              padding: px(6),
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <BizRow ctx={ctx} tone="light" />
+              <Stamp ctx={ctx} color="rgba(255,255,255,0.7)" rotate={8} size={16} />
+            </div>
+            <OfferStack ctx={ctx} tone="light" titleSize={7.6} />
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "snowfall",
+    label: "Snowfall",
+    tags: ["image_first", "dark", "gradient"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div style={{ ...base(brand), background: "#0b1626" }}>
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} style={{ opacity: 0.9 }} />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "linear-gradient(to top, rgba(9,20,36,.95) 16%, rgba(9,20,36,.2) 62%)",
+            }}
+          />
+          <Snowfall count={30} />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              padding: px(6),
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
+            <BizRow ctx={ctx} tone="light" />
+            <OfferStack ctx={ctx} tone="light" titleSize={8} />
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "frostpanel",
+    label: "Frost",
+    tags: ["glass", "light", "image_first"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div style={{ ...base(brand), background: "#16324d" }}>
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              padding: px(5),
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
+            <BizRow ctx={ctx} tone="light" />
+            <div
+              style={{
+                background: "rgba(226,240,255,0.82)",
+                border: "1px solid rgba(255,255,255,0.7)",
+                borderRadius: px(3.4),
+                padding: px(4.4),
+                backdropFilter: "blur(8px)",
+              }}
+            >
+              <OfferStack ctx={ctx} tone="dark" titleSize={6.6} />
+            </div>
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "alpine",
+    label: "Alpine",
+    tags: ["light", "minimal", "image_first"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      const snow = bgOr(brand, "#eef5fb");
+      return (
+        <div style={{ ...base(brand), background: snow, display: "flex", flexDirection: "column" }}>
+          <div style={{ position: "relative", flex: "0 0 52%" }}>
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+            <Snowfall count={18} color="rgba(255,255,255,0.9)" />
+          </div>
+          {/* a snow line running under the picture */}
+          <Scallop color={snow} size={8} count={7} />
+          <div style={{ flex: 1, padding: `${px(2.4)} ${px(5.5)} ${px(5)}` }}>
+            <OfferStack ctx={ctx} tone="dark" titleSize={7} />
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "icebadge",
+    label: "Ice",
+    tags: ["centered", "gradient", "bold"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: `linear-gradient(170deg, #9fd3f2, ${brand.primary} 72%)`,
+          }}
+        >
+          <Snowfall count={22} color="rgba(255,255,255,0.7)" />
+          <div
+            style={{
+              position: "absolute",
+              left: px(6),
+              right: px(6),
+              top: "17%",
+              height: "36%",
+              overflow: "hidden",
+              borderRadius: px(4),
+            }}
+          >
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+          </div>
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              padding: px(6),
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <BizRow ctx={ctx} tone="light" />
+            <span
+              style={{
+                marginTop: "auto",
+                padding: `${px(1)} ${px(3)}`,
+                borderRadius: px(9),
+                background: "rgba(255,255,255,0.9)",
+                color: brand.primary,
+                fontWeight: 800,
+                fontSize: px(2.3),
+                letterSpacing: "0.16em",
+                fontFamily: fontSecondary(brand),
+              }}
+            >
+              OFERTA DIMËRORE
+            </span>
+            <OfferStack ctx={ctx} tone="light" titleSize={7.2} align="center" />
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "festivenight",
+    label: "Festive",
+    tags: ["luxury", "dark", "centered"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div style={{ ...base(brand), background: "#0a1430" }}>
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} style={{ opacity: 0.5 }} />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "radial-gradient(110% 80% at 50% 30%, rgba(20,40,90,.5), rgba(6,12,30,.96))",
+            }}
+          />
+          <Snowfall count={26} color={`${brand.accent}cc`} />
+          <div
+            style={{ position: "absolute", inset: px(4), border: `1px solid ${brand.accent}77` }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              padding: px(6.5),
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "space-between",
+              textAlign: "center",
+            }}
+          >
+            <BizRow ctx={ctx} tone="light" />
+            <OfferStack
+              ctx={ctx}
+              tone="light"
+              titleSize={7.8}
+              align="center"
+              kickerColor={brand.accent}
+              chips={false}
+            />
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "snowcap",
+    label: "Snow Cap",
+    tags: ["light", "image_first", "whitespace"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: bgOr(brand, "#ffffff"),
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <div style={{ padding: `${px(5)} ${px(5)} ${px(2.5)}` }}>
+            <BizRow ctx={ctx} tone="dark" />
+          </div>
+          <div
+            style={{
+              position: "relative",
+              flex: "0 0 46%",
+              margin: `0 ${px(5)}`,
+              overflow: "hidden",
+              borderRadius: px(3),
+            }}
+          >
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+            <div style={{ position: "absolute", left: 0, right: 0, top: 0 }}>
+              <Scallop color="#ffffff" size={6} count={8} flip />
+            </div>
+          </div>
+          <div style={{ flex: 1, padding: `${px(3.5)} ${px(5)} ${px(5)}` }}>
+            <OfferStack ctx={ctx} tone="dark" titleSize={6.8} />
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "skipass",
+    label: "Ski Pass",
+    tags: ["dense", "light", "bold"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: bgOr(brand, "#e8f1f8"),
+            padding: px(4.5),
+            display: "flex",
+          }}
+        >
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              background: "#fff",
+              borderRadius: px(3),
+              overflow: "hidden",
+              boxShadow: `0 ${px(2)} ${px(5)} rgba(12,32,54,0.16)`,
+            }}
+          >
+            <div
+              style={{
+                background: brand.primary,
+                padding: `${px(2.6)} ${px(4)}`,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <BizRow ctx={ctx} tone="light" />
+              <span
+                style={{
+                  fontSize: px(2.1),
+                  fontWeight: 800,
+                  letterSpacing: "0.2em",
+                  color: "rgba(255,255,255,0.9)",
+                  fontFamily: fontSecondary(brand),
+                }}
+              >
+                SEASON PASS
+              </span>
+            </div>
+            <div style={{ position: "relative", flex: "0 0 40%" }}>
+              <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+              <Snowfall count={14} />
+            </div>
+            <div
+              style={{
+                padding: `${px(3.4)} ${px(4)}`,
+                display: "flex",
+                flexDirection: "column",
+                gap: px(2.2),
+              }}
+            >
+              <OfferStack
+                ctx={ctx}
+                tone="dark"
+                titleSize={6.2}
+                chips={false}
+                extra={false}
+                contact={false}
+              />
+              <div style={{ display: "flex", gap: px(4), flexWrap: "wrap" }}>
+                <TicketField ctx={ctx} label="Datat" value={content.date} tone="dark" />
+                <TicketField ctx={ctx} label="Netë" value={content.meta1} tone="dark" />
+                <TicketField ctx={ctx} label="Hotel" value={content.location} tone="dark" />
+              </div>
+              <ContactLine ctx={ctx} tone="dark" />
+            </div>
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "nordicband",
+    label: "Nordic",
+    tags: ["editorial", "light", "dense"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      const band = `repeating-linear-gradient(135deg, ${brand.primary} 0 ${px(1.6)}, transparent ${px(1.6)} ${px(3.2)})`;
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: bgOr(brand, "#f7fbff"),
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <div style={{ height: px(4), background: band }} />
+          <div style={{ position: "relative", flex: "0 0 46%" }}>
+            <Img src={content.imageDataUrl} video={content.videoDataUrl} />
+          </div>
+          <div style={{ flex: 1, padding: px(5.5) }}>
+            <OfferStack ctx={ctx} tone="dark" titleSize={7} />
+          </div>
+          <div style={{ height: px(4), background: band }} />
+        </div>
+      );
+    },
+  },
+  {
+    id: "frozenframe",
+    label: "Frozen Frame",
+    tags: ["minimal", "dark", "image_first"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div style={{ ...base(brand), background: "#0d1c2e" }}>
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} style={{ opacity: 0.86 }} />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "linear-gradient(to top, rgba(10,22,38,.92) 18%, transparent 58%)",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: px(4.5),
+              border: `${px(0.5)} solid rgba(255,255,255,0.85)`,
+              borderRadius: px(1),
+            }}
+          />
+          <Snowfall count={16} />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              padding: px(7.5),
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
+            <BizRow ctx={ctx} tone="light" />
+            <OfferStack ctx={ctx} tone="light" titleSize={7.6} chips={false} />
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "newyear",
+    label: "New Year",
+    tags: ["bold", "dark", "type_first"],
+    render: (ctx) => {
+      const { content, brand } = ctx;
+      return (
+        <div
+          style={{
+            ...base(brand),
+            background: `linear-gradient(165deg, #101a3a, ${brand.primary})`,
+          }}
+        >
+          <Img src={content.imageDataUrl} video={content.videoDataUrl} style={{ opacity: 0.35 }} />
+          <Snowfall count={34} color={`${brand.accent}bb`} />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              padding: px(6),
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <BizRow ctx={ctx} tone="light" />
+              <span
+                style={{
+                  padding: `${px(1)} ${px(2.6)}`,
+                  borderRadius: px(1.4),
+                  border: `1px solid ${brand.accent}`,
+                  color: brand.accent,
+                  fontWeight: 800,
+                  fontSize: px(2.2),
+                  letterSpacing: "0.18em",
+                  fontFamily: fontSecondary(brand),
+                }}
+              >
+                {content.date || "SEZONI"}
+              </span>
+            </div>
+            <OfferStack
+              ctx={ctx}
+              tone="light"
+              titleSize={9.4}
+              gap={2.2}
+              kickerColor={brand.accent}
+            />
+          </div>
+        </div>
+      );
+    },
+  },
 ];
 
 export const engineIds = [...engines.map((e) => e.id), "custom"];
@@ -2833,6 +5139,46 @@ const ENGINE_STYLE: Record<string, string> = {
   halfmoon: "Half Moon",
   gridlines: "Grid Lines",
   stickerprice: "Sticker",
+  boardingpass: "Boarding Pass",
+  routeflight: "Route",
+  departureboard: "Departure Board",
+  ticketstub: "Ticket Stub",
+  luggagetag: "Luggage Tag",
+  farebarcode: "Fare",
+  gateblocks: "Gate",
+  skytrail: "Sky Trail",
+  windowseat: "Window Seat",
+  lastcall: "Last Call",
+  wavecut: "Wave",
+  sunarc: "Sun",
+  beachlabel: "Beach Label",
+  seahorizon: "Horizon",
+  sunsetbands: "Sunset",
+  poolside: "Poolside",
+  postcard: "Postcard",
+  shellbadge: "Shell Badge",
+  azuredeep: "Azure",
+  sandnote: "Sand Note",
+  passportstamp: "Passport",
+  maproute: "Map Route",
+  itinerary: "Itinerary",
+  globering: "Globe",
+  stampgrid: "Stamp Grid",
+  compassrose: "Compass",
+  triptych: "Triptych",
+  journal: "Journal",
+  coordinates: "Coordinates",
+  atlasgrid: "Atlas",
+  snowfall: "Snowfall",
+  frostpanel: "Frost",
+  alpine: "Alpine",
+  icebadge: "Ice",
+  festivenight: "Festive",
+  snowcap: "Snow Cap",
+  skipass: "Ski Pass",
+  nordicband: "Nordic",
+  frozenframe: "Frozen Frame",
+  newyear: "New Year",
 };
 
 const styleName = (engineId: string) => ENGINE_STYLE[engineId] ?? "Classic";
@@ -3125,6 +5471,86 @@ function buildSignatureTemplates(): Template[] {
   });
 }
 
+/** Designs made for one occasion. Each category is its own id space and its own
+ * group in the picker, so a set can grow without touching the ids of another. */
+const CATEGORY_ENGINES: Record<TemplateCategory, string[]> = {
+  flights: [
+    "boardingpass",
+    "routeflight",
+    "departureboard",
+    "ticketstub",
+    "luggagetag",
+    "farebarcode",
+    "gateblocks",
+    "skytrail",
+    "windowseat",
+    "lastcall",
+  ],
+  sea: [
+    "wavecut",
+    "sunarc",
+    "beachlabel",
+    "seahorizon",
+    "sunsetbands",
+    "poolside",
+    "postcard",
+    "shellbadge",
+    "azuredeep",
+    "sandnote",
+  ],
+  world: [
+    "passportstamp",
+    "maproute",
+    "itinerary",
+    "globering",
+    "stampgrid",
+    "compassrose",
+    "triptych",
+    "journal",
+    "coordinates",
+    "atlasgrid",
+  ],
+  winter: [
+    "snowfall",
+    "frostpanel",
+    "alpine",
+    "icebadge",
+    "festivenight",
+    "snowcap",
+    "skipass",
+    "nordicband",
+    "frozenframe",
+    "newyear",
+  ],
+};
+
+const CATEGORY_PREFIX: Record<TemplateCategory, string> = {
+  flights: "F",
+  sea: "B",
+  world: "W",
+  winter: "D",
+};
+
+function buildCategoryTemplates(category: TemplateCategory): Template[] {
+  return CATEGORY_ENGINES[category].map((engineId, index) => {
+    const engine = engineMap.get(engineId)!;
+    const variant = variants[index % variants.length]!;
+    return {
+      id: `${category}_${index + 1}`,
+      name: templateName(index + 1, engine.id, CATEGORY_PREFIX[category]),
+      engine: engine.id,
+      tags: engine.tags,
+      ...(suggestedForEngine(engine.id) ? { suggestedFor: suggestedForEngine(engine.id) } : {}),
+      variant,
+      scope: "global" as const,
+      businessId: null,
+      archived: false,
+      category,
+      format: "post" as const,
+    };
+  });
+}
+
 export const globalTemplates: Template[] = [
   ...buildGlobalTemplates(),
   ...buildNewGlobalTemplates(),
@@ -3132,6 +5558,10 @@ export const globalTemplates: Template[] = [
   ...buildCleanTemplates("video", 90),
   ...buildCleanTemplates("post", 90),
   ...buildSignatureTemplates(),
+  ...buildCategoryTemplates("flights"),
+  ...buildCategoryTemplates("sea"),
+  ...buildCategoryTemplates("world"),
+  ...buildCategoryTemplates("winter"),
 ];
 
 /** Templates available for one format. Custom uploads stay in the post format
