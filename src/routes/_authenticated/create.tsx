@@ -24,7 +24,7 @@ import { PostCanvas } from "@/components/rafty/PostCanvas";
 import { AdjustControls } from "@/components/rafty/AdjustControls";
 import { ShareActions } from "@/components/rafty/ShareActions";
 import { FormatPicker } from "@/components/rafty/FormatPicker";
-import { snapshotOfBrand } from "@/lib/rafty/types";
+import { includedOptions, snapshotOfBrand } from "@/lib/rafty/types";
 import { useRafty } from "@/lib/rafty/store";
 import { generateCaption } from "@/lib/rafty/caption";
 import { readFileAsDataUrl } from "@/lib/rafty/file";
@@ -350,6 +350,10 @@ function CreatePage() {
   const presetsFor = (key: keyof typeof FIELD_LABEL_PRESETS) =>
     FIELD_LABEL_PRESETS[key].map((k) => t(k));
   const sets = contactSets(brand.contact);
+  const included = includedOptions(
+    services.map((s) => s.name),
+    content.services,
+  );
   /** Only the two headline fields stay visible, the rest is optional detail. */
   const primaryFields = fields.slice(0, 2);
   const secondaryFields = fields.slice(2);
@@ -427,21 +431,28 @@ function CreatePage() {
     setShowAdjust(false);
   }
 
-  /** Saves a typed service to the brand so it never has to be retyped, then
-   * selects it on this post. Awaited, so a failed write is reported. */
-  async function saveTypedService() {
+  /**
+   * Puts a typed item on this post, then remembers it on the brand so it is
+   * offered next time. The post comes first on purpose: a brand that cannot be
+   * written to - a plan limit, a dropped connection - must not cost the line
+   * the user just typed for the design in front of them.
+   */
+  async function addIncluded() {
     const value = newService.trim();
     if (!value || savingService) return;
+    if (content.services.some((x) => x.toLowerCase() === value.toLowerCase())) {
+      setNewService("");
+      return;
+    }
+    set({ services: [...content.services, value] });
+    setNewService("");
+    if (services.some((x) => x.name.toLowerCase() === value.toLowerCase())) return;
     setSavingService(true);
     const res = await addService(value);
     setSavingService(false);
     if (!res.ok) {
-      toast.error(res.error ?? "Could not save that service.");
-      return;
+      toast.warning("Added to this post. Could not save it to your brand for next time.");
     }
-    if (!content.services.includes(value)) set({ services: [...content.services, value] });
-    setNewService("");
-    toast.success("Saved to your brand.");
   }
 
   async function onImage(file: File) {
@@ -679,21 +690,21 @@ function CreatePage() {
             />
           </div>
 
-          {services.length ? (
-            <div className="grid gap-2 border-t pt-4">
-              <Label>{t("create.services")}</Label>
+          <div className="grid gap-2 border-t pt-4">
+            <Label htmlFor="new-service">{t("create.services")}</Label>
+            {included.length ? (
               <div className="flex flex-wrap gap-2">
-                {services.map((s) => {
-                  const isOn = content.services.includes(s.name);
+                {included.map((name) => {
+                  const isOn = content.services.includes(name);
                   return (
                     <button
-                      key={s.id}
+                      key={name}
                       type="button"
                       onClick={() =>
                         set({
                           services: isOn
-                            ? content.services.filter((x) => x !== s.name)
-                            : [...content.services, s.name],
+                            ? content.services.filter((x) => x !== name)
+                            : [...content.services, name],
                         })
                       }
                       className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${
@@ -702,13 +713,39 @@ function CreatePage() {
                           : "border-border bg-card"
                       }`}
                     >
-                      {s.name}
+                      {name}
                     </button>
                   );
                 })}
               </div>
+            ) : null}
+            <div className="flex gap-2">
+              <Input
+                id="new-service"
+                value={newService}
+                maxLength={60}
+                onChange={(e) => setNewService(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void addIncluded();
+                  }
+                }}
+                placeholder={t("create.addService")}
+                className="h-10 rounded-xl"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 shrink-0 rounded-xl"
+                disabled={savingService || !newService.trim()}
+                onClick={() => void addIncluded()}
+              >
+                <Plus className="mr-1.5 size-4" />
+                {t("create.add")}
+              </Button>
             </div>
-          ) : null}
+          </div>
 
           <button
             type="button"
@@ -733,30 +770,6 @@ function CreatePage() {
                     onLabel={(v) => setAll({ labels: { ...(content.labels ?? {}), [f.key]: v } })}
                   />
                 ))}
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="new-service">{t("create.addService")}</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="new-service"
-                    value={newService}
-                    maxLength={60}
-                    onChange={(e) => setNewService(e.target.value)}
-                    placeholder={t("create.addService")}
-                    className="h-10 rounded-xl"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-10 shrink-0 rounded-xl"
-                    disabled={savingService || !newService.trim()}
-                    onClick={() => void saveTypedService()}
-                  >
-                    <Plus className="mr-1.5 size-4" />
-                    Save to brand
-                  </Button>
-                </div>
               </div>
 
               <div className="flex items-center justify-between rounded-xl border border-border bg-card px-3 py-2.5">

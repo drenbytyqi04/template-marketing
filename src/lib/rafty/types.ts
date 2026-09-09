@@ -91,6 +91,27 @@ export type AccountPlan = {
   partnershipPostsLimit: number;
 };
 
+/**
+ * Everything a post can offer under Included: the brand's saved items, then
+ * anything the post already carries that the brand does not know about.
+ *
+ * The second half matters. A line typed straight onto a post, or one kept from
+ * a brand it was written for, used to render on the design while being absent
+ * from the chips - so it could not be seen or switched off from the form that
+ * put it there. Matching without case keeps "Breakfast" and "breakfast" from
+ * appearing as two separate choices.
+ */
+export function includedOptions(brandServices: string[], postServices: string[]): string[] {
+  const known = new Set(brandServices.map((name) => name.toLowerCase()));
+  const extra = postServices.filter((name) => {
+    const key = name.toLowerCase();
+    if (known.has(key)) return false;
+    known.add(key);
+    return true;
+  });
+  return [...brandServices, ...extra];
+}
+
 /** Formats the active entitlement allows. Posts are always included. */
 export function allowedFormats(plan: AccountPlan | null): ContentFormat[] {
   const out: ContentFormat[] = ["post"];
