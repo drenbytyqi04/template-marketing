@@ -244,7 +244,7 @@ export type BusinessService = {
 export type TemplateScope = "global" | "custom";
 
 /** Template sets that are grouped and labelled separately in the picker. */
-export type TemplateCollection = "signature";
+export type TemplateCollection = "signature" | "realestate";
 
 /** What a design is made for. A category is the occasion the post is about, not
  * the kind of business: a travel agency sells flights in January and beaches in
@@ -320,6 +320,10 @@ export type Template = {
   /** Named set this template belongs to. A set is shown as its own group at the
    * top of the picker, ahead of the standard library, which carries none. */
   collection?: TemplateCollection | undefined;
+  /** Business types this design is built for. A template with none is offered to
+   * everyone; one with a list is offered only to those, because its layout
+   * depends on fields the others do not have. */
+  onlyFor?: BusinessType[] | undefined;
   /** The occasion this design is built for. Categories are shown as their own
    * groups in the picker, ahead of the general library. */
   category?: TemplateCategory | undefined;

@@ -145,7 +145,10 @@ export function formatPrice(value: string, currency: CurrencyCode): string {
   if (!raw) return "";
   const numeric = raw.replace(/[^\d.,]/g, "");
   if (!numeric) return raw;
-  return `${numeric} ${CURRENCY_SYMBOLS[currency]}`;
+  // A no-break space: with an ordinary one the figure and its symbol are two
+  // words, and a narrow column broke "184000 €" across two lines - the number
+  // on one, the euro sign alone on the next.
+  return `${numeric}\u00a0${CURRENCY_SYMBOLS[currency]}`;
 }
 
 export const LANGUAGES: { code: LanguageCode; label: string }[] = [

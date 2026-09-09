@@ -85,16 +85,20 @@ export function TemplatePicker({
       label: c.label as string | null,
       items: list.filter((x) => x.category === c.key),
     })).filter((g) => g.items.length > 0);
+    const property = list.filter((x) => !x.category && x.collection === "realestate");
     const fresh = list.filter((x) => !x.category && x.collection === "signature");
     const rest = list.filter((x) => !x.category && !x.collection);
     return [
+      ...(property.length
+        ? [{ key: "realestate", label: "Property listings", items: property }]
+        : []),
       ...byCategory,
       ...(fresh.length ? [{ key: "signature", label: "New designs", items: fresh }] : []),
       ...(rest.length
         ? [
             {
               key: "library",
-              label: byCategory.length || fresh.length ? "All templates" : null,
+              label: property.length || byCategory.length || fresh.length ? "All templates" : null,
               items: rest,
             },
           ]

@@ -29,7 +29,11 @@ import { useRafty } from "@/lib/rafty/store";
 import { generateCaption } from "@/lib/rafty/caption";
 import { readFileAsDataUrl } from "@/lib/rafty/file";
 import { renderNodeToDataUrl } from "@/lib/rafty/download";
-import { recommendedFirst, templatesForFormat } from "@/lib/rafty/templates";
+import {
+  recommendedFirst,
+  templatesForBusinessType,
+  templatesForFormat,
+} from "@/lib/rafty/templates";
 import {
   clampDuration,
   FIELD_LABEL_PRESETS,
@@ -303,10 +307,13 @@ function CreatePage() {
   const size = sizeFor(format, sizeKey);
   const sizes = SIZE_OPTIONS[format];
   /** Business type only reorders the list, it never removes a template. */
-  const formatTemplates = useMemo(
-    () => recommendedFirst(templatesForFormat(templates, format), business?.type ?? "other"),
-    [templates, format, business?.type],
-  );
+  const formatTemplates = useMemo(() => {
+    const type = business?.type ?? "other";
+    return recommendedFirst(
+      templatesForBusinessType(templatesForFormat(templates, format), type),
+      type,
+    );
+  }, [templates, format, business?.type]);
   const template = useMemo(
     () => formatTemplates.find((x) => x.id === templateId) ?? formatTemplates[0],
     [formatTemplates, templateId],
@@ -426,9 +433,10 @@ function CreatePage() {
     // The same order the picker shows, so switching format lands on the design
     // that leads the list rather than whichever one happens to be first in the
     // library.
+    const type = business?.type ?? "other";
     const nextTemplate = recommendedFirst(
-      templatesForFormat(templates, next),
-      business?.type ?? "other",
+      templatesForBusinessType(templatesForFormat(templates, next), type),
+      type,
     )[0];
     const nextMax = nextTemplate?.slides?.max ?? nextSpec.maxSlides;
     if (next !== "video") clearVideo();

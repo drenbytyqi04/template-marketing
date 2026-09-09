@@ -1,5 +1,5 @@
 import { formatPrice, FORMAT_SPECS, labelledValue } from "./constants";
-import { alpha, INK, shade, TRACK } from "./tokens";
+import { alpha, ELEVATION, INK, shade, TRACK, WEIGHT } from "./tokens";
 import { Briefcase, Building2, MapPin, Plane } from "lucide-react";
 import { FitText } from "@/components/rafty/FitText";
 import type {
@@ -786,6 +786,298 @@ function PhotoLayer({
           }}
         />
       ) : null}
+    </>
+  );
+}
+
+/* ---------------------------- property listings ---------------------------- */
+
+/**
+ * The parts a property listing is built from.
+ *
+ * A listing sells on facts held quietly: what it is, where, how many rooms, how
+ * much floor, and the number. So these designs are restrained by construction -
+ * a wide tracked label over a plain figure, hairlines instead of boxes, one
+ * accent - and the picture is given room rather than covered in badges.
+ */
+
+/** Rooms, area, floor: the figures a listing is read for, as labelled cells
+ * divided by hairlines. */
+function SpecRow({
+  ctx,
+  tone,
+  align = "left",
+}: {
+  ctx: RenderCtx;
+  tone: "light" | "dark";
+  align?: "left" | "center";
+}) {
+  const { content } = ctx;
+  const cells = [
+    [content.meta1, ctx.content.labels?.["meta1"] ?? "Rooms"],
+    [content.meta2, ctx.content.labels?.["meta2"] ?? "Area"],
+    [content.date, ctx.content.labels?.["date"] ?? "Available"],
+  ].filter(([value]) => !!value && String(value).trim()) as [string, string][];
+  if (!cells.length) return null;
+  const ink = tone === "light" ? INK.onDark : INK.strong;
+  const rule = tone === "light" ? INK.onDarkFaint : INK.faint;
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "stretch",
+        justifyContent: align === "center" ? "center" : "flex-start",
+        gap: px(2.6),
+        width: "100%",
+      }}
+    >
+      {cells.map(([value, label], i) => (
+        <div
+          key={label}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: px(0.4),
+            paddingLeft: i === 0 ? 0 : px(2.6),
+            borderLeft: i === 0 ? undefined : `1px solid ${rule}`,
+          }}
+        >
+          <span
+            style={{
+              fontSize: px(1.8),
+              fontWeight: WEIGHT.bold,
+              letterSpacing: TRACK.wide,
+              textTransform: "uppercase",
+              color: tone === "light" ? INK.onDarkMuted : INK.muted,
+              fontFamily: fontSecondary(ctx.brand),
+            }}
+          >
+            {label}
+          </span>
+          <span
+            style={{
+              fontSize: px(3.2),
+              fontWeight: WEIGHT.heavy,
+              letterSpacing: TRACK.snug,
+              whiteSpace: "nowrap",
+              color: ink,
+              fontFamily: font(ctx.brand),
+            }}
+          >
+            {value}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** The asking price, stated rather than badged. */
+function AskingPrice({
+  ctx,
+  tone,
+  size = 7,
+  align = "left",
+}: {
+  ctx: RenderCtx;
+  tone: "light" | "dark";
+  size?: number;
+  align?: "left" | "center" | "right";
+}) {
+  const price = formatPrice(ctx.content.price, ctx.brand.currency);
+  if (!price) return null;
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: px(0.4),
+        alignItems: align === "center" ? "center" : align === "right" ? "flex-end" : "flex-start",
+      }}
+    >
+      <span
+        style={{
+          fontSize: px(1.8),
+          fontWeight: WEIGHT.bold,
+          letterSpacing: TRACK.wider,
+          textTransform: "uppercase",
+          color: tone === "light" ? INK.onDarkMuted : INK.muted,
+          fontFamily: fontSecondary(ctx.brand),
+        }}
+      >
+        {ctx.content.labels?.["price"] ?? "Asking price"}
+      </span>
+      <span
+        style={{
+          fontSize: px(size),
+          fontWeight: WEIGHT.heavy,
+          letterSpacing: TRACK.tight,
+          whiteSpace: "nowrap",
+          color: tone === "light" ? INK.onDark : INK.strong,
+          fontFamily: font(ctx.brand),
+        }}
+      >
+        {price}
+      </span>
+    </div>
+  );
+}
+
+/** The status a listing carries: for sale, reserved, new. Taken from the post's
+ * own wording so nothing is invented. */
+function StatusTag({ ctx, tone, text }: { ctx: RenderCtx; tone: "light" | "dark"; text?: string }) {
+  const value = (text ?? ctx.content.subject ?? "").trim();
+  if (!value) return null;
+  return (
+    <span
+      style={{
+        alignSelf: "flex-start",
+        padding: `${px(0.8)} ${px(1.8)}`,
+        border: `1px solid ${tone === "light" ? INK.onDarkMuted : INK.faint}`,
+        fontSize: px(1.8),
+        fontWeight: WEIGHT.bold,
+        letterSpacing: TRACK.wider,
+        textTransform: "uppercase",
+        color: tone === "light" ? INK.onDark : INK.strong,
+        fontFamily: fontSecondary(ctx.brand),
+      }}
+    >
+      {value}
+    </span>
+  );
+}
+
+/** The agency's line at the foot of a listing: who is selling it and how to
+ * reach them. */
+function AgentFoot({ ctx, tone }: { ctx: RenderCtx; tone: "light" | "dark" }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: px(0.8), width: "100%" }}>
+      <span
+        style={{
+          height: 1,
+          width: "100%",
+          background: tone === "light" ? INK.onDarkFaint : INK.faint,
+        }}
+      />
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: px(1.8),
+          flexWrap: "wrap",
+        }}
+      >
+        <BizRow ctx={ctx} tone={tone} />
+        <ContactLine ctx={ctx} tone={tone} />
+      </div>
+    </div>
+  );
+}
+
+/** The features of the property, as a quiet list rather than pills. */
+function FeatureList({
+  ctx,
+  tone,
+  columns = 2,
+}: {
+  ctx: RenderCtx;
+  tone: "light" | "dark";
+  columns?: number;
+}) {
+  const items = ctx.content.services.filter(Boolean).slice(0, 6);
+  if (!items.length) return null;
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+        gap: `${px(0.8)} ${px(2.6)}`,
+        width: "100%",
+      }}
+    >
+      {items.map((item) => (
+        <div key={item} style={{ display: "flex", alignItems: "center", gap: px(1.2) }}>
+          <span
+            style={{
+              width: px(0.8),
+              height: px(0.8),
+              borderRadius: "50%",
+              background: accentColor(ctx),
+              flex: "0 0 auto",
+            }}
+          />
+          <span
+            style={{
+              fontSize: px(2.2),
+              fontWeight: WEIGHT.medium,
+              color: tone === "light" ? INK.onDarkBody : INK.body,
+              fontFamily: fontSecondary(ctx.brand),
+            }}
+          >
+            {item}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** A serif headline, the voice these listings are written in. */
+function ListingTitle({
+  ctx,
+  size,
+  tone,
+  align = "left",
+}: {
+  ctx: RenderCtx;
+  size: number;
+  tone: "light" | "dark";
+  align?: "left" | "center";
+}) {
+  return (
+    <FitText
+      as="h2"
+      text={ctx.content.title || "Your headline here"}
+      maxSize={size}
+      minSize={Math.max(3.2, size * 0.45)}
+      maxLines={3}
+      lineHeight={1.06}
+      tightLineHeight={1}
+      style={{
+        fontWeight: WEIGHT.bold,
+        letterSpacing: TRACK.tight,
+        fontFamily: fontSecondary(ctx.brand),
+        color: tone === "light" ? INK.onDark : INK.strong,
+        textAlign: align,
+      }}
+    />
+  );
+}
+
+/** Thin marks at the corners of a frame, the way a plan is cropped. */
+function CornerMarks({
+  color,
+  inset = 3.6,
+  len = 5,
+}: {
+  color: string;
+  inset?: number;
+  len?: number;
+}) {
+  const arm = (style: React.CSSProperties) => (
+    <span style={{ position: "absolute", background: color, ...style }} />
+  );
+  return (
+    <>
+      {arm({ left: px(inset), top: px(inset), width: px(len), height: 1 })}
+      {arm({ left: px(inset), top: px(inset), width: 1, height: px(len) })}
+      {arm({ right: px(inset), top: px(inset), width: px(len), height: 1 })}
+      {arm({ right: px(inset), top: px(inset), width: 1, height: px(len) })}
+      {arm({ left: px(inset), bottom: px(inset), width: px(len), height: 1 })}
+      {arm({ left: px(inset), bottom: px(inset), width: 1, height: px(len) })}
+      {arm({ right: px(inset), bottom: px(inset), width: px(len), height: 1 })}
+      {arm({ right: px(inset), bottom: px(inset), width: 1, height: px(len) })}
     </>
   );
 }
@@ -6018,6 +6310,885 @@ const engines: Engine[] = [
       );
     },
   },
+  {
+    id: "re_editorial",
+    label: "Editorial",
+    tags: ["editorial", "light", "whitespace"],
+    render: (ctx) => (
+      <div
+        style={{
+          ...base(ctx.brand),
+          background: bgOr(ctx.brand, "#f7f5f1"),
+          padding: px(5),
+          display: "flex",
+          flexDirection: "column",
+          gap: px(2.6),
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <BizRow ctx={ctx} tone="dark" />
+          <StatusTag ctx={ctx} tone="dark" />
+        </div>
+        <div style={{ position: "relative", flex: "0 1 48%", minHeight: 0, overflow: "hidden" }}>
+          <PhotoLayer ctx={ctx} />
+        </div>
+        <ListingTitle ctx={ctx} size={6.4} tone="dark" />
+        <SpecRow ctx={ctx} tone="dark" />
+        <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: px(1.8) }}>
+          <AskingPrice ctx={ctx} tone="dark" size={7} />
+          <AgentFoot ctx={ctx} tone="dark" />
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "re_sidebar",
+    label: "Sidebar",
+    tags: ["editorial", "light", "dense"],
+    render: (ctx) => (
+      <div style={{ ...base(ctx.brand), background: bgOr(ctx.brand, "#efece6"), display: "flex" }}>
+        <div style={{ position: "relative", flex: "0 1 56%", minHeight: 0 }}>
+          <PhotoLayer ctx={ctx} />
+        </div>
+        <div
+          style={{
+            flex: 1,
+            padding: px(3.6),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(1.8),
+          }}
+        >
+          <BizRow ctx={ctx} tone="dark" />
+          <ListingTitle ctx={ctx} size={4.2} tone="dark" />
+          <FeatureList ctx={ctx} tone="dark" columns={1} />
+          <div
+            style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: px(1.8) }}
+          >
+            <SpecRow ctx={ctx} tone="dark" />
+            <AskingPrice ctx={ctx} tone="dark" size={5.4} />
+            <ContactLine ctx={ctx} tone="dark" />
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "re_darkluxe",
+    label: "Dark Luxe",
+    tags: ["luxury", "dark", "centered"],
+    render: (ctx) => (
+      <div style={{ ...base(ctx.brand), background: shade(ctx.brand.primary, 0.82) }}>
+        <PhotoLayer ctx={ctx} treatment="scrimBoth" />
+        <div
+          style={{
+            position: "absolute",
+            inset: px(3.6),
+            border: `1px solid ${alpha(ctx.brand.accent, 0.55)}`,
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            padding: px(7),
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "space-between",
+            textAlign: "center",
+          }}
+        >
+          <BizRow ctx={ctx} tone="light" />
+          <div
+            style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: px(1.8) }}
+          >
+            <StatusTag ctx={ctx} tone="light" />
+            <ListingTitle ctx={ctx} size={6.4} tone="light" align="center" />
+            <SpecRow ctx={ctx} tone="light" align="center" />
+          </div>
+          <AskingPrice ctx={ctx} tone="light" size={7} align="center" />
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "re_specband",
+    label: "Spec Band",
+    tags: ["dense", "light", "image_first"],
+    render: (ctx) => (
+      <div
+        style={{
+          ...base(ctx.brand),
+          background: "#ffffff",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div style={{ position: "relative", flex: "0 1 52%", minHeight: 0 }}>
+          <PhotoLayer ctx={ctx} treatment="scrimTop" strength={0.6} />
+          <div
+            style={{
+              position: "absolute",
+              left: px(3.6),
+              top: px(3.6),
+              right: px(3.6),
+              display: "flex",
+              justifyContent: "space-between",
+            }}
+          >
+            <BizRow ctx={ctx} tone="light" />
+            <StatusTag ctx={ctx} tone="light" />
+          </div>
+        </div>
+        <div style={{ background: ctx.brand.primary, padding: `${px(2.6)} ${px(3.6)}` }}>
+          <SpecRow ctx={ctx} tone="light" />
+        </div>
+        <div
+          style={{
+            flex: 1,
+            padding: px(3.6),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(1.8),
+          }}
+        >
+          <ListingTitle ctx={ctx} size={5.4} tone="dark" />
+          <FeatureList ctx={ctx} tone="dark" />
+          <div
+            style={{
+              marginTop: "auto",
+              display: "flex",
+              alignItems: "flex-end",
+              justifyContent: "space-between",
+              gap: px(1.8),
+            }}
+          >
+            <AskingPrice ctx={ctx} tone="dark" size={5.4} />
+            <ContactLine ctx={ctx} tone="dark" />
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "re_floatcard",
+    label: "Float Card",
+    tags: ["image_first", "light", "minimal"],
+    render: (ctx) => (
+      <div style={{ ...base(ctx.brand), background: bgOr(ctx.brand, "#eeeae3") }}>
+        <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: "62%" }}>
+          <PhotoLayer ctx={ctx} />
+        </div>
+        <div
+          style={{
+            position: "absolute",
+            left: px(5),
+            right: px(5),
+            bottom: px(5),
+            background: "#ffffff",
+            padding: px(3.6),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(1.8),
+            boxShadow: ELEVATION.mid(px),
+          }}
+        >
+          <StatusTag ctx={ctx} tone="dark" />
+          <ListingTitle ctx={ctx} size={5.4} tone="dark" />
+          <SpecRow ctx={ctx} tone="dark" />
+          <AskingPrice ctx={ctx} tone="dark" size={5.4} />
+          <AgentFoot ctx={ctx} tone="dark" />
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "re_bonecard",
+    label: "Bone",
+    tags: ["whitespace", "light", "minimal"],
+    render: (ctx) => (
+      <div
+        style={{
+          ...base(ctx.brand),
+          background: bgOr(ctx.brand, "#f3efe8"),
+          padding: px(7),
+          display: "flex",
+          flexDirection: "column",
+          gap: px(3.6),
+        }}
+      >
+        <BizRow ctx={ctx} tone="dark" />
+        <div style={{ position: "relative", flex: "0 1 44%", minHeight: 0, overflow: "hidden" }}>
+          <PhotoLayer ctx={ctx} />
+        </div>
+        <ListingTitle ctx={ctx} size={5.4} tone="dark" />
+        <div
+          style={{
+            marginTop: "auto",
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "space-between",
+            gap: px(2.6),
+          }}
+        >
+          <SpecRow ctx={ctx} tone="dark" />
+          <AskingPrice ctx={ctx} tone="dark" size={5.4} align="right" />
+        </div>
+        <ContactLine ctx={ctx} tone="dark" />
+      </div>
+    ),
+  },
+  {
+    id: "re_splitprice",
+    label: "Split Price",
+    tags: ["bold", "image_first", "dense"],
+    render: (ctx) => (
+      <div
+        style={{
+          ...base(ctx.brand),
+          background: ctx.brand.primary,
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div style={{ position: "relative", flex: "0 1 58%", minHeight: 0 }}>
+          <PhotoLayer ctx={ctx} />
+          <div style={{ position: "absolute", left: px(3.6), top: px(3.6) }}>
+            <StatusTag ctx={ctx} tone="light" />
+          </div>
+        </div>
+        <div
+          style={{
+            flex: 1,
+            padding: px(3.6),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(1.8),
+          }}
+        >
+          <ListingTitle ctx={ctx} size={5.4} tone="light" />
+          <SpecRow ctx={ctx} tone="light" />
+          <div
+            style={{
+              marginTop: "auto",
+              display: "flex",
+              alignItems: "flex-end",
+              justifyContent: "space-between",
+              gap: px(1.8),
+            }}
+          >
+            <AskingPrice ctx={ctx} tone="light" size={7} />
+            <BizRow ctx={ctx} tone="light" />
+          </div>
+          <ContactLine ctx={ctx} tone="light" />
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "re_sheet",
+    label: "Listing Sheet",
+    tags: ["dense", "light", "editorial"],
+    render: (ctx) => (
+      <div
+        style={{
+          ...base(ctx.brand),
+          background: "#ffffff",
+          padding: px(5),
+          display: "flex",
+          flexDirection: "column",
+          gap: px(1.8),
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <BizRow ctx={ctx} tone="dark" />
+          <StatusTag ctx={ctx} tone="dark" />
+        </div>
+        <span style={{ height: 1, background: INK.faint }} />
+        <ListingTitle ctx={ctx} size={5.4} tone="dark" />
+        <div style={{ position: "relative", flex: "0 1 40%", minHeight: 0, overflow: "hidden" }}>
+          <PhotoLayer ctx={ctx} />
+        </div>
+        <SpecRow ctx={ctx} tone="dark" />
+        <span style={{ height: 1, background: INK.faint }} />
+        <FeatureList ctx={ctx} tone="dark" columns={3} />
+        <div
+          style={{
+            marginTop: "auto",
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "space-between",
+            gap: px(1.8),
+          }}
+        >
+          <ContactLine ctx={ctx} tone="dark" />
+          <AskingPrice ctx={ctx} tone="dark" size={5.4} align="right" />
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "re_arch",
+    label: "Arch",
+    tags: ["editorial", "light", "centered"],
+    render: (ctx) => (
+      <div
+        style={{
+          ...base(ctx.brand),
+          background: bgOr(ctx.brand, "#f2eee7"),
+          padding: px(5),
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: px(2.6),
+          textAlign: "center",
+        }}
+      >
+        <BizRow ctx={ctx} tone="dark" />
+        <div
+          style={{
+            position: "relative",
+            flex: "0 1 50%",
+            minHeight: 0,
+            width: "100%",
+            overflow: "hidden",
+            borderRadius: "50% 50% 2% 2% / 34% 34% 2% 2%",
+          }}
+        >
+          <PhotoLayer ctx={ctx} />
+        </div>
+        <ListingTitle ctx={ctx} size={5.4} tone="dark" align="center" />
+        <SpecRow ctx={ctx} tone="dark" align="center" />
+        <div
+          style={{
+            marginTop: "auto",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: px(1.2),
+          }}
+        >
+          <AskingPrice ctx={ctx} tone="dark" size={5.4} align="center" />
+          <ContactLine ctx={ctx} tone="dark" />
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "re_cornermarks",
+    label: "Corner Marks",
+    tags: ["minimal", "dark", "image_first"],
+    render: (ctx) => (
+      <div style={{ ...base(ctx.brand), background: shade(ctx.brand.primary, 0.86) }}>
+        <PhotoLayer ctx={ctx} treatment="scrimBottom" />
+        <CornerMarks color={alpha(ctx.brand.accent, 0.8)} />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            padding: px(7),
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+          }}
+        >
+          <div
+            style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}
+          >
+            <BizRow ctx={ctx} tone="light" />
+            <StatusTag ctx={ctx} tone="light" />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: px(1.8) }}>
+            <ListingTitle ctx={ctx} size={6.4} tone="light" />
+            <SpecRow ctx={ctx} tone="light" />
+            <AskingPrice ctx={ctx} tone="light" size={5.4} />
+            <ContactLine ctx={ctx} tone="light" />
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "re_planlines",
+    label: "Plan Lines",
+    tags: ["minimal", "light", "dense"],
+    render: (ctx) => {
+      const rule = alpha(ctx.brand.primary, 0.14);
+      return (
+        <div
+          style={{
+            ...base(ctx.brand),
+            background: "#fbfaf8",
+            padding: px(5),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(2.6),
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: `repeating-linear-gradient(0deg, ${rule} 0 1px, transparent 1px 9%), repeating-linear-gradient(90deg, ${rule} 0 1px, transparent 1px 14%)`,
+            }}
+          />
+          <div
+            style={{
+              position: "relative",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <BizRow ctx={ctx} tone="dark" />
+            <StatusTag ctx={ctx} tone="dark" />
+          </div>
+          <div style={{ position: "relative", flex: "0 1 46%", minHeight: 0, overflow: "hidden" }}>
+            <PhotoLayer ctx={ctx} />
+          </div>
+          <div
+            style={{ position: "relative", display: "flex", flexDirection: "column", gap: px(1.8) }}
+          >
+            <ListingTitle ctx={ctx} size={5.4} tone="dark" />
+            <SpecRow ctx={ctx} tone="dark" />
+            <FeatureList ctx={ctx} tone="dark" />
+          </div>
+          <div
+            style={{
+              position: "relative",
+              marginTop: "auto",
+              display: "flex",
+              alignItems: "flex-end",
+              justifyContent: "space-between",
+              gap: px(1.8),
+            }}
+          >
+            <AskingPrice ctx={ctx} tone="dark" size={5.4} />
+            <ContactLine ctx={ctx} tone="dark" />
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    id: "re_stackbands",
+    label: "Bands",
+    tags: ["dense", "bold", "image_first"],
+    render: (ctx) => (
+      <div
+        style={{
+          ...base(ctx.brand),
+          background: "#ffffff",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div style={{ position: "relative", flex: "0 1 46%", minHeight: 0 }}>
+          <PhotoLayer ctx={ctx} />
+        </div>
+        <div
+          style={{
+            background: shade(ctx.brand.primary, 0.72),
+            padding: `${px(2.6)} ${px(3.6)}`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: px(1.8),
+          }}
+        >
+          <ListingTitle ctx={ctx} size={4.2} tone="light" />
+          <AskingPrice ctx={ctx} tone="light" size={5.4} align="right" />
+        </div>
+        <div
+          style={{
+            flex: 1,
+            padding: px(3.6),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(1.8),
+          }}
+        >
+          <SpecRow ctx={ctx} tone="dark" />
+          <FeatureList ctx={ctx} tone="dark" />
+          <div style={{ marginTop: "auto" }}>
+            <AgentFoot ctx={ctx} tone="dark" />
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "re_agentcard",
+    label: "Agent",
+    tags: ["light", "dense", "editorial"],
+    render: (ctx) => (
+      <div
+        style={{
+          ...base(ctx.brand),
+          background: bgOr(ctx.brand, "#f1eee9"),
+          padding: px(3.6),
+          display: "flex",
+          flexDirection: "column",
+          gap: px(2.6),
+        }}
+      >
+        <div style={{ position: "relative", flex: "0 1 50%", minHeight: 0, overflow: "hidden" }}>
+          <PhotoLayer ctx={ctx} treatment="scrimBottom" strength={0.7} />
+          <div style={{ position: "absolute", left: px(2.6), right: px(2.6), bottom: px(2.6) }}>
+            <ListingTitle ctx={ctx} size={4.2} tone="light" />
+          </div>
+        </div>
+        <SpecRow ctx={ctx} tone="dark" />
+        <FeatureList ctx={ctx} tone="dark" />
+        <div
+          style={{
+            marginTop: "auto",
+            background: "#ffffff",
+            padding: px(2.6),
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: px(1.8),
+            boxShadow: ELEVATION.low(px),
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: px(0.4) }}>
+            <BizRow ctx={ctx} tone="dark" />
+            <ContactLine ctx={ctx} tone="dark" />
+          </div>
+          <AskingPrice ctx={ctx} tone="dark" size={4.2} align="right" />
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "re_quiet",
+    label: "Quiet",
+    tags: ["whitespace", "light", "minimal"],
+    render: (ctx) => (
+      <div
+        style={{
+          ...base(ctx.brand),
+          background: "#ffffff",
+          padding: px(7),
+          display: "flex",
+          flexDirection: "column",
+          gap: px(2.6),
+        }}
+      >
+        <BizRow ctx={ctx} tone="dark" />
+        <div style={{ position: "relative", flex: "0 1 38%", minHeight: 0, overflow: "hidden" }}>
+          <PhotoLayer ctx={ctx} />
+        </div>
+        <ListingTitle ctx={ctx} size={7} tone="dark" />
+        <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: px(1.8) }}>
+          <SpecRow ctx={ctx} tone="dark" />
+          <AskingPrice ctx={ctx} tone="dark" size={5.4} />
+          <ContactLine ctx={ctx} tone="dark" />
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "re_gallery",
+    label: "Gallery",
+    tags: ["image_first", "dense", "light"],
+    render: (ctx) => (
+      <div
+        style={{
+          ...base(ctx.brand),
+          background: "#ffffff",
+          padding: px(3.6),
+          display: "flex",
+          flexDirection: "column",
+          gap: px(1.2),
+        }}
+      >
+        <div style={{ position: "relative", flex: "0 1 40%", minHeight: 0, overflow: "hidden" }}>
+          <PhotoLayer ctx={ctx} />
+        </div>
+        <div style={{ display: "flex", gap: px(1.2), height: px(20) }}>
+          {["left center", "right center"].map((pos) => (
+            <div key={pos} style={{ position: "relative", flex: 1, overflow: "hidden" }}>
+              <Img
+                src={ctx.content.imageDataUrl}
+                video={ctx.content.videoDataUrl}
+                style={{ objectPosition: pos }}
+              />
+            </div>
+          ))}
+        </div>
+        <div
+          style={{ paddingTop: px(1.8), display: "flex", flexDirection: "column", gap: px(1.8) }}
+        >
+          <ListingTitle ctx={ctx} size={4.2} tone="dark" />
+          <SpecRow ctx={ctx} tone="dark" />
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-end",
+              justifyContent: "space-between",
+              gap: px(1.8),
+            }}
+          >
+            <AskingPrice ctx={ctx} tone="dark" size={4.2} />
+            <BizRow ctx={ctx} tone="dark" />
+          </div>
+          <ContactLine ctx={ctx} tone="dark" />
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "re_goldrule",
+    label: "Gold Rule",
+    tags: ["luxury", "dark", "editorial"],
+    render: (ctx) => (
+      <div style={{ ...base(ctx.brand), background: shade(ctx.brand.primary, 0.88) }}>
+        <PhotoLayer ctx={ctx} treatment="duotone" strength={0.58} grain />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            padding: px(7),
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: px(1.2) }}>
+            <BizRow ctx={ctx} tone="light" />
+            <span style={{ height: 1, background: alpha(ctx.brand.accent, 0.7) }} />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: px(1.8) }}>
+            <StatusTag ctx={ctx} tone="light" />
+            <ListingTitle ctx={ctx} size={7} tone="light" />
+            <span style={{ height: 1, background: alpha(ctx.brand.accent, 0.7), width: "38%" }} />
+            <SpecRow ctx={ctx} tone="light" />
+            <AskingPrice ctx={ctx} tone="light" size={5.4} />
+            <ContactLine ctx={ctx} tone="light" />
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "re_openhouse",
+    label: "Open House",
+    tags: ["bold", "light", "type_first"],
+    render: (ctx) => (
+      <div
+        style={{
+          ...base(ctx.brand),
+          background: bgOr(ctx.brand, "#f6f3ee"),
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div
+          style={{
+            padding: `${px(5)} ${px(5)} ${px(2.6)}`,
+            display: "flex",
+            flexDirection: "column",
+            gap: px(1.2),
+          }}
+        >
+          <BizRow ctx={ctx} tone="dark" />
+          <span
+            style={{
+              fontSize: px(1.8),
+              fontWeight: WEIGHT.bold,
+              letterSpacing: TRACK.wider,
+              textTransform: "uppercase",
+              color: accentColor(ctx),
+              fontFamily: fontSecondary(ctx.brand),
+            }}
+          >
+            {ctx.content.labels?.["date"] ?? "Available"}
+          </span>
+          <FitText
+            as="div"
+            text={ctx.content.date || ctx.content.subject || ""}
+            maxSize={9}
+            minSize={4.2}
+            maxLines={1}
+            lineHeight={1}
+            style={{
+              fontWeight: WEIGHT.heavy,
+              letterSpacing: TRACK.tight,
+              color: INK.strong,
+              fontFamily: font(ctx.brand),
+            }}
+          />
+        </div>
+        <div style={{ position: "relative", flex: "0 1 42%", minHeight: 0 }}>
+          <PhotoLayer ctx={ctx} />
+        </div>
+        <div
+          style={{
+            flex: 1,
+            padding: px(3.6),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(1.8),
+          }}
+        >
+          <ListingTitle ctx={ctx} size={4.2} tone="dark" />
+          <SpecRow ctx={ctx} tone="dark" />
+          <div
+            style={{
+              marginTop: "auto",
+              display: "flex",
+              alignItems: "flex-end",
+              justifyContent: "space-between",
+              gap: px(1.8),
+            }}
+          >
+            <AskingPrice ctx={ctx} tone="dark" size={4.2} />
+            <ContactLine ctx={ctx} tone="dark" />
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "re_priceflag",
+    label: "Price Flag",
+    tags: ["bold", "image_first", "dark"],
+    render: (ctx) => (
+      <div style={{ ...base(ctx.brand), background: shade(ctx.brand.primary, 0.8) }}>
+        <PhotoLayer ctx={ctx} treatment="scrimBottom" strength={0.9} />
+        <div
+          style={{
+            position: "absolute",
+            right: 0,
+            top: "16%",
+            background: ctx.brand.accent,
+            padding: `${px(1.8)} ${px(3.6)} ${px(1.8)} ${px(2.6)}`,
+          }}
+        >
+          <AskingPrice ctx={ctx} tone="dark" size={5.4} />
+        </div>
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            padding: px(5),
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+          }}
+        >
+          <BizRow ctx={ctx} tone="light" />
+          <div style={{ display: "flex", flexDirection: "column", gap: px(1.8) }}>
+            <StatusTag ctx={ctx} tone="light" />
+            <ListingTitle ctx={ctx} size={6.4} tone="light" />
+            <SpecRow ctx={ctx} tone="light" />
+            <ContactLine ctx={ctx} tone="light" />
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "re_frame",
+    label: "Frame",
+    tags: ["editorial", "light", "whitespace"],
+    render: (ctx) => (
+      <div style={{ ...base(ctx.brand), background: bgOr(ctx.brand, "#eceae5"), padding: px(5) }}>
+        <div
+          style={{
+            height: "100%",
+            border: `1px solid ${alpha(ctx.brand.primary, 0.35)}`,
+            padding: px(3.6),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(2.6),
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <BizRow ctx={ctx} tone="dark" />
+            <StatusTag ctx={ctx} tone="dark" />
+          </div>
+          <div style={{ position: "relative", flex: "0 1 44%", minHeight: 0, overflow: "hidden" }}>
+            <PhotoLayer ctx={ctx} />
+          </div>
+          <ListingTitle ctx={ctx} size={5.4} tone="dark" />
+          <SpecRow ctx={ctx} tone="dark" />
+          <div
+            style={{
+              marginTop: "auto",
+              display: "flex",
+              alignItems: "flex-end",
+              justifyContent: "space-between",
+              gap: px(1.8),
+            }}
+          >
+            <AskingPrice ctx={ctx} tone="dark" size={5.4} />
+            <ContactLine ctx={ctx} tone="dark" />
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "re_signature",
+    label: "Signature",
+    tags: ["image_first", "dark", "bold"],
+    render: (ctx) => (
+      <div
+        style={{
+          ...base(ctx.brand),
+          background: shade(ctx.brand.primary, 0.84),
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div style={{ position: "relative", flex: "0 1 56%", minHeight: 0 }}>
+          <PhotoLayer ctx={ctx} treatment="scrimTop" strength={0.5} />
+          <div
+            style={{
+              position: "absolute",
+              left: px(3.6),
+              top: px(3.6),
+              right: px(3.6),
+              display: "flex",
+              justifyContent: "space-between",
+            }}
+          >
+            <BizRow ctx={ctx} tone="light" />
+            <StatusTag ctx={ctx} tone="light" />
+          </div>
+        </div>
+        <div
+          style={{
+            flex: 1,
+            padding: px(5),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(1.8),
+          }}
+        >
+          <ListingTitle ctx={ctx} size={5.4} tone="light" />
+          <SpecRow ctx={ctx} tone="light" />
+          <FeatureList ctx={ctx} tone="light" />
+          <div
+            style={{
+              marginTop: "auto",
+              display: "flex",
+              alignItems: "flex-end",
+              justifyContent: "space-between",
+              gap: px(1.8),
+            }}
+          >
+            <AskingPrice ctx={ctx} tone="light" size={5.4} />
+            <ContactLine ctx={ctx} tone="light" />
+          </div>
+        </div>
+      </div>
+    ),
+  },
 ];
 
 export const engineIds = [...engines.map((e) => e.id), "custom"];
@@ -6205,6 +7376,26 @@ const ENGINE_STYLE: Record<string, string> = {
   goldroute: "Gold Route",
   appscreen: "App Screen",
   phonemock: "Phone",
+  re_editorial: "Editorial",
+  re_sidebar: "Sidebar",
+  re_darkluxe: "Dark Luxe",
+  re_specband: "Spec Band",
+  re_floatcard: "Float Card",
+  re_bonecard: "Bone",
+  re_splitprice: "Split Price",
+  re_sheet: "Listing Sheet",
+  re_arch: "Arch",
+  re_cornermarks: "Corner Marks",
+  re_planlines: "Plan Lines",
+  re_stackbands: "Bands",
+  re_agentcard: "Agent",
+  re_quiet: "Quiet",
+  re_gallery: "Gallery",
+  re_goldrule: "Gold Rule",
+  re_openhouse: "Open House",
+  re_priceflag: "Price Flag",
+  re_frame: "Frame",
+  re_signature: "Signature",
   wavecut: "Wave",
   sunarc: "Sun",
   beachlabel: "Beach Label",
@@ -6609,6 +7800,53 @@ function buildCategoryTemplates(category: TemplateCategory): Template[] {
   });
 }
 
+/** Twenty designs made for property listings only. They are offered to estate
+ * agencies alone: a restaurant has no rooms, no floor area and no asking price,
+ * so the layouts would print half empty for anyone else. */
+const REAL_ESTATE_ENGINE_IDS = [
+  "re_editorial",
+  "re_sidebar",
+  "re_darkluxe",
+  "re_specband",
+  "re_floatcard",
+  "re_bonecard",
+  "re_splitprice",
+  "re_sheet",
+  "re_arch",
+  "re_cornermarks",
+  "re_planlines",
+  "re_stackbands",
+  "re_agentcard",
+  "re_quiet",
+  "re_gallery",
+  "re_goldrule",
+  "re_openhouse",
+  "re_priceflag",
+  "re_frame",
+  "re_signature",
+];
+
+function buildRealEstateTemplates(): Template[] {
+  return REAL_ESTATE_ENGINE_IDS.map((engineId, index) => {
+    const engine = engineMap.get(engineId)!;
+    const variant = variants[index % variants.length]!;
+    return {
+      id: `realestate_${index + 1}`,
+      name: templateName(index + 1, engine.id, "R"),
+      engine: engine.id,
+      tags: engine.tags,
+      suggestedFor: ["real_estate" as const],
+      onlyFor: ["real_estate" as const],
+      variant,
+      scope: "global" as const,
+      businessId: null,
+      archived: false,
+      collection: "realestate" as const,
+      format: "post" as const,
+    };
+  });
+}
+
 export const globalTemplates: Template[] = [
   ...buildGlobalTemplates(),
   ...buildNewGlobalTemplates(),
@@ -6620,7 +7858,21 @@ export const globalTemplates: Template[] = [
   ...buildCategoryTemplates("sea"),
   ...buildCategoryTemplates("world"),
   ...buildCategoryTemplates("winter"),
+  ...buildRealEstateTemplates(),
 ];
+
+/**
+ * Templates a business is allowed to pick from.
+ *
+ * Most designs suit any trade, and those stay open to everyone: suggestedFor
+ * only sorts them. A design that declares onlyFor is built around fields a
+ * particular trade has - a property's rooms, floor area and asking price - and
+ * would print half empty for anyone else, so it is withheld rather than sorted
+ * down.
+ */
+export function templatesForBusinessType(all: Template[], type: BusinessType): Template[] {
+  return all.filter((tpl) => !tpl.onlyFor || tpl.onlyFor.includes(type));
+}
 
 /** Templates available for one format. Custom uploads stay in the post format
  * unless they declare otherwise, since their design is locked to its canvas. */
