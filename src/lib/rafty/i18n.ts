@@ -91,6 +91,10 @@ const en: Record<string, string> = {
   "tpl.uploadHint":
     "Upload one reference design. We recreate it as a deterministic template that stays private to your business.",
   "tpl.processing": "Processing",
+  "tpl.processingHint":
+    "Uploaded and waiting for a krijo24 designer to turn it into a template. You can withdraw it if you no longer need it.",
+  "tpl.withdraw": "Withdraw",
+  "tpl.withdrawn": "Request withdrawn.",
   "tpl.ready": "Ready",
   "tpl.rejected": "Rejected",
   "tpl.mine": "Your templates",
@@ -249,6 +253,10 @@ const de: Record<string, string> = {
   "tpl.uploadHint":
     "Lade ein Referenzdesign hoch. Wir bauen daraus eine Vorlage, die privat für dein Unternehmen bleibt.",
   "tpl.processing": "In Bearbeitung",
+  "tpl.processingHint":
+    "Hochgeladen und wartet darauf, dass ein krijo24 Designer daraus eine Vorlage macht. Du kannst die Anfrage zurückziehen.",
+  "tpl.withdraw": "Zurückziehen",
+  "tpl.withdrawn": "Anfrage zurückgezogen.",
   "tpl.ready": "Bereit",
   "tpl.rejected": "Abgelehnt",
   "tpl.mine": "Deine Vorlagen",
@@ -407,6 +415,10 @@ const sq: Record<string, string> = {
   "tpl.uploadHint":
     "Ngarko një dizajn referencë. Ne e rikrijojmë si shabllon që mbetet privat për biznesin tënd.",
   "tpl.processing": "Në përpunim",
+  "tpl.processingHint":
+    "E ngarkuar dhe në pritje që një dizajner i krijo24 ta kthejë në shabllon. Mund ta heqësh nëse nuk të duhet më.",
+  "tpl.withdraw": "Hiqe",
+  "tpl.withdrawn": "Kërkesa u hoq.",
   "tpl.ready": "Gati",
   "tpl.rejected": "Refuzuar",
   "tpl.mine": "Shabllonet e tua",

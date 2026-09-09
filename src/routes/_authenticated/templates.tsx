@@ -520,6 +520,19 @@ function TemplatesPage() {
   const [tag, setTag] = useState<TemplateTag | "all">("all");
   const [wizardOpen, setWizardOpen] = useState(false);
   const [requests, setRequests] = useState<CustomTemplateRequest[]>([]);
+  const [removing, setRemoving] = useState<string | null>(null);
+
+  async function removeRequest(requestId: string) {
+    setRemoving(requestId);
+    const { error } = await repo.deleteRequest(requestId);
+    setRemoving(null);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    setRequests((prev) => prev.filter((r) => r.id !== requestId));
+    toast.success(t("tpl.withdrawn"));
+  }
 
   useEffect(() => {
     if (!business) return;
@@ -587,14 +600,31 @@ function TemplatesPage() {
       ) : null}
 
       {requests.length ? (
-        <div className="card-soft mb-6 grid gap-2 p-4 text-sm">
+        <div className="card-soft mb-6 grid gap-3 p-4 text-sm">
           <p className="font-semibold">{t("tpl.mine")}</p>
           {requests.map((r) => (
-            <div key={r.id} className="flex items-center gap-3 text-muted-foreground">
-              <span className="truncate">{r.fileName}</span>
-              <span className="ml-auto shrink-0 font-semibold text-foreground">
-                {t(`tpl.${r.status}`)}
-              </span>
+            <div key={r.id} className="grid gap-1">
+              <div className="flex items-center gap-3 text-muted-foreground">
+                <span className="truncate">{r.fileName}</span>
+                <span className="ml-auto shrink-0 font-semibold text-foreground">
+                  {t(`tpl.${r.status}`)}
+                </span>
+                {r.status === "processing" ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 shrink-0 rounded-lg px-2 text-xs font-semibold"
+                    disabled={removing === r.id}
+                    onClick={() => void removeRequest(r.id)}
+                  >
+                    {t("tpl.withdraw")}
+                  </Button>
+                ) : null}
+              </div>
+              {r.status === "processing" ? (
+                <p className="text-xs text-muted-foreground">{t("tpl.processingHint")}</p>
+              ) : null}
             </div>
           ))}
         </div>

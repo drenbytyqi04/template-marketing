@@ -671,6 +671,22 @@ export async function updateRequest(
     .eq("id", requestId);
 }
 
+/**
+ * Withdrawing a pending request. The delete is confirmed by reading back the
+ * removed row, so a request blocked by row level security reports a failure
+ * instead of pretending the record is gone.
+ */
+export async function deleteRequest(requestId: string): Promise<{ error?: string }> {
+  const { data, error } = await supabase
+    .from("custom_template_requests")
+    .delete()
+    .eq("id", requestId)
+    .select("id");
+  if (error) return { error: error.message };
+  if (!data || data.length === 0) return { error: "This request could not be removed." };
+  return {};
+}
+
 /* ---------------------------------- posts --------------------------------- */
 
 type PostRow = {
