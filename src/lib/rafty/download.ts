@@ -210,8 +210,21 @@ export async function renderPostToBlob(
   return (await fetch(dataUrl)).blob();
 }
 
-/** Export a rendered post node as a 1080x1350 PNG. */
-export async function downloadNode(node: HTMLElement, filename: string, size?: ExportSize) {
+/** The message to show when an export fails. The exporter raises reasons a
+ * person can act on, so they are passed through rather than replaced with one
+ * generic line. */
+export function reasonFor(err: unknown): string {
+  const message = err instanceof Error ? err.message.trim() : "";
+  return message || "Could not prepare the download. Please try again.";
+}
+
+/** Exports a rendered post: a still, or a clip when the post carries footage.
+ * Returns which of the two was saved so the caller can say so. */
+export async function downloadNode(
+  node: HTMLElement,
+  filename: string,
+  size?: ExportSize,
+): Promise<"image" | "video"> {
   // A post built on uploaded footage exports as a clip, not a still. Detecting
   // the video here covers every download path - Create, Posts, share - because
   // they all come through this function.
@@ -239,6 +252,7 @@ export async function downloadNode(node: HTMLElement, filename: string, size?: E
   // why saving an image "sometimes" did nothing. Hold the URL until the transfer
   // has certainly begun.
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  return extension === "webm" ? "video" : "image";
 }
 
 /** Same export, returned as a File so it can be handed to the Web Share API. */

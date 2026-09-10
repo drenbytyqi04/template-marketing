@@ -13,7 +13,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { downloadNode, nodeToPngFile, slugify, type ExportSize } from "@/lib/rafty/download";
+import {
+  downloadNode,
+  nodeToPngFile,
+  reasonFor,
+  slugify,
+  type ExportSize,
+} from "@/lib/rafty/download";
 
 type Props = {
   canvasRef: React.RefObject<HTMLElement | null>;
@@ -68,10 +74,13 @@ export function ShareActions({
     if (!node || downloading) return;
     setDownloading(true);
     try {
-      await downloadNode(node, slugify(filename), size);
-      toast.success("Image downloaded.");
-    } catch {
-      toast.error("Could not prepare the image. Please try again.");
+      const kind = await downloadNode(node, slugify(filename), size);
+      toast.success(kind === "video" ? "Video downloaded." : "Image downloaded.");
+    } catch (err) {
+      // The exporter knows why it stopped, and that reason is far more use than
+      // "try again": footage that would not play, or a recording the browser
+      // cut short, each need a different thing from the person downloading.
+      toast.error(reasonFor(err));
     } finally {
       setDownloading(false);
     }
@@ -91,11 +100,11 @@ export function ShareActions({
         await nav.share({ files: [file], title: filename, text: caption });
         return;
       }
-      await downloadNode(node, slugify(filename), size);
-      toast.success("Image downloaded.");
+      const kind = await downloadNode(node, slugify(filename), size);
+      toast.success(kind === "video" ? "Video downloaded." : "Image downloaded.");
     } catch (err) {
       if ((err as Error)?.name !== "AbortError") {
-        toast.error("Could not share the image. Try downloading instead.");
+        toast.error(reasonFor(err));
       }
     } finally {
       setSharing(false);

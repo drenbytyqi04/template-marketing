@@ -17,7 +17,7 @@ import { AppShell } from "@/components/rafty/AppShell";
 import { PostCanvas } from "@/components/rafty/PostCanvas";
 import { LazyMount } from "@/components/rafty/LazyMount";
 import { useRafty } from "@/lib/rafty/store";
-import { downloadNode, slugify } from "@/lib/rafty/download";
+import { downloadNode, reasonFor, slugify } from "@/lib/rafty/download";
 import { id as newId } from "@/lib/rafty/repo";
 import { brandForPost } from "@/lib/rafty/types";
 import type { Post } from "@/lib/rafty/types";
@@ -66,10 +66,10 @@ function PostsPage() {
     if (!node || downloadingId) return;
     setDownloadingId(post.id);
     try {
-      await downloadNode(node, slugify(post.content.title || "krijo24-post"));
-      toast.success("Image downloaded.");
-    } catch {
-      toast.error("Could not prepare the image. Please try again.");
+      const kind = await downloadNode(node, slugify(post.content.title || "krijo24-post"));
+      toast.success(kind === "video" ? "Video downloaded." : "Image downloaded.");
+    } catch (err) {
+      toast.error(reasonFor(err));
     } finally {
       setDownloadingId(null);
     }

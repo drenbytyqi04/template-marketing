@@ -363,7 +363,12 @@ function ContactLine({ ctx, tone }: { ctx: RenderCtx; tone: "light" | "dark" }) 
 function BizRow({ ctx, tone }: { ctx: RenderCtx; tone: "light" | "dark" }) {
   const showName = !!ctx.showBrandName && !!ctx.businessName;
   const hasLogo = !!ctx.brand.logoDataUrl;
-  if (!showName && !hasLogo) return null;
+  // An empty row still has to occupy its place in the layout. Returning nothing
+  // removed a flex item, and a column that spreads its children to the top and
+  // the foot of the frame was then left with one child, which it put at the
+  // top: a brand with no logo and its name switched off saw the whole design
+  // slide up into the corner.
+  if (!showName && !hasLogo) return <span aria-hidden style={{ display: "block" }} />;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: px(2.6) }}>
       <Logo ctx={ctx} />

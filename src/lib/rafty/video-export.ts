@@ -30,16 +30,55 @@ type FootageRect = { x: number; y: number; width: number; height: number };
  */
 type Overlay = { gain: HTMLCanvasElement; constant: HTMLCanvasElement; rect: FootageRect };
 
-/** WebM with the best codec this browser actually offers. */
+/**
+ * WebM with a codec this browser will actually encode.
+ *
+ * VP8 leads rather than VP9. isTypeSupported answers whether the browser knows
+ * the codec, not whether it can encode a 1080x1920 stream in real time on this
+ * machine, and a VP9 encoder that cannot keep up gives up part way: the
+ * recorder emits its first chunk and then errors, which lands as a file holding
+ * a single frame. VP8 is the encoder every browser that offers MediaRecorder
+ * has actually shipped.
+ */
 function pickMimeType(): string | undefined {
   const candidates = [
-    "video/webm;codecs=vp9,opus",
     "video/webm;codecs=vp8,opus",
-    "video/webm;codecs=vp9",
     "video/webm;codecs=vp8",
+    "video/webm;codecs=vp9,opus",
+    "video/webm;codecs=vp9",
     "video/webm",
   ];
   return candidates.find((type) => MediaRecorder.isTypeSupported(type));
+}
+
+/**
+ * A recording that holds one frame is a still with a video extension, and
+ * handing that to someone as their clip is worse than saying it failed. The
+ * check reads how much media the file actually carries, without playing it.
+ */
+async function assertPlayableClip(blob: Blob): Promise<void> {
+  const url = URL.createObjectURL(blob);
+  try {
+    const probe = document.createElement("video");
+    probe.src = url;
+    probe.muted = true;
+    probe.preload = "auto";
+    const loaded = await new Promise<boolean>((resolve) => {
+      probe.onloadeddata = () => resolve(true);
+      probe.onerror = () => resolve(false);
+      setTimeout(() => resolve(false), 4000);
+    });
+    if (!loaded) throw new Error("The recorded clip could not be read back.");
+    const spans = probe.buffered.length ? probe.buffered.end(probe.buffered.length - 1) : 0;
+    const duration = Number.isFinite(probe.duration) ? probe.duration : 0;
+    if (Math.max(spans, duration) < 0.3) {
+      throw new Error(
+        "The clip recorded only a single frame. Please try the download again, and keep this tab in front while it runs.",
+      );
+    }
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 export function canExportVideo(): boolean {
@@ -441,8 +480,11 @@ export async function renderVideoPostToBlob(
   recorder.ondataavailable = (e) => {
     if (e.data.size > 0) chunks.push(e.data);
   };
-  const done = new Promise<Blob>((resolve) => {
+  const done = new Promise<Blob>((resolve, reject) => {
     recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType }));
+    // An encoder that quits part way used to pass silently: the chunks it had
+    // already emitted were handed over as the finished clip.
+    recorder.onerror = () => reject(new Error("The browser stopped recording this clip."));
   });
 
   const limit = opts.maxDurationMs ?? 60_000;
@@ -458,6 +500,12 @@ export async function renderVideoPostToBlob(
   recorder.start(100);
   await video.play();
   const startedAt = performance.now();
+  // Footage that reports itself finished before a single frame has been drawn
+  // never played, so recording it would capture one still.
+  if (video.ended) {
+    stop();
+    throw new Error("The uploaded video would not play, so there was nothing to record.");
+  }
   const tick = () => {
     composite(ctx, video, overlay, size);
     if (video.ended || performance.now() - startedAt > limit) return stop();
@@ -466,5 +514,7 @@ export async function renderVideoPostToBlob(
   video.addEventListener("ended", stop, { once: true });
   tick();
 
-  return done;
+  const blob = await done;
+  await assertPlayableClip(blob);
+  return blob;
 }
