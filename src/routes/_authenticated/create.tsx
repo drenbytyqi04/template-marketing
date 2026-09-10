@@ -306,14 +306,21 @@ function CreatePage() {
   const spec = FORMAT_SPECS[format];
   const size = sizeFor(format, sizeKey);
   const sizes = SIZE_OPTIONS[format];
-  /** Business type only reorders the list, it never removes a template. */
+  /** The designs this trade may pick, in the order the picker shows them. A
+   * post already built on another design keeps it, so opening an older post
+   * never swaps its layout underneath the author. */
   const formatTemplates = useMemo(() => {
     const type = business?.type ?? "other";
-    return recommendedFirst(
+    const allowed = recommendedFirst(
       templatesForBusinessType(templatesForFormat(templates, format), type),
       type,
     );
-  }, [templates, format, business?.type]);
+    const inUse = existing?.templateId
+      ? templates.find((tpl) => tpl.id === existing.templateId && (tpl.format ?? "post") === format)
+      : undefined;
+    if (!inUse || allowed.some((tpl) => tpl.id === inUse.id)) return allowed;
+    return [inUse, ...allowed];
+  }, [templates, format, business?.type, existing?.templateId]);
   const template = useMemo(
     () => formatTemplates.find((x) => x.id === templateId) ?? formatTemplates[0],
     [formatTemplates, templateId],

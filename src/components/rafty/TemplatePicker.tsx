@@ -61,6 +61,13 @@ export function TemplatePicker({
 
   const content = useMemo(() => placeholderContent(businessType), [businessType]);
 
+  /** Only the occasions this brand actually has designs for. A trade with its
+   * own set has none, so the row disappears instead of filtering to nothing. */
+  const occasions = useMemo(
+    () => CATEGORIES.filter((c) => templates.some((x) => x.category === c.key)),
+    [templates],
+  );
+
   const selected = templates.find((x) => x.id === value) ?? templates[0];
 
   const list = useMemo(() => {
@@ -209,8 +216,8 @@ export function TemplatePicker({
               ))}
             </div>
 
-            <div className="flex flex-wrap gap-2 px-4 pt-2">
-              {[{ key: "all" as const, label: "All occasions" }, ...CATEGORIES].map((c) => (
+            <div className="flex flex-wrap gap-2 px-4 pt-2" hidden={occasions.length === 0}>
+              {[{ key: "all" as const, label: "All occasions" }, ...occasions].map((c) => (
                 <button
                   key={c.key}
                   type="button"

@@ -11,6 +11,7 @@ import type {
   Template,
   TemplateTag,
   TemplateCategory,
+  TemplateCollection,
   TemplateVariant,
   TemplateZone,
   ZoneKey,
@@ -7861,17 +7862,33 @@ export const globalTemplates: Template[] = [
   ...buildRealEstateTemplates(),
 ];
 
+/** The set of designs a trade owns. A trade listed here is shown its own set
+ * and nothing else, so a property brand never scrolls through flight offers. */
+const OWN_COLLECTION: Partial<Record<BusinessType, TemplateCollection>> = {
+  real_estate: "realestate",
+};
+
 /**
  * Templates a business is allowed to pick from.
  *
- * Most designs suit any trade, and those stay open to everyone: suggestedFor
- * only sorts them. A design that declares onlyFor is built around fields a
- * particular trade has - a property's rooms, floor area and asking price - and
- * would print half empty for anyone else, so it is withheld rather than sorted
- * down.
+ * A trade with its own set sees that set alone, plus whatever it uploaded
+ * itself. A property brand therefore never scrolls through flight offers or
+ * beach weeks. A trade without its own set keeps the whole library, minus the
+ * designs another trade owns: those are built around fields such as a
+ * property's rooms and floor area and would print half empty.
+ *
+ * The list handed in is already narrowed to one format. A format the trade set
+ * does not cover, video today, would otherwise offer nothing at all, so there
+ * the plain library stands in, without occasion designs or another trade's set.
  */
 export function templatesForBusinessType(all: Template[], type: BusinessType): Template[] {
-  return all.filter((tpl) => !tpl.onlyFor || tpl.onlyFor.includes(type));
+  const open = all.filter((tpl) => !tpl.onlyFor || tpl.onlyFor.includes(type));
+  const own = OWN_COLLECTION[type];
+  if (!own) return open;
+  const mine = all.filter((tpl) => tpl.scope === "custom");
+  const owned = open.filter((tpl) => tpl.collection === own);
+  if (owned.length > 0) return [...mine, ...owned];
+  return [...mine, ...open.filter((tpl) => !tpl.category && !tpl.collection)];
 }
 
 /** Templates available for one format. Custom uploads stay in the post format

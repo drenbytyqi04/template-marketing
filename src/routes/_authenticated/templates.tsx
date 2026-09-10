@@ -25,6 +25,8 @@ import { AppShell } from "@/components/rafty/AppShell";
 import { PostCanvas } from "@/components/rafty/PostCanvas";
 import { LazyMount } from "@/components/rafty/LazyMount";
 import { placeholderContent } from "@/lib/rafty/placeholder";
+import { CONTENT_FORMATS } from "@/lib/rafty/constants";
+import { templatesForBusinessType, templatesForFormat } from "@/lib/rafty/templates";
 
 import { useRafty } from "@/lib/rafty/store";
 import { readFileAsDataUrl } from "@/lib/rafty/file";
@@ -567,8 +569,18 @@ function TemplatesPage() {
     };
   }, [business, wizardOpen]);
 
-  const custom = useMemo(() => templates.filter((x) => x.scope === "custom"), [templates]);
-  const global = useMemo(() => templates.filter((x) => x.scope === "global"), [templates]);
+  /** The gallery shows exactly what the Create page will offer this trade, so
+   * a brand never browses a design it cannot then pick. */
+  const visible = useMemo(() => {
+    const type = business?.type ?? "other";
+    const seen = new Set<string>();
+    return CONTENT_FORMATS.flatMap((format) =>
+      templatesForBusinessType(templatesForFormat(templates, format), type),
+    ).filter((tpl) => !seen.has(tpl.id) && seen.add(tpl.id));
+  }, [templates, business?.type]);
+
+  const custom = useMemo(() => visible.filter((x) => x.scope === "custom"), [visible]);
+  const global = useMemo(() => visible.filter((x) => x.scope === "global"), [visible]);
 
   const filteredCustom = useMemo(
     () => (tag === "all" ? custom : custom.filter((x) => (x.tags ?? []).includes(tag))),
@@ -588,7 +600,7 @@ function TemplatesPage() {
       <div className="mb-5 flex flex-wrap items-end gap-3">
         <div className="mr-auto">
           <h1 className="font-display text-2xl font-extrabold">{t("tpl.title")}</h1>
-          <p className="text-sm text-muted-foreground">{templates.length} templates</p>
+          <p className="text-sm text-muted-foreground">{visible.length} templates</p>
         </div>
         <Select value={tag} onValueChange={(v) => setTag(v as TemplateTag | "all")}>
           <SelectTrigger className="h-11 w-[200px] rounded-xl bg-card">
