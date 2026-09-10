@@ -18,10 +18,19 @@ import type {
   ContentFormat,
   Template,
   TemplateCategory,
+  TemplateCollection,
 } from "@/lib/rafty/types";
 import { cn } from "@/lib/utils";
 
 type Filter = "all" | "favorites" | "used";
+
+/** The named sets, in the order they lead the picker. Every collection needs a
+ * heading here, otherwise its designs fall through the grouping unlisted. */
+const COLLECTIONS: { key: TemplateCollection; label: string }[] = [
+  { key: "realestate", label: "Property listings" },
+  { key: "travel", label: "Travel designs" },
+  { key: "signature", label: "New designs" },
+];
 
 /** The occasions a design can be made for, in the order they are offered. */
 const CATEGORIES: { key: TemplateCategory; label: string }[] = [
@@ -93,27 +102,19 @@ export function TemplatePicker({
       items: list.filter((x) => x.category === c.key),
     })).filter((g) => g.items.length > 0);
     const mine = list.filter((x) => x.scope === "custom");
-    const property = list.filter((x) => !x.category && x.collection === "realestate");
-    const fresh = list.filter((x) => !x.category && x.collection === "signature");
+    const named = COLLECTIONS.map((c) => ({
+      key: c.key as string,
+      label: c.label as string | null,
+      items: list.filter((x) => !x.category && x.collection === c.key),
+    })).filter((g) => g.items.length > 0);
     const rest = list.filter((x) => x.scope !== "custom" && !x.category && !x.collection);
+    const leading = mine.length + named.length + byCategory.length;
     return [
       ...(mine.length ? [{ key: "mine", label: "Your templates", items: mine }] : []),
-      ...(property.length
-        ? [{ key: "realestate", label: "Property listings", items: property }]
-        : []),
+      ...named,
       ...byCategory,
-      ...(fresh.length ? [{ key: "signature", label: "New designs", items: fresh }] : []),
       ...(rest.length
-        ? [
-            {
-              key: "library",
-              label:
-                mine.length || property.length || byCategory.length || fresh.length
-                  ? "All templates"
-                  : null,
-              items: rest,
-            },
-          ]
+        ? [{ key: "library", label: leading ? "All templates" : null, items: rest }]
         : []),
     ];
   }, [list, filter, category]);

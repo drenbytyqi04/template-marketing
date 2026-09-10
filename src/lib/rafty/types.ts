@@ -244,7 +244,7 @@ export type BusinessService = {
 export type TemplateScope = "global" | "custom";
 
 /** Template sets that are grouped and labelled separately in the picker. */
-export type TemplateCollection = "signature" | "realestate";
+export type TemplateCollection = "signature" | "realestate" | "travel";
 
 /** What a design is made for. A category is the occasion the post is about, not
  * the kind of business: a travel agency sells flights in January and beaches in

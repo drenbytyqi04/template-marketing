@@ -791,6 +791,68 @@ function PhotoLayer({
   );
 }
 
+/* -------------------------------- video stage ------------------------------ */
+
+/**
+ * The skeleton every video design starts from: the footage, its scrim, and a
+ * padded column over it that pins one block to the top of the frame and one to
+ * the foot. A clip is 9:16 and the picture is the reason anyone stops on it, so
+ * the middle is left alone and the design works at the two edges.
+ */
+function Stage({
+  ctx,
+  treatment = "plain",
+  strength = 1,
+  pad = 5,
+  children,
+}: {
+  ctx: RenderCtx;
+  treatment?: PhotoTreatment;
+  strength?: number;
+  pad?: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <div style={{ ...base(ctx.brand), color: INK.onDark }}>
+      <PhotoLayer ctx={ctx} treatment={treatment} strength={strength} />
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          padding: px(pad),
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          gap: px(2.6),
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A band that runs the full width of the clip while still being drawn inside
+ * the padded layer. A platform lays its caption and buttons over the top and
+ * bottom of a vertical video, and the safe area is applied to that one layer,
+ * so a band pinned to the frame's own edge would sit under them. Bleeding
+ * sideways out of the layer keeps the full width look and the clear zone both.
+ */
+function Bleed({
+  pad = 5,
+  style,
+  children,
+}: {
+  pad?: number;
+  style?: React.CSSProperties;
+  children: React.ReactNode;
+}) {
+  return (
+    <div style={{ marginInline: `-${px(pad)}`, paddingInline: px(pad), ...style }}>{children}</div>
+  );
+}
+
 /* ---------------------------- property listings ---------------------------- */
 
 /**
@@ -7190,6 +7252,1461 @@ const engines: Engine[] = [
       </div>
     ),
   },
+
+  /* ------------------------------ video designs ----------------------------- */
+
+  /**
+   * Twenty designs for a travel agency's footage.
+   *
+   * A clip is 9:16 and the picture is the whole reason anyone stops on it, so
+   * these hold the middle of the frame open and work at the edges: a band along
+   * the foot, a rail down one side, a card in a corner. The scrims are the same
+   * PhotoLayer the posters use, so a brand's video and its post still read as
+   * one set.
+   */
+  {
+    id: "tv_lowerthird",
+    label: "Lower Third",
+    tags: ["image_first", "minimal"],
+    render: (ctx) => (
+      <Stage ctx={ctx} treatment="scrimBottom">
+        <BizRow ctx={ctx} tone="light" />
+        <AdjustBox
+          ctx={ctx}
+          style={{ display: "flex", flexDirection: "column", gap: px(1.8), width: "100%" }}
+        >
+          <Kicker ctx={ctx} color={ctx.brand.accent} />
+          <Title ctx={ctx} size={8} color={INK.onDark} />
+          <ServiceLine ctx={ctx} tone="light" />
+          <CtaBar ctx={ctx} tone="dark" />
+          <ContactLine ctx={ctx} tone="light" />
+        </AdjustBox>
+      </Stage>
+    ),
+  },
+  {
+    id: "tv_topbar",
+    label: "Top Bar",
+    tags: ["image_first", "bold"],
+    render: (ctx) => (
+      <Stage ctx={ctx} treatment="scrimBottom" strength={0.7}>
+        <Bleed
+          style={{
+            paddingBlock: px(2.6),
+            background: accentColor(ctx),
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: px(2.6),
+          }}
+        >
+          <BizRow ctx={ctx} tone="light" />
+          <Kicker ctx={ctx} color={INK.onDarkBody} />
+        </Bleed>
+        <AdjustBox
+          ctx={ctx}
+          style={{ display: "flex", flexDirection: "column", gap: px(1.8), width: "100%" }}
+        >
+          <Title ctx={ctx} size={7} color={INK.onDark} />
+          <PriceBadge ctx={ctx} tone="light" />
+          <ContactLine ctx={ctx} tone="light" />
+        </AdjustBox>
+      </Stage>
+    ),
+  },
+  {
+    id: "tv_ticketcard",
+    label: "Ticket",
+    tags: ["image_first", "dense"],
+    render: (ctx) => (
+      <Stage ctx={ctx} treatment="scrimBottom" strength={0.8}>
+        <BizRow ctx={ctx} tone="light" />
+        <AdjustBox
+          ctx={ctx}
+          style={{
+            width: "100%",
+            background: "#ffffff",
+            borderRadius: px(2.4),
+            overflow: "hidden",
+            boxShadow: ELEVATION.high(px),
+          }}
+        >
+          <div style={{ padding: px(3.6), display: "flex", flexDirection: "column", gap: px(2.6) }}>
+            <RouteCodes ctx={ctx} color={INK.strong} muted={INK.muted} />
+            <div style={{ display: "flex", gap: px(3.6) }}>
+              <TicketField
+                ctx={ctx}
+                label={ctx.content.labels?.["date"] ?? "Date"}
+                value={ctx.content.date}
+                tone="dark"
+              />
+              <TicketField
+                ctx={ctx}
+                label={ctx.content.labels?.["price"] ?? "Fare"}
+                value={formatPrice(ctx.content.price, ctx.brand.currency)}
+                tone="dark"
+              />
+            </div>
+          </div>
+          <Perforation color={alpha(INK.strong, 0.16)} />
+          <div
+            style={{
+              padding: `${px(2.6)} ${px(3.6)}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: px(2.6),
+            }}
+          >
+            <Barcode color={INK.strong} />
+            <CtaTag ctx={ctx} tone="dark" />
+          </div>
+        </AdjustBox>
+      </Stage>
+    ),
+  },
+  {
+    id: "tv_routearc",
+    label: "Route",
+    tags: ["image_first", "editorial"],
+    render: (ctx) => (
+      <Stage ctx={ctx} treatment="scrimBoth">
+        <div style={{ display: "flex", flexDirection: "column", gap: px(2.6), width: "100%" }}>
+          <BizRow ctx={ctx} tone="light" />
+          <RouteCodes ctx={ctx} color={INK.onDark} muted={INK.onDarkMuted} />
+        </div>
+        <AdjustBox
+          ctx={ctx}
+          style={{ display: "flex", flexDirection: "column", gap: px(1.8), width: "100%" }}
+        >
+          <Title ctx={ctx} size={7} color={INK.onDark} />
+          <CtaBar ctx={ctx} tone="dark" />
+        </AdjustBox>
+      </Stage>
+    ),
+  },
+  {
+    id: "tv_siderail",
+    label: "Side Rail",
+    tags: ["minimal", "image_first"],
+    render: (ctx) => (
+      <div style={{ ...base(ctx.brand), color: INK.onDark }}>
+        <PhotoLayer ctx={ctx} treatment="scrimBottom" />
+        <span
+          style={{
+            position: "absolute",
+            left: px(3.6),
+            top: px(7),
+            writingMode: "vertical-rl",
+            fontSize: px(2.2),
+            fontWeight: WEIGHT.bold,
+            letterSpacing: TRACK.wider,
+            textTransform: "uppercase",
+            color: INK.onDarkMuted,
+            fontFamily: fontSecondary(ctx.brand),
+          }}
+        >
+          {ctx.content.subject || ctx.businessName}
+        </span>
+        <AdjustBox
+          ctx={ctx}
+          style={{
+            position: "absolute",
+            left: px(10),
+            right: px(5),
+            bottom: px(7),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(1.8),
+          }}
+        >
+          <Title ctx={ctx} size={7} color={INK.onDark} />
+          <ServiceLine ctx={ctx} tone="light" />
+          <PriceBadge ctx={ctx} tone="light" />
+        </AdjustBox>
+      </div>
+    ),
+  },
+  {
+    id: "tv_footblock",
+    label: "Foot Block",
+    tags: ["bold", "image_first"],
+    render: (ctx) => (
+      <Stage ctx={ctx} treatment="scrimBottom" strength={0.5}>
+        <BizRow ctx={ctx} tone="light" />
+        <Bleed
+          style={{
+            paddingBlock: px(3.6),
+            background: deepGround(ctx.brand),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(2.6),
+          }}
+        >
+          <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(1.8) }}>
+            <HeadlineTwoTone ctx={ctx} size={6.4} color={INK.onDark} accent={ctx.brand.accent} />
+            <FeatureBoxes ctx={ctx} tone="light" columns={2} limit={2} />
+          </AdjustBox>
+          <CtaBar ctx={ctx} tone="light" />
+          <ContactLine ctx={ctx} tone="light" />
+        </Bleed>
+      </Stage>
+    ),
+  },
+  {
+    id: "tv_hairframe",
+    label: "Hair Frame",
+    tags: ["minimal", "whitespace"],
+    render: (ctx) => (
+      <div style={{ ...base(ctx.brand), color: INK.onDark }}>
+        <PhotoLayer ctx={ctx} treatment="scrimBoth" strength={0.8} />
+        <span
+          style={{
+            position: "absolute",
+            inset: px(3.6),
+            border: `1px solid ${INK.onDarkFaint}`,
+          }}
+        />
+        <CornerMarks color={INK.onDark} inset={3.6} len={4} />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            padding: px(7),
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "space-between",
+            textAlign: "center",
+          }}
+        >
+          <Kicker ctx={ctx} color={INK.onDarkBody} />
+          <AdjustBox
+            ctx={ctx}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: px(2.6),
+              width: "100%",
+            }}
+          >
+            <Title ctx={ctx} size={8} color={INK.onDark} />
+            <PriceBadge ctx={ctx} tone="light" />
+            <ContactLine ctx={ctx} tone="light" />
+          </AdjustBox>
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "tv_pricepill",
+    label: "Price Pill",
+    tags: ["bold", "image_first"],
+    render: (ctx) => {
+      // The pill is the whole design, so it is drawn only when there is
+      // something to put in it rather than sitting there empty.
+      const pill = formatPrice(ctx.content.price, ctx.brand.currency) || ctx.content.cta.trim();
+      return (
+        <Stage ctx={ctx} treatment="scrimBottom" strength={0.75}>
+          <BizRow ctx={ctx} tone="light" />
+          <AdjustBox
+            ctx={ctx}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: px(2.6),
+              width: "100%",
+              textAlign: "center",
+            }}
+          >
+            <Title ctx={ctx} size={7} color={INK.onDark} />
+            {pill ? (
+              <span
+                style={{
+                  padding: `${px(2.6)} ${px(5)}`,
+                  borderRadius: px(9),
+                  background: accentColor(ctx),
+                  fontSize: px(5.4),
+                  fontWeight: WEIGHT.heavy,
+                  letterSpacing: TRACK.tight,
+                  fontFamily: font(ctx.brand),
+                  color: INK.onDark,
+                }}
+              >
+                {pill}
+              </span>
+            ) : null}
+            <ContactLine ctx={ctx} tone="light" />
+          </AdjustBox>
+        </Stage>
+      );
+    },
+  },
+  {
+    id: "tv_stampcorner",
+    label: "Stamp",
+    tags: ["editorial", "image_first"],
+    render: (ctx) => (
+      <div style={{ ...base(ctx.brand), color: INK.onDark }}>
+        <PhotoLayer ctx={ctx} treatment="scrimBottom" />
+        <div style={{ position: "absolute", right: px(5), top: px(7) }}>
+          <Stamp ctx={ctx} color={INK.onDarkBody} size={24} />
+        </div>
+        <div style={{ position: "absolute", left: px(5), top: px(7) }}>
+          <BizRow ctx={ctx} tone="light" />
+        </div>
+        <AdjustBox
+          ctx={ctx}
+          style={{
+            position: "absolute",
+            insetInline: px(5),
+            bottom: px(7),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(1.8),
+          }}
+        >
+          <Title ctx={ctx} size={7} color={INK.onDark} />
+          <ServiceLine ctx={ctx} tone="light" />
+          <PriceBadge ctx={ctx} tone="light" />
+        </AdjustBox>
+      </div>
+    ),
+  },
+  {
+    id: "tv_splitfoot",
+    label: "Split Foot",
+    tags: ["editorial", "dense"],
+    render: (ctx) => (
+      <Stage ctx={ctx} treatment="scrimTop" strength={0.7}>
+        <BizRow ctx={ctx} tone="light" />
+        <Bleed
+          style={{
+            paddingBlock: px(3.6),
+            background: bgOr(ctx.brand, "#ffffff"),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(2.6),
+          }}
+        >
+          <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(1.2) }}>
+            <Kicker ctx={ctx} color={accentColor(ctx)} />
+            <Title ctx={ctx} size={5.4} color={INK.strong} />
+          </AdjustBox>
+          <StopList ctx={ctx} tone="dark" />
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-end",
+              justifyContent: "space-between",
+              gap: px(1.8),
+            }}
+          >
+            <PriceBadge ctx={ctx} tone="dark" />
+            <ContactLine ctx={ctx} tone="dark" />
+          </div>
+        </Bleed>
+      </Stage>
+    ),
+  },
+  {
+    id: "tv_marquee",
+    label: "Marquee",
+    tags: ["bold", "image_first"],
+    render: (ctx) => {
+      const word = (ctx.content.subject || ctx.content.location || ctx.businessName).toUpperCase();
+      return (
+        <Stage ctx={ctx} treatment="scrimBottom">
+          <BizRow ctx={ctx} tone="light" />
+          <div style={{ display: "flex", flexDirection: "column", gap: px(2.6), width: "100%" }}>
+            <Bleed
+              style={{
+                paddingBlock: px(1.2),
+                background: accentColor(ctx),
+                display: "flex",
+                alignItems: "center",
+                gap: px(2.6),
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {Array.from({ length: 6 }, (_, i) => (
+                <span
+                  key={i}
+                  style={{
+                    fontSize: px(1.8),
+                    fontWeight: WEIGHT.heavy,
+                    letterSpacing: TRACK.wide,
+                    color: INK.onDark,
+                    fontFamily: fontSecondary(ctx.brand),
+                  }}
+                >
+                  {word}
+                </span>
+              ))}
+            </Bleed>
+            <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(1.8) }}>
+              <Title ctx={ctx} size={7} color={INK.onDark} />
+              <PriceBadge ctx={ctx} tone="light" />
+            </AdjustBox>
+          </div>
+        </Stage>
+      );
+    },
+  },
+  {
+    id: "tv_cornercard",
+    label: "Corner Card",
+    tags: ["minimal", "image_first"],
+    render: (ctx) => (
+      <Stage ctx={ctx} treatment="plain">
+        <BizRow ctx={ctx} tone="light" />
+        <AdjustBox
+          ctx={ctx}
+          style={{
+            maxWidth: "78%",
+            background: alpha("#ffffff", 0.94),
+            borderRadius: px(2.4),
+            padding: px(3.6),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(1.8),
+            boxShadow: ELEVATION.mid(px),
+          }}
+        >
+          <Kicker ctx={ctx} color={accentColor(ctx)} />
+          <Title ctx={ctx} size={5.4} color={INK.strong} />
+          <PriceBadge ctx={ctx} tone="dark" />
+          <ContactLine ctx={ctx} tone="dark" />
+        </AdjustBox>
+      </Stage>
+    ),
+  },
+  {
+    id: "tv_sunband",
+    label: "Sun Band",
+    tags: ["gradient", "image_first"],
+    render: (ctx) => (
+      <div style={{ ...base(ctx.brand), color: INK.onDark }}>
+        <PhotoLayer ctx={ctx} treatment="scrimTop" strength={0.6} />
+        <SunDisc
+          color={alpha(ctx.brand.accent, 0.9)}
+          size={26}
+          style={{ right: px(7), top: px(24) }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            padding: px(5),
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            gap: px(2.6),
+          }}
+        >
+          <BizRow ctx={ctx} tone="light" />
+          <div style={{ width: "100%" }}>
+            <Bleed pad={5} style={{ paddingInline: 0 }}>
+              <Scallop color={bgOr(ctx.brand, "#fffaf2")} size={7} count={9} />
+            </Bleed>
+            <Bleed
+              style={{
+                paddingBlock: `0 ${px(2.6)}`,
+                background: bgOr(ctx.brand, "#fffaf2"),
+                display: "flex",
+                flexDirection: "column",
+                gap: px(1.8),
+              }}
+            >
+              <AdjustBox
+                ctx={ctx}
+                style={{ display: "flex", flexDirection: "column", gap: px(1.2) }}
+              >
+                <Title ctx={ctx} size={5.4} color={INK.strong} />
+                <ServiceLine ctx={ctx} tone="dark" />
+              </AdjustBox>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: px(1.8),
+                }}
+              >
+                <PriceBadge ctx={ctx} tone="dark" />
+                <CtaTag ctx={ctx} tone="dark" />
+              </div>
+            </Bleed>
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "tv_boardingpass",
+    label: "Boarding Pass",
+    tags: ["dense", "editorial"],
+    render: (ctx) => (
+      <Stage ctx={ctx} treatment="wash" strength={0.55}>
+        <BizRow ctx={ctx} tone="light" />
+        <AdjustBox
+          ctx={ctx}
+          style={{
+            width: "100%",
+            background: "#ffffff",
+            borderRadius: px(2.4),
+            overflow: "hidden",
+            boxShadow: ELEVATION.high(px),
+          }}
+        >
+          <div
+            style={{
+              padding: `${px(2.6)} ${px(3.6)}`,
+              background: accentColor(ctx),
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <span
+              style={{
+                fontSize: px(2.2),
+                fontWeight: WEIGHT.heavy,
+                letterSpacing: TRACK.wide,
+                textTransform: "uppercase",
+                color: INK.onDark,
+                fontFamily: fontSecondary(ctx.brand),
+              }}
+            >
+              {ctx.content.subject || ctx.businessName}
+            </span>
+            <Barcode color={INK.onDark} height={4} />
+          </div>
+          <div style={{ padding: px(3.6), display: "flex", flexDirection: "column", gap: px(2.6) }}>
+            <Title ctx={ctx} size={5.4} color={INK.strong} />
+            <div style={{ display: "flex", gap: px(3.6), flexWrap: "wrap" }}>
+              <TicketField
+                ctx={ctx}
+                label={ctx.content.labels?.["location"] ?? "To"}
+                value={ctx.content.location}
+                tone="dark"
+              />
+              <TicketField
+                ctx={ctx}
+                label={ctx.content.labels?.["date"] ?? "Date"}
+                value={ctx.content.date}
+                tone="dark"
+              />
+              <TicketField
+                ctx={ctx}
+                label={ctx.content.labels?.["price"] ?? "Fare"}
+                value={formatPrice(ctx.content.price, ctx.brand.currency)}
+                tone="dark"
+              />
+            </div>
+          </div>
+        </AdjustBox>
+      </Stage>
+    ),
+  },
+  {
+    id: "tv_checklist",
+    label: "Checklist",
+    tags: ["dense", "image_first"],
+    render: (ctx) => (
+      <Stage ctx={ctx} treatment="scrimBoth">
+        <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(1.8) }}>
+          <BizRow ctx={ctx} tone="light" />
+          <Title ctx={ctx} size={7} color={INK.onDark} />
+        </AdjustBox>
+        <div style={{ display: "flex", flexDirection: "column", gap: px(2.6), width: "100%" }}>
+          <FeatureBoxes ctx={ctx} tone="light" columns={1} limit={3} />
+          <CtaBar ctx={ctx} tone="dark" />
+        </div>
+      </Stage>
+    ),
+  },
+  {
+    id: "tv_daterail",
+    label: "Date Rail",
+    tags: ["editorial", "minimal"],
+    render: (ctx) => (
+      <div style={{ ...base(ctx.brand), color: INK.onDark }}>
+        <PhotoLayer ctx={ctx} treatment="scrimBottom" />
+        <div
+          style={{
+            position: "absolute",
+            right: px(5),
+            top: px(7),
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-end",
+            gap: px(2.6),
+            textAlign: "right",
+          }}
+        >
+          <TicketField
+            ctx={ctx}
+            label={ctx.content.labels?.["date"] ?? "Departs"}
+            value={ctx.content.date}
+            tone="light"
+          />
+          <TicketField
+            ctx={ctx}
+            label={ctx.content.labels?.["meta1"] ?? "Nights"}
+            value={ctx.content.meta1}
+            tone="light"
+          />
+        </div>
+        <div style={{ position: "absolute", left: px(5), top: px(7) }}>
+          <BizRow ctx={ctx} tone="light" />
+        </div>
+        <AdjustBox
+          ctx={ctx}
+          style={{
+            position: "absolute",
+            insetInline: px(5),
+            bottom: px(7),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(1.8),
+          }}
+        >
+          <Title ctx={ctx} size={7} color={INK.onDark} />
+          <PriceBadge ctx={ctx} tone="light" />
+        </AdjustBox>
+      </div>
+    ),
+  },
+  {
+    id: "tv_bigtype",
+    label: "Big Type",
+    tags: ["bold", "image_first"],
+    render: (ctx) => (
+      <div style={{ ...base(ctx.brand), color: INK.onDark }}>
+        <PhotoLayer ctx={ctx} treatment="scrimBoth" strength={0.9} />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            padding: px(5),
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+          }}
+        >
+          <BizRow ctx={ctx} tone="light" />
+          <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(2.6) }}>
+            <HeadlineTwoTone ctx={ctx} size={11.5} color={INK.onDark} accent={ctx.brand.accent} />
+          </AdjustBox>
+          <div style={{ display: "flex", flexDirection: "column", gap: px(1.8) }}>
+            <PriceBadge ctx={ctx} tone="light" />
+            <ContactLine ctx={ctx} tone="light" />
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "tv_snowband",
+    label: "Snow Band",
+    tags: ["image_first", "light"],
+    render: (ctx) => (
+      <div style={{ ...base(ctx.brand), color: INK.onDark }}>
+        <PhotoLayer ctx={ctx} treatment="scrimTop" strength={0.5} />
+        <Snowfall count={30} />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            padding: px(5),
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            gap: px(2.6),
+          }}
+        >
+          <BizRow ctx={ctx} tone="light" />
+          <div style={{ width: "100%" }}>
+            <Bleed pad={5} style={{ paddingInline: 0 }}>
+              <Scallop color="#ffffff" size={6} count={10} />
+            </Bleed>
+            <Bleed
+              style={{
+                paddingBlock: `0 ${px(2.6)}`,
+                background: "#ffffff",
+                display: "flex",
+                flexDirection: "column",
+                gap: px(1.8),
+              }}
+            >
+              <AdjustBox
+                ctx={ctx}
+                style={{ display: "flex", flexDirection: "column", gap: px(1.2) }}
+              >
+                <Kicker ctx={ctx} color={accentColor(ctx)} />
+                <Title ctx={ctx} size={5.4} color={INK.strong} />
+              </AdjustBox>
+              <ServiceLine ctx={ctx} tone="dark" />
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: px(1.8),
+                }}
+              >
+                <PriceBadge ctx={ctx} tone="dark" />
+                <ContactLine ctx={ctx} tone="dark" />
+              </div>
+            </Bleed>
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "tv_routedots",
+    label: "Route Dots",
+    tags: ["minimal", "editorial"],
+    render: (ctx) => (
+      <Stage ctx={ctx} treatment="scrimBoth" strength={0.85}>
+        <div style={{ display: "flex", flexDirection: "column", gap: px(2.6), width: "100%" }}>
+          <BizRow ctx={ctx} tone="light" />
+          <DottedRoute color={INK.onDarkMuted} stops={4} />
+        </div>
+        <AdjustBox
+          ctx={ctx}
+          style={{ display: "flex", flexDirection: "column", gap: px(1.8), width: "100%" }}
+        >
+          <Title ctx={ctx} size={7} color={INK.onDark} />
+          <Chips
+            items={[...metaItems(ctx.content, ctx.businessType), ...ctx.content.services]}
+            tone="light"
+          />
+          <PriceBadge ctx={ctx} tone="light" />
+        </AdjustBox>
+      </Stage>
+    ),
+  },
+  {
+    id: "tv_closer",
+    label: "Closer",
+    tags: ["minimal", "whitespace"],
+    render: (ctx) => (
+      <div style={{ ...base(ctx.brand), color: INK.onDark }}>
+        <PhotoLayer ctx={ctx} treatment="scrimBoth" strength={0.8} />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            padding: px(5),
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "space-between",
+            textAlign: "center",
+            gap: px(2.6),
+          }}
+        >
+          <BizRow ctx={ctx} tone="light" />
+          <AdjustBox
+            ctx={ctx}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: px(2.6),
+              width: "100%",
+            }}
+          >
+            <Kicker ctx={ctx} color={INK.onDarkBody} />
+            <Title ctx={ctx} size={9} color={INK.onDark} />
+            <CtaBar ctx={ctx} tone="light" />
+          </AdjustBox>
+          <Bleed style={{ width: "100%", paddingInline: 0 }}>
+            <ContactBar ctx={ctx} ground={accentColor(ctx)} />
+          </Bleed>
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "rv_lowerthird",
+    label: "Lower Third",
+    tags: ["minimal", "image_first"],
+    render: (ctx) => (
+      <Stage ctx={ctx} treatment="scrimBottom">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <BizRow ctx={ctx} tone="light" />
+          <StatusTag ctx={ctx} tone="light" />
+        </div>
+        <AdjustBox
+          ctx={ctx}
+          style={{ display: "flex", flexDirection: "column", gap: px(2.6), width: "100%" }}
+        >
+          <ListingTitle ctx={ctx} size={7} tone="light" />
+          <SpecRow ctx={ctx} tone="light" />
+          <AskingPrice ctx={ctx} tone="light" size={7} />
+          <ContactLine ctx={ctx} tone="light" />
+        </AdjustBox>
+      </Stage>
+    ),
+  },
+  {
+    id: "rv_sheetfoot",
+    label: "Sheet",
+    tags: ["editorial", "light"],
+    render: (ctx) => (
+      <Stage ctx={ctx} treatment="scrimTop" strength={0.6}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <BizRow ctx={ctx} tone="light" />
+          <StatusTag ctx={ctx} tone="light" />
+        </div>
+        <Bleed
+          style={{
+            paddingBlock: px(3.6),
+            background: bgOr(ctx.brand, "#f7f5f1"),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(2.6),
+          }}
+        >
+          <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(1.8) }}>
+            <ListingTitle ctx={ctx} size={5.4} tone="dark" />
+            <SpecRow ctx={ctx} tone="dark" />
+          </AdjustBox>
+          <AskingPrice ctx={ctx} tone="dark" size={7} />
+          <AgentFoot ctx={ctx} tone="dark" />
+        </Bleed>
+      </Stage>
+    ),
+  },
+  {
+    id: "rv_toprail",
+    label: "Top Rail",
+    tags: ["minimal", "editorial"],
+    render: (ctx) => (
+      <Stage ctx={ctx} treatment="scrimBottom" strength={0.7}>
+        <Bleed
+          style={{
+            paddingBlock: px(2.6),
+            background: alpha(shade(ctx.brand.primary, 0.72), 0.86),
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: px(2.6),
+          }}
+        >
+          <BizRow ctx={ctx} tone="light" />
+          <StatusTag ctx={ctx} tone="light" />
+        </Bleed>
+        <AdjustBox
+          ctx={ctx}
+          style={{ display: "flex", flexDirection: "column", gap: px(2.6), width: "100%" }}
+        >
+          <ListingTitle ctx={ctx} size={6.4} tone="light" />
+          <AskingPrice ctx={ctx} tone="light" size={7} />
+        </AdjustBox>
+      </Stage>
+    ),
+  },
+  {
+    id: "rv_specband",
+    label: "Spec Band",
+    tags: ["dense", "image_first"],
+    render: (ctx) => (
+      <Stage ctx={ctx} treatment="scrimBoth" strength={0.75}>
+        <BizRow ctx={ctx} tone="light" />
+        <div style={{ display: "flex", flexDirection: "column", gap: px(2.6), width: "100%" }}>
+          <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(1.8) }}>
+            <ListingTitle ctx={ctx} size={6.4} tone="light" />
+          </AdjustBox>
+          <Bleed
+            style={{
+              paddingBlock: px(2.6),
+              background: alpha(shade(ctx.brand.primary, 0.72), 0.9),
+              display: "flex",
+              flexDirection: "column",
+              gap: px(2.6),
+            }}
+          >
+            <SpecRow ctx={ctx} tone="light" />
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-end",
+                justifyContent: "space-between",
+                gap: px(1.8),
+              }}
+            >
+              <AskingPrice ctx={ctx} tone="light" size={5.4} />
+              <ContactLine ctx={ctx} tone="light" />
+            </div>
+          </Bleed>
+        </div>
+      </Stage>
+    ),
+  },
+  {
+    id: "rv_cornermarks",
+    label: "Corner Marks",
+    tags: ["minimal", "whitespace"],
+    render: (ctx) => (
+      <div style={{ ...base(ctx.brand), color: INK.onDark }}>
+        <PhotoLayer ctx={ctx} treatment="scrimBottom" />
+        <CornerMarks color={INK.onDarkMuted} inset={3.6} len={5} />
+        <div style={{ position: "absolute", left: px(7), top: px(9) }}>
+          <BizRow ctx={ctx} tone="light" />
+        </div>
+        <AdjustBox
+          ctx={ctx}
+          style={{
+            position: "absolute",
+            insetInline: px(7),
+            bottom: px(9),
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "space-between",
+            gap: px(2.6),
+          }}
+        >
+          <ListingTitle ctx={ctx} size={5.4} tone="light" />
+          <AskingPrice ctx={ctx} tone="light" size={5.4} align="right" />
+        </AdjustBox>
+      </div>
+    ),
+  },
+  {
+    id: "rv_pricebar",
+    label: "Price Bar",
+    tags: ["bold", "image_first"],
+    render: (ctx) => {
+      const hasBar =
+        !!formatPrice(ctx.content.price, ctx.brand.currency) || !!ctx.content.cta.trim();
+      return (
+        <Stage ctx={ctx} treatment="scrimBoth" strength={0.7}>
+          <BizRow ctx={ctx} tone="light" />
+          <div style={{ display: "flex", flexDirection: "column", gap: px(2.6), width: "100%" }}>
+            <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(1.8) }}>
+              <StatusTag ctx={ctx} tone="light" />
+              <ListingTitle ctx={ctx} size={6.4} tone="light" />
+            </AdjustBox>
+            {hasBar ? (
+              <Bleed
+                style={{
+                  paddingBlock: px(2.6),
+                  background: accentColor(ctx),
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: px(2.6),
+                }}
+              >
+                <AskingPrice ctx={ctx} tone="light" size={5.4} />
+                <CtaTag ctx={ctx} tone="light" />
+              </Bleed>
+            ) : null}
+          </div>
+        </Stage>
+      );
+    },
+  },
+  {
+    id: "rv_sidesheet",
+    label: "Side Sheet",
+    tags: ["editorial", "dense"],
+    render: (ctx) => (
+      <div style={{ ...base(ctx.brand), color: INK.onDark }}>
+        <PhotoLayer ctx={ctx} treatment="plain" />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            padding: px(5),
+            display: "flex",
+            justifyContent: "flex-end",
+          }}
+        >
+          <div
+            style={{
+              width: "44%",
+              background: alpha(shade(ctx.brand.primary, 0.74), 0.9),
+              borderRadius: px(2.4),
+              padding: px(2.6),
+              display: "flex",
+              flexDirection: "column",
+              gap: px(2.6),
+            }}
+          >
+            <BizRow ctx={ctx} tone="light" />
+            <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(1.8) }}>
+              <ListingTitle ctx={ctx} size={4.2} tone="light" />
+              <FeatureList ctx={ctx} tone="light" columns={1} />
+            </AdjustBox>
+            <div
+              style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: px(1.8) }}
+            >
+              <AskingPrice ctx={ctx} tone="light" size={4.2} />
+              <ContactLine ctx={ctx} tone="light" />
+            </div>
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "rv_quiet",
+    label: "Quiet",
+    tags: ["minimal", "whitespace"],
+    render: (ctx) => (
+      <Stage ctx={ctx} treatment="scrimBottom" strength={0.6} pad={7}>
+        <BizRow ctx={ctx} tone="light" />
+        <AdjustBox
+          ctx={ctx}
+          style={{ display: "flex", flexDirection: "column", gap: px(1.8), width: "100%" }}
+        >
+          <ListingTitle ctx={ctx} size={5.4} tone="light" />
+          <AskingPrice ctx={ctx} tone="light" size={5.4} />
+        </AdjustBox>
+      </Stage>
+    ),
+  },
+  {
+    id: "rv_goldrule",
+    label: "Gold Rule",
+    tags: ["luxury", "centered"],
+    render: (ctx) => (
+      <div style={{ ...base(ctx.brand), color: INK.onDark }}>
+        <PhotoLayer ctx={ctx} treatment="scrimBoth" strength={0.85} />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            padding: px(7),
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "space-between",
+            textAlign: "center",
+          }}
+        >
+          <BizRow ctx={ctx} tone="light" />
+          <AdjustBox
+            ctx={ctx}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: px(2.6),
+              width: "100%",
+            }}
+          >
+            <ListingTitle ctx={ctx} size={7} tone="light" align="center" />
+            <span style={{ width: px(14), height: px(0.4), background: accentColor(ctx) }} />
+            <AskingPrice ctx={ctx} tone="light" size={7} align="center" />
+          </AdjustBox>
+          <ContactLine ctx={ctx} tone="light" />
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "rv_openhouse",
+    label: "Open House",
+    tags: ["editorial", "image_first"],
+    render: (ctx) => (
+      <div style={{ ...base(ctx.brand), color: INK.onDark }}>
+        <PhotoLayer ctx={ctx} treatment="scrimBottom" />
+        <div style={{ position: "absolute", left: px(5), top: px(7) }}>
+          <BizRow ctx={ctx} tone="light" />
+        </div>
+        <AdjustBox
+          ctx={ctx}
+          style={{
+            position: "absolute",
+            insetInline: px(5),
+            bottom: px(7),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(2.6),
+          }}
+        >
+          <ListingTitle ctx={ctx} size={5.4} tone="light" />
+          {ctx.content.date || ctx.content.location ? (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "stretch",
+                gap: px(2.6),
+                padding: px(2.6),
+                borderRadius: px(2.4),
+                background: alpha("#ffffff", 0.14),
+                border: `1px solid ${INK.onDarkFaint}`,
+              }}
+            >
+              <TicketField
+                ctx={ctx}
+                label={ctx.content.labels?.["date"] ?? "Viewing"}
+                value={ctx.content.date}
+                tone="light"
+              />
+              <TicketField
+                ctx={ctx}
+                label={ctx.content.labels?.["location"] ?? "Where"}
+                value={ctx.content.location}
+                tone="light"
+              />
+            </div>
+          ) : null}
+          <AskingPrice ctx={ctx} tone="light" size={5.4} />
+        </AdjustBox>
+      </div>
+    ),
+  },
+  {
+    id: "rv_statusflag",
+    label: "Status Flag",
+    tags: ["bold", "minimal"],
+    render: (ctx) => (
+      <div style={{ ...base(ctx.brand), color: INK.onDark }}>
+        <PhotoLayer ctx={ctx} treatment="scrimBottom" />
+        <span
+          style={{
+            position: "absolute",
+            left: 0,
+            top: px(14),
+            padding: `${px(1.2)} ${px(3.6)}`,
+            background: accentColor(ctx),
+            fontSize: px(2.2),
+            fontWeight: WEIGHT.heavy,
+            letterSpacing: TRACK.wider,
+            textTransform: "uppercase",
+            color: INK.onDark,
+            fontFamily: fontSecondary(ctx.brand),
+          }}
+        >
+          {ctx.content.subject || ctx.businessName}
+        </span>
+        <div style={{ position: "absolute", left: px(5), top: px(7) }}>
+          <BizRow ctx={ctx} tone="light" />
+        </div>
+        <AdjustBox
+          ctx={ctx}
+          style={{
+            position: "absolute",
+            insetInline: px(5),
+            bottom: px(7),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(2.6),
+          }}
+        >
+          <ListingTitle ctx={ctx} size={6.4} tone="light" />
+          <SpecRow ctx={ctx} tone="light" />
+          <AskingPrice ctx={ctx} tone="light" size={5.4} />
+        </AdjustBox>
+      </div>
+    ),
+  },
+  {
+    id: "rv_featuregrid",
+    label: "Feature Grid",
+    tags: ["dense", "image_first"],
+    render: (ctx) => (
+      <Stage ctx={ctx} treatment="scrimBoth">
+        <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(1.8) }}>
+          <BizRow ctx={ctx} tone="light" />
+          <ListingTitle ctx={ctx} size={6.4} tone="light" />
+        </AdjustBox>
+        <div style={{ display: "flex", flexDirection: "column", gap: px(2.6), width: "100%" }}>
+          <FeatureList ctx={ctx} tone="light" columns={2} />
+          <AskingPrice ctx={ctx} tone="light" size={5.4} />
+          <ContactLine ctx={ctx} tone="light" />
+        </div>
+      </Stage>
+    ),
+  },
+  {
+    id: "rv_agentfoot",
+    label: "Agent Foot",
+    tags: ["editorial", "minimal"],
+    render: (ctx) => (
+      <Stage ctx={ctx} treatment="scrimBottom">
+        <StatusTag ctx={ctx} tone="light" />
+        <AdjustBox
+          ctx={ctx}
+          style={{ display: "flex", flexDirection: "column", gap: px(2.6), width: "100%" }}
+        >
+          <ListingTitle ctx={ctx} size={7} tone="light" />
+          <AskingPrice ctx={ctx} tone="light" size={7} />
+          <AgentFoot ctx={ctx} tone="light" />
+        </AdjustBox>
+      </Stage>
+    ),
+  },
+  {
+    id: "rv_stackbands",
+    label: "Stack Bands",
+    tags: ["dense", "asymmetric"],
+    render: (ctx) => {
+      const band: React.CSSProperties = {
+        background: alpha(shade(ctx.brand.primary, 0.72), 0.88),
+        padding: `${px(2.6)} ${px(3.6)}`,
+      };
+      return (
+        <div style={{ ...base(ctx.brand), color: INK.onDark }}>
+          <PhotoLayer ctx={ctx} treatment="plain" />
+          <div style={{ position: "absolute", left: px(5), top: px(7) }}>
+            <BizRow ctx={ctx} tone="light" />
+          </div>
+          <AdjustBox
+            ctx={ctx}
+            style={{
+              position: "absolute",
+              insetInline: px(5),
+              bottom: px(7),
+              display: "flex",
+              flexDirection: "column",
+              gap: px(0.8),
+            }}
+          >
+            <div style={band}>
+              <ListingTitle ctx={ctx} size={5.4} tone="light" />
+            </div>
+            <div style={band}>
+              <SpecRow ctx={ctx} tone="light" />
+            </div>
+            <div style={band}>
+              <AskingPrice ctx={ctx} tone="light" size={5.4} />
+            </div>
+          </AdjustBox>
+        </div>
+      );
+    },
+  },
+  {
+    id: "rv_archwindow",
+    label: "Arch",
+    tags: ["luxury", "light"],
+    render: (ctx) => (
+      <div
+        style={{
+          ...base(ctx.brand),
+          background: bgOr(ctx.brand, "#f4f1ec"),
+          padding: px(5),
+          display: "flex",
+          flexDirection: "column",
+          gap: px(2.6),
+        }}
+      >
+        <BizRow ctx={ctx} tone="dark" />
+        <div
+          style={{
+            position: "relative",
+            flex: 1,
+            minHeight: 0,
+            overflow: "hidden",
+            borderRadius: `${px(30)} ${px(30)} ${px(2.4)} ${px(2.4)}`,
+          }}
+        >
+          <PhotoLayer ctx={ctx} treatment="plain" />
+        </div>
+        <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(1.8) }}>
+          <ListingTitle ctx={ctx} size={5.4} tone="dark" />
+          <SpecRow ctx={ctx} tone="dark" />
+        </AdjustBox>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "space-between",
+            gap: px(1.8),
+          }}
+        >
+          <AskingPrice ctx={ctx} tone="dark" size={5.4} />
+          <ContactLine ctx={ctx} tone="dark" />
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "rv_planlines",
+    label: "Plan Lines",
+    tags: ["minimal", "editorial"],
+    render: (ctx) => (
+      <div style={{ ...base(ctx.brand), color: INK.onDark }}>
+        <PhotoLayer ctx={ctx} treatment="scrimBottom" />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: `linear-gradient(${INK.onDarkFaint} 1px, transparent 1px), linear-gradient(90deg, ${INK.onDarkFaint} 1px, transparent 1px)`,
+            backgroundSize: `${px(12)} ${px(12)}`,
+            opacity: 0.3,
+          }}
+        />
+        <div style={{ position: "absolute", left: px(5), top: px(7) }}>
+          <BizRow ctx={ctx} tone="light" />
+        </div>
+        <AdjustBox
+          ctx={ctx}
+          style={{
+            position: "absolute",
+            insetInline: px(5),
+            bottom: px(7),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(2.6),
+          }}
+        >
+          <ListingTitle ctx={ctx} size={6.4} tone="light" />
+          <SpecRow ctx={ctx} tone="light" />
+          <AskingPrice ctx={ctx} tone="light" size={5.4} />
+        </AdjustBox>
+      </div>
+    ),
+  },
+  {
+    id: "rv_floatcard",
+    label: "Float Card",
+    tags: ["light", "image_first"],
+    render: (ctx) => (
+      <Stage ctx={ctx} treatment="plain">
+        <BizRow ctx={ctx} tone="light" />
+        <AdjustBox
+          ctx={ctx}
+          style={{
+            width: "100%",
+            background: alpha("#ffffff", 0.95),
+            borderRadius: px(2.4),
+            padding: px(3.6),
+            display: "flex",
+            flexDirection: "column",
+            gap: px(2.6),
+            boxShadow: ELEVATION.high(px),
+          }}
+        >
+          <StatusTag ctx={ctx} tone="dark" />
+          <ListingTitle ctx={ctx} size={5.4} tone="dark" />
+          <SpecRow ctx={ctx} tone="dark" />
+          <AskingPrice ctx={ctx} tone="dark" size={5.4} />
+        </AdjustBox>
+      </Stage>
+    ),
+  },
+  {
+    id: "rv_serifhero",
+    label: "Serif Hero",
+    tags: ["editorial", "type_first"],
+    render: (ctx) => (
+      <Stage ctx={ctx} treatment="scrimTop" strength={0.9}>
+        <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(1.8) }}>
+          <BizRow ctx={ctx} tone="light" />
+          <ListingTitle ctx={ctx} size={9} tone="light" />
+        </AdjustBox>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: px(2.6),
+            width: "100%",
+            padding: px(2.6),
+            borderRadius: px(2.4),
+            background: alpha(shade(ctx.brand.primary, 0.72), 0.82),
+          }}
+        >
+          <SpecRow ctx={ctx} tone="light" />
+          <AskingPrice ctx={ctx} tone="light" size={5.4} />
+        </div>
+      </Stage>
+    ),
+  },
+  {
+    id: "rv_boneframe",
+    label: "Bone Frame",
+    tags: ["whitespace", "light"],
+    render: (ctx) => (
+      <div
+        style={{
+          ...base(ctx.brand),
+          background: bgOr(ctx.brand, "#efece6"),
+          padding: px(3.6),
+          display: "flex",
+          flexDirection: "column",
+          gap: px(2.6),
+        }}
+      >
+        <div style={{ position: "relative", flex: 1, minHeight: 0, overflow: "hidden" }}>
+          <PhotoLayer ctx={ctx} treatment="scrimTop" strength={0.5} />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              padding: px(3.6),
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+            }}
+          >
+            <BizRow ctx={ctx} tone="light" />
+            <StatusTag ctx={ctx} tone="light" />
+          </div>
+        </div>
+        <AdjustBox ctx={ctx} style={{ display: "flex", flexDirection: "column", gap: px(1.8) }}>
+          <ListingTitle ctx={ctx} size={5.4} tone="dark" />
+          <SpecRow ctx={ctx} tone="dark" />
+          <AskingPrice ctx={ctx} tone="dark" size={5.4} />
+        </AdjustBox>
+        <AgentFoot ctx={ctx} tone="dark" />
+      </div>
+    ),
+  },
+  {
+    id: "rv_closer",
+    label: "Closer",
+    tags: ["centered", "luxury"],
+    render: (ctx) => (
+      <div style={{ ...base(ctx.brand), color: INK.onDark }}>
+        <PhotoLayer ctx={ctx} treatment="scrimBoth" strength={0.9} />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            padding: px(5),
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "space-between",
+            textAlign: "center",
+            gap: px(2.6),
+          }}
+        >
+          <BizRow ctx={ctx} tone="light" />
+          <AdjustBox
+            ctx={ctx}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: px(2.6),
+              width: "100%",
+            }}
+          >
+            <StatusTag ctx={ctx} tone="light" />
+            <ListingTitle ctx={ctx} size={7} tone="light" align="center" />
+            <AskingPrice ctx={ctx} tone="light" size={7} align="center" />
+          </AdjustBox>
+          <Bleed style={{ width: "100%", paddingInline: 0 }}>
+            <ContactBar ctx={ctx} ground={shade(ctx.brand.primary, 0.76)} />
+          </Bleed>
+        </div>
+      </div>
+    ),
+  },
 ];
 
 export const engineIds = [...engines.map((e) => e.id), "custom"];
@@ -7427,6 +8944,46 @@ const ENGINE_STYLE: Record<string, string> = {
   nordicband: "Nordic",
   frozenframe: "Frozen Frame",
   newyear: "New Year",
+  tv_lowerthird: "Lower Third",
+  tv_topbar: "Top Bar",
+  tv_ticketcard: "Ticket",
+  tv_routearc: "Route",
+  tv_siderail: "Side Rail",
+  tv_footblock: "Foot Block",
+  tv_hairframe: "Hair Frame",
+  tv_pricepill: "Price Pill",
+  tv_stampcorner: "Stamp",
+  tv_splitfoot: "Split Foot",
+  tv_marquee: "Marquee",
+  tv_cornercard: "Corner Card",
+  tv_sunband: "Sun Band",
+  tv_boardingpass: "Boarding Pass",
+  tv_checklist: "Checklist",
+  tv_daterail: "Date Rail",
+  tv_bigtype: "Big Type",
+  tv_snowband: "Snow Band",
+  tv_routedots: "Route Dots",
+  tv_closer: "Closer",
+  rv_lowerthird: "Lower Third",
+  rv_sheetfoot: "Sheet",
+  rv_toprail: "Top Rail",
+  rv_specband: "Spec Band",
+  rv_cornermarks: "Corner Marks",
+  rv_pricebar: "Price Bar",
+  rv_sidesheet: "Side Sheet",
+  rv_quiet: "Quiet",
+  rv_goldrule: "Gold Rule",
+  rv_openhouse: "Open House",
+  rv_statusflag: "Status Flag",
+  rv_featuregrid: "Feature Grid",
+  rv_agentfoot: "Agent Foot",
+  rv_stackbands: "Stack Bands",
+  rv_archwindow: "Arch",
+  rv_planlines: "Plan Lines",
+  rv_floatcard: "Float Card",
+  rv_serifhero: "Serif Hero",
+  rv_boneframe: "Bone Frame",
+  rv_closer: "Closer",
 };
 
 const styleName = (engineId: string) => ENGINE_STYLE[engineId] ?? "Classic";
@@ -7848,6 +9405,88 @@ function buildRealEstateTemplates(): Template[] {
   });
 }
 
+/** Twenty clips for a travel agency. A walk through a resort or a window seat
+ * carries the offer on its own, so these designs hold the middle of the frame
+ * open and work along the edges. */
+const TRAVEL_VIDEO_ENGINE_IDS = [
+  "tv_lowerthird",
+  "tv_topbar",
+  "tv_ticketcard",
+  "tv_routearc",
+  "tv_siderail",
+  "tv_footblock",
+  "tv_hairframe",
+  "tv_pricepill",
+  "tv_stampcorner",
+  "tv_splitfoot",
+  "tv_marquee",
+  "tv_cornercard",
+  "tv_sunband",
+  "tv_boardingpass",
+  "tv_checklist",
+  "tv_daterail",
+  "tv_bigtype",
+  "tv_snowband",
+  "tv_routedots",
+  "tv_closer",
+];
+
+/** Twenty clips for a property agency. A walkthrough already shows the rooms,
+ * so the design only has to hold the facts and the number. */
+const REAL_ESTATE_VIDEO_ENGINE_IDS = [
+  "rv_lowerthird",
+  "rv_sheetfoot",
+  "rv_toprail",
+  "rv_specband",
+  "rv_cornermarks",
+  "rv_pricebar",
+  "rv_sidesheet",
+  "rv_quiet",
+  "rv_goldrule",
+  "rv_openhouse",
+  "rv_statusflag",
+  "rv_featuregrid",
+  "rv_agentfoot",
+  "rv_stackbands",
+  "rv_archwindow",
+  "rv_planlines",
+  "rv_floatcard",
+  "rv_serifhero",
+  "rv_boneframe",
+  "rv_closer",
+];
+
+/** One trade's video set. Both sets are built the same way, they differ only in
+ * which designs they name and which trade they belong to. */
+function buildTradeVideoTemplates(input: {
+  engineIds: string[];
+  type: BusinessType;
+  collection: TemplateCollection;
+  prefix: string;
+  idPrefix: string;
+}): Template[] {
+  const spec = FORMAT_SPECS.video;
+  return input.engineIds.map((engineId, index) => {
+    const engine = engineMap.get(engineId)!;
+    const variant = variants[index % variants.length]!;
+    return {
+      id: `${input.idPrefix}_${index + 1}`,
+      name: templateName(index + 1, engine.id, input.prefix),
+      engine: engine.id,
+      tags: engine.tags,
+      suggestedFor: [input.type],
+      onlyFor: [input.type],
+      variant,
+      scope: "global" as const,
+      businessId: null,
+      archived: false,
+      collection: input.collection,
+      format: "video" as const,
+      slides: { min: spec.minSlides, max: spec.maxSlides, default: spec.defaultSlides },
+    };
+  });
+}
+
 export const globalTemplates: Template[] = [
   ...buildGlobalTemplates(),
   ...buildNewGlobalTemplates(),
@@ -7860,6 +9499,20 @@ export const globalTemplates: Template[] = [
   ...buildCategoryTemplates("world"),
   ...buildCategoryTemplates("winter"),
   ...buildRealEstateTemplates(),
+  ...buildTradeVideoTemplates({
+    engineIds: TRAVEL_VIDEO_ENGINE_IDS,
+    type: "travel_agency",
+    collection: "travel",
+    prefix: "T",
+    idPrefix: "travelvideo",
+  }),
+  ...buildTradeVideoTemplates({
+    engineIds: REAL_ESTATE_VIDEO_ENGINE_IDS,
+    type: "real_estate",
+    collection: "realestate",
+    prefix: "RV",
+    idPrefix: "realestatevideo",
+  }),
 ];
 
 /** The set of designs a trade owns. A trade listed here is shown its own set
