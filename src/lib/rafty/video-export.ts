@@ -56,7 +56,7 @@ function pickMimeType(): string | undefined {
  * handing that to someone as their clip is worse than saying it failed. The
  * check reads how much media the file actually carries, without playing it.
  */
-async function assertPlayableClip(blob: Blob): Promise<void> {
+async function measureClip(blob: Blob): Promise<{ seconds: number; frames: number }> {
   const url = URL.createObjectURL(blob);
   try {
     const probe = document.createElement("video");
@@ -69,13 +69,30 @@ async function assertPlayableClip(blob: Blob): Promise<void> {
       setTimeout(() => resolve(false), 4000);
     });
     if (!loaded) throw new Error("The recorded clip could not be read back.");
-    const spans = probe.buffered.length ? probe.buffered.end(probe.buffered.length - 1) : 0;
-    const duration = Number.isFinite(probe.duration) ? probe.duration : 0;
-    if (Math.max(spans, duration) < 0.3) {
-      throw new Error(
-        "The clip recorded only a single frame. Please try the download again, and keep this tab in front while it runs.",
-      );
-    }
+
+    // A recording made live carries no duration in its header, so the only
+    // honest measure is how much of it decodes. Played fast and muted, a whole
+    // clip runs through in a fraction of its length.
+    const withCallback = probe as HTMLVideoElement & {
+      requestVideoFrameCallback?: (cb: () => void) => number;
+    };
+    if (!withCallback.requestVideoFrameCallback) return { seconds: Infinity, frames: Infinity };
+    let frames = 0;
+    let last = 0;
+    const count = () => {
+      frames += 1;
+      last = probe.currentTime;
+      withCallback.requestVideoFrameCallback?.(count);
+    };
+    withCallback.requestVideoFrameCallback(count);
+    probe.playbackRate = 16;
+    await probe.play().catch(() => {});
+    await new Promise<void>((resolve) => {
+      probe.onended = () => resolve();
+      setTimeout(resolve, 6000);
+    });
+    probe.pause();
+    return { seconds: Math.max(last, probe.currentTime), frames };
   } finally {
     URL.revokeObjectURL(url);
   }
@@ -363,10 +380,19 @@ function composite(
   overlay: Overlay,
   size: VideoExportSize,
 ): void {
+  // The design is rasterised once, at full size, and may be recorded onto a
+  // smaller canvas, so the box the footage fills is scaled with it.
+  const k = size.width / overlay.gain.width;
+  const rect: FootageRect = {
+    x: overlay.rect.x * k,
+    y: overlay.rect.y * k,
+    width: overlay.rect.width * k,
+    height: overlay.rect.height * k,
+  };
   ctx.globalCompositeOperation = "source-over";
   ctx.fillStyle = "#000000";
   ctx.fillRect(0, 0, size.width, size.height);
-  drawCover(ctx, video, overlay.rect);
+  drawCover(ctx, video, rect);
   ctx.globalCompositeOperation = "multiply";
   ctx.drawImage(overlay.gain, 0, 0, size.width, size.height);
   ctx.globalCompositeOperation = "lighter";
@@ -443,30 +469,84 @@ export async function renderVideoPostToBlob(
   const overlay = await buildOverlay(node, onScreenVideo, size);
   const { video, release } = await loadFootage(src);
 
+  try {
+    // Recording at a size the machine cannot keep up with does not simply lower
+    // the frame rate: frames the capture queue cannot take are dropped, and the
+    // clip comes back shorter than the footage, a six second walkthrough
+    // arriving as two seconds of stutter. What a machine can manage is only
+    // knowable by recording, so the clip is measured against the time it took
+    // to record and, if it fell behind, made again at half the frame size. The
+    // design is rasterised once and scaled, so a second pass costs one more
+    // playthrough and nothing else.
+    const half = { width: Math.round(size.width / 4) * 2, height: Math.round(size.height / 4) * 2 };
+    let best: Blob | null = null;
+    for (const recordSize of [size, half]) {
+      const attempt = await recordOnce({
+        video,
+        overlay,
+        mimeType,
+        size: recordSize,
+        limitMs: opts.maxDurationMs ?? 60_000,
+      });
+      const clip = await measureClip(attempt.blob);
+      if (clip.frames < 2) {
+        throw new Error(
+          "The clip recorded only a single frame. Please try the download again, and keep this tab in front while it runs.",
+        );
+      }
+      best = attempt.blob;
+      // Within a tenth of the time it was recorded over is a faithful clip.
+      if (clip.seconds >= (attempt.wallMs / 1000) * 0.9) return attempt.blob;
+    }
+    return best!;
+  } finally {
+    release();
+  }
+}
+
+/** One recording pass: plays the footage through once, compositing every frame
+ * onto a canvas the recorder is reading. */
+async function recordOnce(input: {
+  video: HTMLVideoElement;
+  overlay: Overlay;
+  mimeType: string;
+  size: VideoExportSize;
+  limitMs: number;
+}): Promise<{ blob: Blob; wallMs: number }> {
+  const { video, overlay, mimeType, size, limitMs } = input;
   const canvas = document.createElement("canvas");
   canvas.width = size.width;
   canvas.height = size.height;
   const ctx = canvas.getContext("2d");
-  if (!ctx) {
-    release();
-    throw new Error("Could not get a drawing context.");
-  }
+  if (!ctx) throw new Error("Could not get a drawing context.");
 
-  // Paint once before recording: captureStream only emits on paint, so starting
-  // on an unpainted canvas records an empty file.
-  try {
-    await seekTo(video, 0);
-    ctx.fillStyle = "#000000";
-    ctx.fillRect(0, 0, size.width, size.height);
-    drawCover(ctx, video, overlay.rect);
-    assertFootagePainted(ctx, overlay.rect);
-    composite(ctx, video, overlay, size);
-  } catch (err) {
-    release();
-    throw err;
-  }
+  // Paint once before recording: a capture only emits on paint, so starting on
+  // an unpainted canvas records an empty file.
+  await seekTo(video, 0);
+  // The picture is checked before the design goes over it, while black still
+  // means nothing decoded rather than a scrim doing its work.
+  const k = size.width / overlay.gain.width;
+  const rect: FootageRect = {
+    x: overlay.rect.x * k,
+    y: overlay.rect.y * k,
+    width: overlay.rect.width * k,
+    height: overlay.rect.height * k,
+  };
+  ctx.globalCompositeOperation = "source-over";
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(0, 0, size.width, size.height);
+  drawCover(ctx, video, rect);
+  assertFootagePainted(ctx, rect);
+  composite(ctx, video, overlay, size);
 
-  const stream = canvas.captureStream(30);
+  // Frames are handed over one at a time rather than sampled at a fixed rate,
+  // so every frame that was painted is offered to the recorder.
+  const manual = canvas.captureStream(0);
+  const manualTrack = manual.getVideoTracks()[0] as
+    (MediaStreamTrack & { requestFrame?: () => void }) | undefined;
+  const stream = manualTrack?.requestFrame ? manual : canvas.captureStream(30);
+  const requestFrame = manualTrack?.requestFrame ? () => manualTrack.requestFrame?.() : () => {};
+
   const source = video as HTMLVideoElement & { captureStream?: () => MediaStream };
   try {
     const audio = source.captureStream?.().getAudioTracks() ?? [];
@@ -487,14 +567,15 @@ export async function renderVideoPostToBlob(
     recorder.onerror = () => reject(new Error("The browser stopped recording this clip."));
   });
 
-  const limit = opts.maxDurationMs ?? 60_000;
-  let raf = 0;
+  // Paced by animation frames rather than by the footage's own frame callback:
+  // the element being recorded is never in the document, and a detached video
+  // never presents frames, so its callback would not fire.
+  let handle = 0;
   const stop = () => {
-    cancelAnimationFrame(raf);
+    cancelAnimationFrame(handle);
     video.removeEventListener("ended", stop);
     if (recorder.state !== "inactive") recorder.stop();
     video.pause();
-    release();
   };
 
   recorder.start(100);
@@ -508,13 +589,13 @@ export async function renderVideoPostToBlob(
   }
   const tick = () => {
     composite(ctx, video, overlay, size);
-    if (video.ended || performance.now() - startedAt > limit) return stop();
-    raf = requestAnimationFrame(tick);
+    requestFrame();
+    if (video.ended || performance.now() - startedAt > limitMs) return stop();
+    handle = requestAnimationFrame(tick);
   };
   video.addEventListener("ended", stop, { once: true });
   tick();
 
   const blob = await done;
-  await assertPlayableClip(blob);
-  return blob;
+  return { blob, wallMs: performance.now() - startedAt };
 }
