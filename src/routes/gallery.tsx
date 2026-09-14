@@ -47,15 +47,25 @@ function GalleryPage() {
           A look inside the template library
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg">
-          krijo24 ships with 50 global templates built as visual families, not industry boxes. Here
-          is a curated sample from a few of them.
+          krijo24 ships its templates as visual families, not industry boxes. Here is a curated
+          sample from a few of them.
         </p>
       </section>
+
+      {globalTemplates.length === 0 ? (
+        <section className="mx-auto max-w-2xl px-4 pb-4 text-center sm:px-6">
+          <p className="text-sm text-muted-foreground">
+            The library is being rebuilt right now. New designs appear here as they land.
+          </p>
+        </section>
+      ) : null}
 
       {FAMILIES.map((family, index) => {
         const templates = globalTemplates
           .filter((tpl) => tpl.tags.includes(family.tag))
           .slice(0, 3);
+        // A family with nothing in it is not a family worth a heading.
+        if (templates.length === 0) return null;
         const demo = demoPosts[index % demoPosts.length]!;
 
         return (
@@ -91,7 +101,7 @@ function GalleryPage() {
       <section className="mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6">
         <div className="brand-gradient flex flex-col items-start gap-4 rounded-3xl px-6 py-10 text-primary-foreground sm:px-10">
           <h2 className="font-display text-2xl font-extrabold sm:text-3xl">
-            See all 50 templates, plus your own.
+            See the whole library, plus your own.
           </h2>
           <p className="max-w-xl text-sm text-primary-foreground/85">
             Once inside krijo24 you can browse the full library and even request a custom template

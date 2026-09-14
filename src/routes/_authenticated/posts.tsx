@@ -18,6 +18,7 @@ import { PostCanvas } from "@/components/rafty/PostCanvas";
 import { LazyMount } from "@/components/rafty/LazyMount";
 import { useRafty } from "@/lib/rafty/store";
 import { downloadNode, reasonFor, slugify } from "@/lib/rafty/download";
+import { removedTemplate } from "@/lib/rafty/templates";
 import { id as newId } from "@/lib/rafty/repo";
 import { brandForPost } from "@/lib/rafty/types";
 import type { Post } from "@/lib/rafty/types";
@@ -130,8 +131,8 @@ function PostsPage() {
       ) : (
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 xl:grid-cols-5">
           {filtered.map((post) => {
-            const template = templates.find((x) => x.id === post.templateId) ?? templates[0];
-            if (!template) return null;
+            const template =
+              templates.find((x) => x.id === post.templateId) ?? removedTemplate(post.templateId);
             return (
               <article key={post.id} className="card-soft overflow-hidden">
                 <div className="p-1.5">

@@ -355,7 +355,21 @@ function CreatePage() {
     postId,
   ]);
 
-  if (!business || !brand || !template) return null;
+  if (!business || !brand) return null;
+
+  // The library can be empty between one set of designs and the next, and a
+  // brand may have uploaded none of its own. Saying so beats a blank page.
+  if (!template) {
+    return (
+      <div className="card-soft mx-auto max-w-md p-6 text-center">
+        <p className="text-sm font-bold">No designs available yet</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          The template library is being rebuilt. You can still upload your own design from the
+          Templates page and post with it.
+        </p>
+      </div>
+    );
+  }
 
   const active = slides[Math.min(activeIndex, slides.length - 1)] ?? slides[0]!;
   const content = active.content;

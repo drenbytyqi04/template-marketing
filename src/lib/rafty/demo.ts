@@ -42,7 +42,23 @@ const brand = (primary: string, secondary: string, fontFamily: string): BrandPro
   language: "en",
 });
 
-const pick = (id: string) => globalTemplates.find((t) => t.id === id) ?? globalTemplates[0]!;
+/**
+ * The design a preview is drawn on. While the library is empty the previews
+ * fall back to the built in renderer, which still shows the picture and the
+ * words, so the public pages keep working between one set of designs and the
+ * next. Named designs are picked again as soon as they exist.
+ */
+const pick = (id: string): Template =>
+  globalTemplates.find((t) => t.id === id) ?? {
+    id: `preview_${id}`,
+    name: "Preview",
+    engine: "preview",
+    tags: ["image_first"],
+    variant: { align: "left", tone: "dark", badge: "pill", accent: "primary" },
+    scope: "global",
+    businessId: null,
+    archived: false,
+  };
 
 export const demoPosts: DemoPost[] = [
   {

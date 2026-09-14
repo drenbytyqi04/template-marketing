@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useRafty } from "@/lib/rafty/store";
+import { removedTemplate } from "@/lib/rafty/templates";
 import * as repo from "@/lib/rafty/repo";
 import { PLATFORM_LABELS, SOCIAL_PLATFORMS, TIMEZONES } from "@/lib/rafty/constants";
 import { brandForPost } from "@/lib/rafty/types";
@@ -96,7 +97,7 @@ function SchedulePage() {
     ({ id, className }: { id: string; className?: string }) => {
       const post = posts.find((p) => p.id === id);
       const template = post
-        ? (templates.find((x) => x.id === post.templateId) ?? templates[0])
+        ? (templates.find((x) => x.id === post.templateId) ?? removedTemplate(post.templateId))
         : null;
       if (!post || !template || !brand || !business) {
         return (
