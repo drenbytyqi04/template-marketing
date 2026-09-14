@@ -1,5 +1,8 @@
 import { formatPrice } from "./constants";
 import { INK } from "./tokens";
+import { renderDesign } from "./design/render";
+import { TRAVEL_DESIGNS } from "./design/travel";
+import type { DesignSpec } from "./design/spec";
 import type {
   BrandProfile,
   BusinessType,
@@ -38,6 +41,9 @@ export type RenderCtx = {
   adjustments?: PostAdjustments;
   /** Renders the brand contact zone when a template opts in. */
   showContact?: boolean;
+  /** The canvas this design is drawn on, in pixels. A design needs the shape of
+   * the frame to work out how tall a row of its field is. */
+  canvas?: { width: number; height: number };
 };
 
 /** Every size in a design is container relative, so a thumbnail and a 1080
@@ -303,8 +309,34 @@ export function removedTemplate(id: string): Template {
 
 /* -------------------------------- selectors -------------------------------- */
 
-/** The library. Empty until the new system's designs are added. */
-export const globalTemplates: Template[] = [];
+/**
+ * The library.
+ *
+ * A design is a written specification rather than a function: what it holds and
+ * where, drawn by one renderer from one set of tokens. The template record here
+ * is what the app picks with, the specification is what the design actually is.
+ */
+const DESIGNS: DesignSpec[] = [...TRAVEL_DESIGNS];
+
+const designById = new Map(DESIGNS.map((d) => [d.id, d]));
+
+export const globalTemplates: Template[] = DESIGNS.map((design) => ({
+  id: design.id,
+  name: design.name,
+  engine: "spec",
+  tags: design.tags,
+  ...(design.for ? { suggestedFor: design.for, onlyFor: design.for } : {}),
+  variant: {
+    align: "left",
+    tone: design.tone === "light" ? "dark" : "light",
+    badge: "pill",
+    accent: "primary",
+  },
+  scope: "global" as const,
+  businessId: null,
+  archived: false,
+  format: "post" as const,
+}));
 
 /** The set of designs a trade owns. A trade listed here is shown its own set
  * and nothing else, so a property brand never scrolls through flight offers. */
@@ -361,6 +393,8 @@ export function renderTemplate(
   if (template.engine === "custom") {
     return renderCustomTemplate(template, ctx);
   }
+  const design = designById.get(template.id);
+  if (design) return renderDesign(design, ctx);
   // An engine that is not registered is not an error to throw at the reader:
   // the post still has a picture and words, so those are what it shows.
   const engine = engineMap.get(template.engine);

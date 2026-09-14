@@ -10,6 +10,9 @@ type Props = {
   lineHeight?: number;
   tightLineHeight?: number;
   style?: React.CSSProperties;
+  /** Style for the measuring box. A design that hands the text a share of a
+   * fixed frame sets its height here, and the text is fitted to it. */
+  boxStyle?: React.CSSProperties;
   className?: string;
 };
 
@@ -28,6 +31,7 @@ export function FitText({
   lineHeight = 1.2,
   tightLineHeight,
   style,
+  boxStyle,
   className,
 }: Props) {
   const boxRef = useRef<HTMLDivElement>(null);
@@ -38,15 +42,21 @@ export function FitText({
     const el = textRef.current;
     if (!box || !el) return;
 
-    const opts = {
-      maxSize,
-      minSize,
-      maxLines,
-      lineHeight,
-      ...(tightLineHeight !== undefined ? { tightLineHeight } : {}),
-    };
     const fit = () => {
-      if (boxRef.current && textRef.current) fitTextToBox(boxRef.current, textRef.current, opts);
+      const node = boxRef.current;
+      const el = textRef.current;
+      if (!node || !el) return;
+      // The ceiling the design set on this box, read from CSS rather than from
+      // the laid out box, so it does not move as the text is resized.
+      const cap = parseFloat(getComputedStyle(node).maxHeight);
+      fitTextToBox(node, el, {
+        maxSize,
+        minSize,
+        maxLines,
+        lineHeight,
+        ...(tightLineHeight !== undefined ? { tightLineHeight } : {}),
+        ...(Number.isFinite(cap) ? { maxHeight: cap } : {}),
+      });
     };
 
     // Fit now so the first paint is already close.
@@ -74,7 +84,7 @@ export function FitText({
   if (!text) return null;
 
   return (
-    <div ref={boxRef} style={{ overflow: "hidden", maxWidth: "100%" }}>
+    <div ref={boxRef} style={{ overflow: "hidden", maxWidth: "100%", ...boxStyle }}>
       {createElement(
         as,
         {

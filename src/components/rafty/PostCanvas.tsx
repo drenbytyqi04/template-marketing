@@ -95,6 +95,7 @@ export const PostCanvas = forwardRef<HTMLDivElement, Props>(function PostCanvas(
         showBrandName: showBrandName ?? false,
         showContact: showContact ?? false,
         ...(adjustments ? { adjustments } : {}),
+        canvas: { width: size.width, height: size.height },
       })}
       <ExtraTextLayer items={content.extras} brand={brand} />
     </div>

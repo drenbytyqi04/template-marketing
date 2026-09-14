@@ -24,6 +24,15 @@ export type FitTextOptions = {
   tightLineHeight?: number;
   /** Binary search iterations. 8 is enough to converge to sub-pixel sizes. */
   iterations?: number;
+  /**
+   * A ceiling on the laid out height, in pixels.
+   *
+   * It has to come from outside. The box's own height is decided by the text
+   * inside it, so measuring against that compares the text with itself: it
+   * accepts whatever size it is already at and rejects every larger one, which
+   * collapses every headline to its minimum on the first pass.
+   */
+  maxHeight?: number;
 };
 
 /**
@@ -36,7 +45,15 @@ export function fitTextToBox(
   text: HTMLElement,
   opts: FitTextOptions,
 ): void {
-  const { maxSize, minSize, maxLines, lineHeight, tightLineHeight, iterations = 8 } = opts;
+  const {
+    maxSize,
+    minSize,
+    maxLines,
+    lineHeight,
+    tightLineHeight,
+    maxHeight,
+    iterations = 8,
+  } = opts;
 
   const setSize = (size: number, lh: number) => {
     text.style.fontSize = `${size}cqw`;
@@ -88,6 +105,9 @@ export function fitTextToBox(
   const fits = () => {
     const { widest, lines } = measure();
     if (lines > maxLines) return false;
+    // Where a design gave the text a share of a fixed frame, the headline is
+    // held to it rather than running out of the block it sits in.
+    if (maxHeight !== undefined && text.scrollHeight > maxHeight + 0.5) return false;
     // Sub-pixel tolerance only. Anything larger reappears multiplied when the
     // design is exported at 1080px.
     return widest <= container.clientWidth + 0.5;
