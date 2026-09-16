@@ -126,34 +126,51 @@ function Kicker({ ctx, tone }: { ctx: RenderCtx; tone: Tone }) {
  *
  * The headline is the one part that gives: it is fitted to whatever the block
  * has left once the others are accounted for. Working that out from the tokens
- * keeps the answer stable, which matters more than it sounds - deriving it from
- * the laid out box instead put the two in a loop, each shrinking the other
- * until the headline bottomed out at its minimum on every design.
+ * and from what the post actually carries keeps the answer stable, which
+ * matters more than it sounds - deriving it from the laid out box instead put
+ * the two in a loop, each shrinking the other until the headline bottomed out
+ * at its minimum on every design. A part with nothing to draw asks for nothing,
+ * so an empty field hands its room back to the headline.
  */
-function reserveOf(part: Part): number {
+function reserveOf(part: Part, ctx: RenderCtx): number {
+  const { content } = ctx;
+  const has = (value: string | undefined) => !!value && value.trim().length > 0;
   switch (part.t) {
     case "kicker":
-      return TYPE.label * 1.4;
+      return has(content.subject) || has(content.location) ? TYPE.label * 1.4 : 0;
     case "headline":
       return 0;
-    case "price":
+    case "price": {
+      if (!formatPrice(content.price, ctx.brand.currency)) return 0;
       return part.as === "badge" ? TYPE.h3 * 1.2 + SPACE.sm * 2 : TYPE.h2 * 1.2;
-    case "facts":
-      return TYPE.body * 1.5;
-    case "included":
-      if (part.as === "ticks") return (part.limit ?? 4) * (TYPE.body * 1.5 + SPACE.xs);
-      // Chips wrap, and four of them rarely sit on one line.
+    }
+    case "facts": {
+      const n = [content.location, content.meta1, content.date].filter(has).length;
+      return n ? TYPE.body * 1.5 : 0;
+    }
+    case "included": {
+      const n = includedItems(ctx, part.limit).length;
+      if (!n) return 0;
+      if (part.as === "ticks") {
+        const rows = Math.ceil(n / (n > 4 ? 2 : 1));
+        return rows * (TYPE.body * 1.5 + SPACE.xs);
+      }
       if (part.as === "chips") {
-        const rows = Math.ceil((part.limit ?? 4) / 3);
+        // Chips wrap: roughly three to a row at the widths these blocks run to.
+        const rows = Math.ceil(n / 3);
         return rows * (TYPE.label * 1.5 + SPACE.xxs * 2) + (rows - 1) * SPACE.xs;
       }
-      return TYPE.body * 1.5;
+      // A line wraps by character count rather than by item count.
+      const chars = includedItems(ctx, part.limit).join("   ").length;
+      return Math.max(1, Math.ceil(chars / 44)) * (TYPE.body * 1.5);
+    }
     case "cta":
+      if (!has(content.cta)) return 0;
       return part.as === "bar" ? TYPE.body * 1.4 + SPACE.sm * 2 : TYPE.body * 1.4 + SPACE.xs * 2;
     case "brand":
-      return 5;
+      return ctx.brand.logoDataUrl || (ctx.showBrandName && ctx.businessName) ? 5 : 0;
     case "contact":
-      return TYPE.label * 1.5;
+      return ctx.showContact ? TYPE.label * 1.5 : 0;
     case "rule":
       return 0.4;
     default:
@@ -173,13 +190,23 @@ function Headline({
   room?: number;
 }) {
   const max = HEADLINE_SIZE[size];
+  const lines = 3;
+  // The floor gives way before the box does. A block whose other parts have
+  // taken nearly everything leaves room for a line or two, and a headline held
+  // to its usual minimum there is not shrunk, it is cut off by the box that
+  // clips it. Better small and whole than large and halved.
+  const floor = Math.max(TYPE.h4, max * 0.42);
+  const min =
+    room !== undefined && room > 0
+      ? Math.max(TYPE.label, Math.min(floor, room / (lines * 1.02)))
+      : floor;
   return (
     <FitText
       as="h2"
       text={ctx.content.title || "Your headline here"}
       maxSize={max}
-      minSize={Math.max(TYPE.h4, max * 0.42)}
-      maxLines={3}
+      minSize={min}
+      maxLines={lines}
       lineHeight={1.02}
       tightLineHeight={0.96}
       // The headline takes whatever the block has left after the other parts,
@@ -193,7 +220,10 @@ function Headline({
         flex: "0 0 auto",
         minHeight: 0,
         width: "100%",
-        ...(room !== undefined && room > 0 ? { maxHeight: px(room) } : {}),
+        // Always capped, even where the other parts have taken nearly all of
+        // the block: a headline with no room left shrinks to one small line
+        // instead of running out over everything below it.
+        ...(room !== undefined ? { maxHeight: px(Math.max(room, TYPE.h4 * 1.2)) } : {}),
       }}
       style={{
         fontWeight: WEIGHT.heavy,
@@ -280,18 +310,25 @@ function Facts({ ctx, tone, limit = 3 }: { ctx: RenderCtx; tone: Tone; limit?: n
   );
 }
 
+/** What Included actually prints: everything the post carries, unless the
+ * design asked for fewer. */
+function includedItems(ctx: RenderCtx, limit?: number): string[] {
+  const items = ctx.content.services.filter((s) => s && s.trim());
+  return limit === undefined ? items : items.slice(0, limit);
+}
+
 function Included({
   ctx,
   tone,
   as,
-  limit = 4,
+  limit,
 }: {
   ctx: RenderCtx;
   tone: Tone;
   as: "line" | "ticks" | "chips";
   limit?: number;
 }) {
-  const items = ctx.content.services.filter(Boolean).slice(0, limit);
+  const items = includedItems(ctx, limit);
   if (!items.length) return null;
   const c = ink(tone);
   if (as === "line") {
@@ -333,8 +370,18 @@ function Included({
       </div>
     );
   }
+  // A long list in one column is taller than any block can hold. Two columns
+  // keep the same ticked look at half the height.
+  const columns = items.length > 4 ? 2 : 1;
   return (
-    <div style={{ display: "grid", gap: px(SPACE.xs), width: "100%" }}>
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+        gap: `${px(SPACE.xs)} ${px(SPACE.lg)}`,
+        width: "100%",
+      }}
+    >
       {items.map((item) => (
         <div key={item} style={{ display: "flex", alignItems: "center", gap: px(SPACE.sm) }}>
           <span
@@ -561,7 +608,7 @@ function BlockNode({
   const gap = GAP[block.gap ?? "md"];
   const padding = block.panel && block.panel !== "none" ? SPACE.lg * 2 : 0;
   const reserved =
-    block.parts.reduce((sum, part) => sum + reserveOf(part), 0) +
+    block.parts.reduce((sum, part) => sum + reserveOf(part, ctx), 0) +
     gap * Math.max(0, block.parts.length - 1) +
     padding;
   const room = (r2 - r1) * rowHeight - reserved;
