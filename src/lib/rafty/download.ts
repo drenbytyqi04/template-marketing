@@ -1,6 +1,7 @@
 import { toPng } from "html-to-image";
 import { FONT_LIBRARY } from "./constants";
 import { canExportVideo, renderVideoPosterToDataUrl, renderVideoPostToBlob } from "./video-export";
+import { tagSrgbDataUrl } from "./png-srgb";
 
 /** Always embedded: every template declares these as its fallback faces. */
 const ALWAYS_EMBEDDED = ["Sora", "Plus Jakarta Sans"];
@@ -102,8 +103,16 @@ function nextFrame(): Promise<void> {
  * Renders a node to a deterministic 1080x1350 PNG data url. This is the only
  * export implementation, shared by download and share so preview, save,
  * download and share always agree pixel for pixel.
+ *
+ * Every return goes out through `tagSrgbDataUrl`, so the one thing the canvas
+ * leaves unsaid - which colour space the pixels are in - is written into the
+ * file here rather than at each of the four call sites.
  */
 export async function renderNodeToDataUrl(node: HTMLElement, size?: ExportSize): Promise<string> {
+  return tagSrgbDataUrl(await rasterise(node, size));
+}
+
+async function rasterise(node: HTMLElement, size?: ExportSize): Promise<string> {
   const outWidth = size?.width ?? EXPORT_WIDTH;
   const outHeight = size?.height ?? EXPORT_HEIGHT;
 
