@@ -554,6 +554,9 @@ function CreatePage() {
   }
 
   async function persist() {
+    // Whether this was an edit has to be read before the save, because saving a
+    // new post assigns it an id and would make every save look like an edit.
+    const wasEditing = postId !== null;
     setSaving(true);
     try {
       // Upload freshly picked footage before writing the post, so the row keeps a
@@ -595,28 +598,43 @@ function CreatePage() {
         ...(postId || !brand ? {} : { brandSnapshot: snapshotOfBrand(brand) }),
       };
       const saved = await createPost(post);
-      if (saved) {
-        setPostId(saved.id);
-        toast.success(t("create.saved"));
-        // Store the exact rendered image so scheduling and publishing send
-        // precisely what is on screen. Failure here never blocks the save.
-        const node = canvasRef.current;
-        if (node && format === "post") {
-          void (async () => {
-            try {
-              const dataUrl = await renderNodeToDataUrl(node, {
-                width: size.width,
-                height: size.height,
-              });
-              await repo.savePostRender(business!.id, saved.id, dataUrl);
-            } catch {
-              /* the Website page re-renders anything still missing */
-            }
-          })();
-        }
-      } else {
+      if (!saved) {
         toast.error("Could not save the post. Please try again.");
+        return;
       }
+      setPostId(saved.id);
+
+      // Store the exact rendered image so scheduling and publishing send
+      // precisely what is on screen. The capture is awaited rather than left to
+      // run on its own, because the editor is cleared a few lines below and the
+      // exporter reads the live canvas: a reset that got there first would file
+      // a blank frame against a post that looked finished on screen. Only the
+      // upload is left to finish by itself, so a slow network never holds up
+      // the next post. Failure here still never blocks the save.
+      const node = canvasRef.current;
+      if (node && format === "post") {
+        try {
+          const dataUrl = await renderNodeToDataUrl(node, {
+            width: size.width,
+            height: size.height,
+          });
+          // Left to finish on its own, so the catch has to travel with it.
+          void repo.savePostRender(business!.id, saved.id, dataUrl).catch(() => {});
+        } catch {
+          /* the Website page re-renders anything still missing */
+        }
+      }
+
+      toast.success(t("create.saved"));
+
+      // A saved post is finished, so it leaves the desk. The editor goes back
+      // to empty and is ready for the next one instead of holding the picture,
+      // the design and the text of a post that is already filed; editing it
+      // again means opening it from Posts, which is also where an edit that was
+      // just saved returns to rather than dropping the person on a blank page
+      // they did not ask for.
+      if (wasEditing) void navigate({ to: "/posts" });
+      else resetAll();
     } finally {
       setSaving(false);
     }
