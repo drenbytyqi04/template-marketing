@@ -139,7 +139,11 @@ function RootComponent() {
       <RaftyProvider>
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
-        <Toaster position="top-center" />
+        {/* Below the header, not over it. Centred at the top of the viewport the
+            toast covered the navigation, and a message that says the post was
+            saved was exactly the moment someone wanted to click through to
+            Posts. The offset clears the tallest header the app has. */}
+        <Toaster position="top-center" offset="88px" mobileOffset="88px" />
       </RaftyProvider>
     </QueryClientProvider>
   );
