@@ -1,30 +1,45 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { usePrefersReducedMotion } from "./usePrefersReducedMotion";
 import { Logo } from "@/components/rafty/Logo";
 
 const SESSION_KEY = "krijo24-intro-shown";
+const HOLD_MS = 620;
 
 /**
  * Quick, once-per-session brand intro shown before the marketing home
  * finishes revealing. Skipped entirely under reduced motion or on repeat
  * visits within the same session.
+ *
+ * Whether to show it is decided once, inside the effect, and the effect depends
+ * on nothing. It used to take reduced motion from a hook that reports false on
+ * the first render and the true answer a moment later. On a machine with
+ * animation turned off that second answer re-ran the effect: the timer that
+ * hides the intro was cleared on the way out, the re-run saw the session key it
+ * had just written and returned early, and the intro stayed over the whole page
+ * until the visitor reloaded. Hiding on the way out as well means no re-run,
+ * remount or double invocation can stranded it there again.
  */
 export function BrandIntro() {
-  const reduced = usePrefersReducedMotion();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduced) return;
-    const shown = window.sessionStorage.getItem(SESSION_KEY);
-    if (shown) return;
-
+    let held = 0;
+    try {
+      if (window.sessionStorage.getItem(SESSION_KEY)) return;
+      window.sessionStorage.setItem(SESSION_KEY, "1");
+    } catch {
+      // A browser that refuses storage still gets the intro, just every visit.
+    }
     setVisible(true);
-    window.sessionStorage.setItem(SESSION_KEY, "1");
-    const timer = window.setTimeout(() => setVisible(false), 620);
-    return () => window.clearTimeout(timer);
-  }, [reduced]);
+    held = window.setTimeout(() => setVisible(false), HOLD_MS);
+    return () => {
+      window.clearTimeout(held);
+      setVisible(false);
+    };
+  }, []);
 
   return (
     <AnimatePresence>
