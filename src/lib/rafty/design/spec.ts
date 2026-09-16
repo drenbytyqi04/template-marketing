@@ -32,8 +32,9 @@ export type Part =
   | { t: "price"; as: "plain" | "badge" }
   /** Where, how long, when: whatever the post actually filled in. */
   | { t: "facts"; limit?: number }
-  /** What the offer includes, as one quiet line or as a ticked list. */
-  | { t: "included"; as: "line" | "ticks"; limit?: number }
+  /** What the offer includes: one quiet line, a ticked list, or the same tags
+   * the post was built with. */
+  | { t: "included"; as: "line" | "ticks" | "chips"; limit?: number }
   | { t: "cta"; as: "bar" | "tag" }
   /** Logo and business name, drawn only when the brand has them. */
   | { t: "brand" }
@@ -119,6 +120,13 @@ export function checkSpec(spec: DesignSpec): Finding[] {
     }),
   );
   if (overlaps) say("no overlap", "two blocks cover the same part of the frame");
+
+  // What a customer ticks under Included has to appear somewhere. A design that
+  // cannot print it silently drops a choice the customer made, and the only
+  // evidence is a post that does not say breakfast is included.
+  if (!parts.some((p) => p.t === "included")) {
+    say("prints what is included", "no part of this design shows the Included choices");
+  }
 
   // A design that writes light ink straight onto an untreated photograph is a
   // caption waiting to disappear into a bright sky.

@@ -141,9 +141,13 @@ function reserveOf(part: Part): number {
     case "facts":
       return TYPE.body * 1.5;
     case "included":
-      return part.as === "ticks"
-        ? (part.limit ?? 4) * (TYPE.body * 1.5 + SPACE.xs)
-        : TYPE.body * 1.5;
+      if (part.as === "ticks") return (part.limit ?? 4) * (TYPE.body * 1.5 + SPACE.xs);
+      // Chips wrap, and four of them rarely sit on one line.
+      if (part.as === "chips") {
+        const rows = Math.ceil((part.limit ?? 4) / 3);
+        return rows * (TYPE.label * 1.5 + SPACE.xxs * 2) + (rows - 1) * SPACE.xs;
+      }
+      return TYPE.body * 1.5;
     case "cta":
       return part.as === "bar" ? TYPE.body * 1.4 + SPACE.sm * 2 : TYPE.body * 1.4 + SPACE.xs * 2;
     case "brand":
@@ -284,7 +288,7 @@ function Included({
 }: {
   ctx: RenderCtx;
   tone: Tone;
-  as: "line" | "ticks";
+  as: "line" | "ticks" | "chips";
   limit?: number;
 }) {
   const items = ctx.content.services.filter(Boolean).slice(0, limit);
@@ -302,6 +306,30 @@ function Included({
         }}
       >
         {items.join("  ·  ")}
+      </div>
+    );
+  }
+  if (as === "chips") {
+    return (
+      <div style={{ display: "flex", flexWrap: "wrap", gap: px(SPACE.xs), width: "100%" }}>
+        {items.map((item) => (
+          <span
+            key={item}
+            style={{
+              padding: `${px(SPACE.xxs)} ${px(SPACE.md)}`,
+              borderRadius: px(RADIUS.pill),
+              border: `1px solid ${c.faint}`,
+              background: tone === "light" ? alpha("#ffffff", 0.14) : alpha(INK.strong, 0.05),
+              fontSize: px(TYPE.label),
+              fontWeight: WEIGHT.bold,
+              color: c.strong,
+              fontFamily: fontSecondary(ctx),
+              whiteSpace: "nowrap",
+            }}
+          >
+            {item}
+          </span>
+        ))}
       </div>
     );
   }
