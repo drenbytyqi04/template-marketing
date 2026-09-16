@@ -269,6 +269,17 @@ function CreatePage() {
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
+  /**
+   * Set once a saved post is on its way off this page.
+   *
+   * The draft below is written from state, on every change, so that walking to
+   * Brand and back does not lose an unfinished post. That is the wrong thing to
+   * do while leaving: the post has just been filed, and anything written now is
+   * what Create would hand back the next time it is opened - the picture and
+   * the text of something already saved.
+   */
+  const leaving = useRef(false);
+
   // Prefill from an item found on the brand's own website. Only the text and
   // the picture come across: the template still owns the whole layout.
   const loadItemImage = useServerFn(fetchDiscoveredImage);
@@ -328,7 +339,7 @@ function CreatePage() {
 
   // Keeps the in progress post alive across navigation inside the app.
   useEffect(() => {
-    if (!business) return;
+    if (!business || leaving.current) return;
     writeDraft({
       businessId: business.id,
       format,
@@ -633,8 +644,16 @@ function CreatePage() {
       // again means opening it from Posts, which is also where an edit that was
       // just saved returns to rather than dropping the person on a blank page
       // they did not ask for.
-      if (wasEditing) void navigate({ to: "/posts" });
-      else resetAll();
+      if (wasEditing) {
+        // Clearing has to happen here as well as in resetAll: this branch walks
+        // away from Create instead of emptying it, so nothing else would ever
+        // drop the draft and the edited post would come back on the next visit.
+        leaving.current = true;
+        clearDraft();
+        void navigate({ to: "/posts" });
+      } else {
+        resetAll();
+      }
     } finally {
       setSaving(false);
     }
