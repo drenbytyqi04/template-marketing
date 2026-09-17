@@ -1,4 +1,4 @@
-import { formatPrice, labelledValue } from "../constants";
+import { fieldLabel, formatPrice } from "../constants";
 import { alpha, INK, RADIUS, shade, SPACE, TRACK, TYPE, WEIGHT } from "../tokens";
 import { FitText } from "@/components/rafty/FitText";
 import type { RenderCtx } from "../templates";
@@ -177,8 +177,15 @@ function reserveOf(part: Part, ctx: RenderCtx): number {
       // meta2 belongs here as much as the rest. Leaving it out quietly dropped
       // whatever a trade had put in its second detail slot - a property's area,
       // a trip's departure city - from every design in the library.
-      const n = [content.location, content.meta1, content.meta2, content.date].filter(has).length;
-      return n ? TYPE.body * 1.5 : 0;
+      //
+      // Measured by length rather than by count: now that each fact prints the
+      // name of its field as well as its answer the row is roughly twice as
+      // long, and a reserve of one line would hand the headline room that the
+      // second line of facts is about to take back.
+      const rows = facts(ctx, part.limit ?? FACTS_LIMIT);
+      if (!rows.length) return 0;
+      const chars = rows.reduce((n, f) => n + f.label.length + f.value.length + 5, 0);
+      return Math.max(1, Math.ceil(chars / 40)) * (TYPE.body * 1.5);
     }
     case "included": {
       const n = includedItems(ctx, part.limit).length;
@@ -455,37 +462,67 @@ function Offers({ ctx, tone, limit = 4 }: { ctx: RenderCtx; tone: Tone; limit?: 
 }
 
 /** Where, how long, when: printed only where the post actually said something. */
-function Facts({ ctx, tone, limit = 3 }: { ctx: RenderCtx; tone: Tone; limit?: number }) {
-  const { content } = ctx;
-  const values = [
-    labelledValue(content.location, content.labels?.["location"]),
-    labelledValue(content.meta1, content.labels?.["meta1"]),
-    labelledValue(content.meta2, content.labels?.["meta2"]),
-    labelledValue(content.date, content.labels?.["date"]),
-  ]
-    .filter((v) => v && v.trim())
+/** The four detail slots, each with the name the business calls it by. */
+const FACT_KEYS = ["location", "meta1", "meta2", "date"] as const;
+
+/**
+ * What the post fills in, named: `Hotel: Bosphorus`, not `Bosphorus`.
+ *
+ * A hotel name, a departure city and a date all read as the same anonymous
+ * string once they are set in a row, so a reader had to guess which was which
+ * from the words themselves - and "Prishtina" tells you nothing about whether
+ * the trip leaves from there or goes there. The name is set quieter than the
+ * answer, so the row still reads as facts rather than as a form.
+ */
+function facts(ctx: RenderCtx, limit: number) {
+  return FACT_KEYS.map((key) => ({
+    key,
+    label: fieldLabel(ctx.businessType, key, ctx.brand.language, ctx.content.labels),
+    value: (ctx.content[key] ?? "").trim(),
+  }))
+    .filter((fact) => fact.value)
     .slice(0, limit);
-  if (!values.length) return null;
+}
+
+/** Four, because there are four detail slots and a customer who filled one in
+ * meant it to be printed. The old default of three was set when the renderer
+ * could only see three of them, and left whichever came last on the floor. A
+ * design that wants a shorter row asks for one. */
+const FACTS_LIMIT = 4;
+
+function Facts({ ctx, tone, limit = FACTS_LIMIT }: { ctx: RenderCtx; tone: Tone; limit?: number }) {
+  const rows = facts(ctx, limit);
+  if (!rows.length) return null;
   const c = ink(tone);
   return (
-    <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: px(SPACE.md) }}>
-      {values.map((value, i) => (
-        <span key={value} style={{ display: "flex", alignItems: "center", gap: px(SPACE.md) }}>
-          {i > 0 ? (
-            <span
-              style={{ width: px(0.6), height: px(0.6), borderRadius: "50%", background: c.faint }}
-            />
+    <div
+      style={{
+        display: "flex",
+        alignItems: "baseline",
+        flexWrap: "wrap",
+        // No dots between the facts. They were the only thing telling one
+        // anonymous string from the next, and now that each fact says what it
+        // is the separator is doing nothing but waiting to be orphaned at the
+        // start of a wrapped line. The space between them is the separator.
+        columnGap: px(SPACE.lg),
+        rowGap: px(SPACE.xs),
+      }}
+    >
+      {rows.map((fact) => (
+        <span
+          key={fact.key}
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: px(SPACE.xs),
+            fontSize: px(TYPE.body),
+            fontFamily: fontSecondary(ctx),
+          }}
+        >
+          {fact.label ? (
+            <span style={{ fontWeight: WEIGHT.plain, color: c.muted }}>{fact.label}:</span>
           ) : null}
-          <span
-            style={{
-              fontSize: px(TYPE.body),
-              fontWeight: WEIGHT.medium,
-              color: c.body,
-              fontFamily: fontSecondary(ctx),
-            }}
-          >
-            {value}
-          </span>
+          <span style={{ fontWeight: WEIGHT.bold, color: c.strong }}>{fact.value}</span>
         </span>
       ))}
     </div>

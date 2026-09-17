@@ -7,6 +7,7 @@ import type {
   PlanTier,
   SocialPlatform,
 } from "./types";
+import { translate } from "./i18n";
 
 export const BUSINESS_TYPES: BusinessType[] = [
   "travel_agency",
@@ -729,10 +730,34 @@ export const INCLUDED_LABEL_KEY: Partial<Record<BusinessType, string>> = {
 };
 
 /** A plain number plus its label reads better than the number alone. */
+/**
+ * What a field is called on the post itself.
+ *
+ * The wording a business chose wins; otherwise it is the default for its trade,
+ * read in the language the brand posts in. Designs need this because
+ * `content.labels` only ever holds the names someone typed over the defaults -
+ * leave the fields named as they came and it is empty, so a design asking it
+ * what the location field is called got nothing back and printed a hotel name
+ * with no hint that it was a hotel.
+ */
+export function fieldLabel(
+  type: BusinessType,
+  key: FieldKey,
+  language: LanguageCode,
+  chosen?: Partial<Record<string, string>>,
+): string {
+  const own = chosen?.[key]?.trim();
+  if (own) return own;
+  const field = TYPE_FIELDS[type].find((f) => f.key === key);
+  return field ? translate(language, field.labelKey) : "";
+}
+
+/** A field as one string, named and answered: `Hotel: Bosphorus`. */
 export function labelledValue(value: string, label?: string): string {
   const v = (value ?? "").trim();
-  if (!v || !label) return v;
-  return /^\d+([.,]\d+)?$/.test(v) ? `${v} ${label.trim()}` : v;
+  const l = (label ?? "").trim();
+  if (!v) return "";
+  return l ? `${l}: ${v}` : v;
 }
 
 /* --------------------------- social and scheduling ------------------------- */
