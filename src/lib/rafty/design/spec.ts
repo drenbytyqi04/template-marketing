@@ -92,6 +92,25 @@ export type Finding = { id: string; rule: string; detail: string };
 
 const MAX_BLOCKS = 3;
 
+/**
+ * Every part a post can fill in, and therefore every part a design must draw.
+ *
+ * A design is free to decide how each one looks - a price as a badge or set
+ * plain, what is included as chips, ticks or one quiet line - and where it
+ * sits. It is not free to leave one out.
+ */
+const REQUIRED: Part["t"][] = [
+  "kicker",
+  "headline",
+  "facts",
+  "price",
+  "included",
+  "stamp",
+  "cta",
+  "brand",
+  "contact",
+];
+
 export function checkSpec(spec: DesignSpec): Finding[] {
   const found: Finding[] = [];
   const say = (rule: string, detail: string) => found.push({ id: spec.id, rule, detail });
@@ -129,16 +148,27 @@ export function checkSpec(spec: DesignSpec): Finding[] {
   );
   if (overlaps) say("no overlap", "two blocks cover the same part of the frame");
 
-  // What a customer ticks under Included has to appear somewhere. A design that
-  // cannot print it silently drops a choice the customer made, and the only
-  // evidence is a post that does not say breakfast is included.
-  if (!parts.some((p) => p.t === "included")) {
-    say("prints what is included", "no part of this design shows the Included choices");
+  // Everything the form can be filled in with has to land somewhere.
+  //
+  // This is the rule the library kept breaking quietly. A design missing a part
+  // does not look broken - it looks fine, and simply never mentions the hotel,
+  // or the dates, or how to get in touch. The customer typed those in, saw
+  // them on the design they happened to have selected, picked a different
+  // design for the next post and lost them with no warning and no error. Which
+  // fields survive should not depend on which layout somebody liked.
+  const drawn = new Set(parts.map((p) => p.t));
+  for (const needed of REQUIRED) {
+    // A price list is the one honest exception: it is a different kind of post,
+    // and the rule below keeps it from also setting a single price.
+    if (needed === "price" && drawn.has("offers")) continue;
+    if (!drawn.has(needed)) {
+      say("prints everything a post can carry", `nothing in this design draws the ${needed}`);
+    }
   }
 
   // An offers list is the frame's whole content. Setting a single price beside
   // it asks which of the two the reader is meant to believe.
-  if (parts.some((p) => p.t === "offers") && parts.some((p) => p.t === "price")) {
+  if (drawn.has("offers") && drawn.has("price")) {
     say("one price story", "a design lists offers or sets one price, never both");
   }
 
