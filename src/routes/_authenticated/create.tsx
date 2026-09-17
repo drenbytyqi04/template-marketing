@@ -7,6 +7,7 @@ import {
   Pencil,
   Plus,
   Sparkles,
+  Trash2,
   Video,
   Wand2,
 } from "lucide-react";
@@ -24,12 +25,14 @@ import { PostCanvas } from "@/components/rafty/PostCanvas";
 import { AdjustControls } from "@/components/rafty/AdjustControls";
 import { ShareActions } from "@/components/rafty/ShareActions";
 import { FormatPicker } from "@/components/rafty/FormatPicker";
-import { includedOptions, snapshotOfBrand } from "@/lib/rafty/types";
+import { includedOptions, snapshotOfBrand, type OfferRow } from "@/lib/rafty/types";
 import { useRafty } from "@/lib/rafty/store";
 import { generateCaption } from "@/lib/rafty/caption";
 import { readFileAsDataUrl } from "@/lib/rafty/file";
 import { renderNodeToDataUrl } from "@/lib/rafty/download";
 import {
+  designDraws,
+  isSpecDesign,
   recommendedFirst,
   templatesForBusinessType,
   templatesForFormat,
@@ -105,6 +108,122 @@ function newSlide(durationMs?: number): Slide {
     adjustments: {},
     ...(durationMs !== undefined ? { durationMs } : {}),
   };
+}
+
+/**
+ * What surrounds the price: where it starts, what it buys, what it was.
+ *
+ * A travel agency does not sell at a number, it sells at "from 590 per person,
+ * down from 790". The design could print only the bare figure, so the part of
+ * the offer that makes it an offer never reached the post. These sit under the
+ * price rather than in More details because they are the price.
+ */
+function PriceExtras({
+  content,
+  onChange,
+}: {
+  content: PostContent;
+  onChange: (patch: Partial<PostContent>) => void;
+}) {
+  return (
+    <div className="grid gap-3 rounded-xl border border-border bg-card p-3">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold">Price starts from</p>
+          <p className="text-xs text-muted-foreground">
+            Prints &ldquo;from&rdquo; before the figure
+          </p>
+        </div>
+        <Switch checked={!!content.priceFrom} onCheckedChange={(v) => onChange({ priceFrom: v })} />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-1.5">
+          <Label htmlFor="price-was">Was (optional)</Label>
+          <Input
+            id="price-was"
+            value={content.priceWas ?? ""}
+            inputMode="decimal"
+            placeholder="790"
+            onChange={(e) => onChange({ priceWas: e.target.value })}
+            className="h-11 rounded-xl"
+          />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="price-unit">Per (optional)</Label>
+          <Input
+            id="price-unit"
+            value={content.priceUnit ?? ""}
+            maxLength={24}
+            placeholder="person"
+            onChange={(e) => onChange({ priceUnit: e.target.value })}
+            className="h-11 rounded-xl"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The offers list, shown only when the chosen design prints one.
+ *
+ * An agency posts "a season on one card" every week, and until now that meant
+ * three posts because a design carries one headline and one price. The editor
+ * follows the design rather than the other way round: a form that always showed
+ * this would ask most people to fill in something no design of theirs draws.
+ */
+function OffersEditor({
+  rows,
+  onChange,
+}: {
+  rows: OfferRow[];
+  onChange: (rows: OfferRow[]) => void;
+}) {
+  const patch = (id: string, part: Partial<OfferRow>) =>
+    onChange(rows.map((row) => (row.id === id ? { ...row, ...part } : row)));
+  return (
+    <div className="grid gap-2">
+      {rows.map((row) => (
+        <div key={row.id} className="flex items-center gap-2">
+          <Input
+            value={row.label}
+            maxLength={40}
+            placeholder="Destination"
+            onChange={(e) => patch(row.id, { label: e.target.value })}
+            className="h-11 flex-1 rounded-xl"
+          />
+          <Input
+            value={row.price}
+            inputMode="decimal"
+            placeholder="590"
+            onChange={(e) => patch(row.id, { price: e.target.value })}
+            className="h-11 w-28 rounded-xl"
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            aria-label="Remove offer"
+            className="size-11 shrink-0 rounded-xl p-0"
+            onClick={() => onChange(rows.filter((r) => r.id !== row.id))}
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        </div>
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        className="h-10 rounded-xl"
+        // Four is what the design draws; asking for a fifth would fill in a row
+        // the post will never show.
+        disabled={rows.length >= 4}
+        onClick={() => onChange([...rows, { id: newId("offer"), label: "", price: "" }])}
+      >
+        <Plus className="mr-1.5 size-4" />
+        Add destination
+      </Button>
+    </div>
+  );
 }
 
 /**
@@ -303,7 +422,12 @@ function CreatePage() {
                   ...slide.content,
                   title: item.title.slice(0, 90),
                   price: item.price,
-                  additionalText: item.description.slice(0, 160),
+                  // The scraped description used to land in additionalText,
+                  // which no design drew - it was a quiet place to park text.
+                  // That field is now the urgent line stamped on the post, and
+                  // a sentence and a half of website copy is not that. The
+                  // caption is where a description belongs.
+                  caption: item.description.slice(0, 280),
                   ...(image?.ok ? { imageDataUrl: image.dataUrl } : {}),
                 },
               }
@@ -423,6 +547,17 @@ function CreatePage() {
   const priceField = fields.find((f) => f.key === "price" && !headlineFields.includes(f));
   const primaryFields = [...headlineFields, ...(priceField ? [priceField] : [])];
   const secondaryFields = fields.filter((f) => !primaryFields.includes(f));
+
+  // The form follows the design: a price panel on designs that set a price, an
+  // offers list on the ones that print offers. Asking for either where the
+  // design draws neither is asking for work that goes nowhere.
+  //
+  // A template uploaded by the business is not one of these designs and cannot
+  // be asked what it draws, so it keeps the price panel - every template prints
+  // a price - and is never offered the list, which only the spec designs read.
+  const fromLibrary = isSpecDesign(template.id);
+  const showsPrice = !fromLibrary || designDraws(template.id, "price");
+  const showsOffers = fromLibrary && designDraws(template.id, "offers");
 
   const locked = !canCreatePost && !postId;
 
@@ -772,6 +907,30 @@ function CreatePage() {
                 onLabel={(v) => setAll({ labels: { ...(content.labels ?? {}), [f.key]: v } })}
               />
             ))}
+          </div>
+
+          {showsPrice ? <PriceExtras content={content} onChange={set} /> : null}
+
+          {showsOffers ? (
+            <div className="grid gap-2 border-t pt-4">
+              <Label>Destinations and prices</Label>
+              <OffersEditor rows={content.offers ?? []} onChange={(offers) => set({ offers })} />
+            </div>
+          ) : null}
+
+          <div className="grid gap-1.5 border-t pt-4">
+            <Label htmlFor="stamp">Urgent line (optional)</Label>
+            <Input
+              id="stamp"
+              value={content.additionalText}
+              maxLength={40}
+              placeholder="Last minute"
+              onChange={(e) => set({ additionalText: e.target.value })}
+              className="h-11 rounded-xl"
+            />
+            <p className="text-xs text-muted-foreground">
+              Short and urgent: last minute, 5 places left, book by Friday.
+            </p>
           </div>
 
           <div className="grid gap-2 border-t pt-4">

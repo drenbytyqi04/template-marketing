@@ -2,6 +2,7 @@ import { formatPrice, labelledValue } from "../constants";
 import { alpha, INK, RADIUS, shade, SPACE, TRACK, TYPE, WEIGHT } from "../tokens";
 import { FitText } from "@/components/rafty/FitText";
 import type { RenderCtx } from "../templates";
+import type { LanguageCode } from "../types";
 import type { Block, DesignSpec, Part, PhotoTreatment } from "./spec";
 import { GRID } from "./spec";
 
@@ -21,6 +22,23 @@ const font = (ctx: RenderCtx) =>
 
 const fontSecondary = (ctx: RenderCtx) =>
   `"${ctx.brand.fontSecondary || ctx.brand.fontFamily}", "Sora", ui-sans-serif, system-ui, sans-serif`;
+
+/**
+ * The handful of words a design prints on its own behalf.
+ *
+ * Everything else on a post is typed by the customer, so this is the only place
+ * the renderer has to choose wording - and it chooses in the language the brand
+ * posts in, not the one the app happens to be showing. An agency that sells in
+ * Albanian should not get an English "from" over its price because someone left
+ * the interface in English.
+ */
+const WORDS: Record<LanguageCode, { from: string }> = {
+  en: { from: "from" },
+  de: { from: "ab" },
+  sq: { from: "nga" },
+};
+
+const words = (ctx: RenderCtx) => WORDS[ctx.brand.language] ?? WORDS.en;
 
 const accent = (ctx: RenderCtx) =>
   ctx.variant.accent === "secondary"
@@ -142,10 +160,24 @@ function reserveOf(part: Part, ctx: RenderCtx): number {
       return 0;
     case "price": {
       if (!formatPrice(content.price, ctx.brand.currency)) return 0;
-      return part.as === "badge" ? TYPE.h3 * 1.2 + SPACE.sm * 2 : TYPE.h2 * 1.2;
+      const base = part.as === "badge" ? TYPE.h3 * 1.2 + SPACE.sm * 2 : TYPE.h2 * 1.2;
+      // "from", a struck old price and a unit wrap onto a second line in a
+      // narrow block, so they are worth a line of small type between them.
+      const extras =
+        [content.priceWas, content.priceUnit].filter(has).length + (content.priceFrom ? 1 : 0);
+      return base + (extras ? TYPE.label * 1.4 : 0);
+    }
+    case "stamp":
+      return has(content.additionalText) ? TYPE.label * 1.4 + SPACE.xs * 2 : 0;
+    case "offers": {
+      const n = offerRows(ctx, part.limit ?? 4).length;
+      return n ? n * (TYPE.lead * 1.4 + SPACE.sm) : 0;
     }
     case "facts": {
-      const n = [content.location, content.meta1, content.date].filter(has).length;
+      // meta2 belongs here as much as the rest. Leaving it out quietly dropped
+      // whatever a trade had put in its second detail slot - a property's area,
+      // a trip's departure city - from every design in the library.
+      const n = [content.location, content.meta1, content.meta2, content.date].filter(has).length;
       return n ? TYPE.body * 1.5 : 0;
     }
     case "included": {
@@ -235,41 +267,190 @@ function Headline({
   );
 }
 
+/**
+ * What the post says about money, read once.
+ *
+ * A travel agency does not sell at a number, it sells at "from 590 EUR per
+ * person, down from 790". Three of those four were impossible to print, so an
+ * offer that was the whole reason for the post arrived on the design as a bare
+ * figure. Reading them together here keeps the price parts and the offers list
+ * telling the same story.
+ */
+function priceParts(ctx: RenderCtx) {
+  const now = formatPrice(ctx.content.price, ctx.brand.currency);
+  const was = formatPrice(ctx.content.priceWas ?? "", ctx.brand.currency);
+  const unit = (ctx.content.priceUnit ?? "").trim();
+  return {
+    now,
+    // A struck figure only means anything beside a current one, and only when
+    // it is the larger of the two. Otherwise it reads as a mistake.
+    was: now && was && was !== now ? was : "",
+    unit,
+    from: !!ctx.content.priceFrom && !!now,
+  };
+}
+
 function Price({ ctx, tone, as }: { ctx: RenderCtx; tone: Tone; as: "plain" | "badge" }) {
-  const price = formatPrice(ctx.content.price, ctx.brand.currency);
-  if (!price) return null;
-  if (as === "badge") {
+  const { now, was, unit, from } = priceParts(ctx);
+  if (!now) return null;
+  const onBadge = as === "badge";
+  const c = ink(tone);
+  const quiet = onBadge ? INK.onDarkBody : c.muted;
+
+  // "from", the old price and the unit are all small type around one big
+  // figure, so the eye still lands on the number first.
+  const small: React.CSSProperties = {
+    fontSize: px(TYPE.label),
+    fontWeight: WEIGHT.bold,
+    letterSpacing: TRACK.wide,
+    textTransform: "uppercase",
+    color: quiet,
+    fontFamily: fontSecondary(ctx),
+    whiteSpace: "nowrap",
+  };
+  const figure: React.CSSProperties = {
+    fontSize: px(onBadge ? TYPE.h3 : TYPE.h2),
+    fontWeight: WEIGHT.heavy,
+    letterSpacing: TRACK.tight,
+    whiteSpace: "nowrap",
+    color: onBadge ? INK.onDark : c.strong,
+    fontFamily: font(ctx),
+  };
+  const body = (
+    <>
+      {from ? <span style={small}>{words(ctx).from}</span> : null}
+      {was ? (
+        <span style={{ ...small, textDecoration: "line-through", letterSpacing: TRACK.normal }}>
+          {was}
+        </span>
+      ) : null}
+      <span style={figure}>{now}</span>
+      {unit ? <span style={small}>/ {unit}</span> : null}
+    </>
+  );
+  const row: React.CSSProperties = {
+    display: "flex",
+    alignItems: "baseline",
+    flexWrap: "wrap",
+    gap: px(SPACE.sm),
+  };
+  if (onBadge) {
     return (
       <span
         style={{
+          ...row,
           padding: `${px(SPACE.sm)} ${px(SPACE.lg)}`,
           borderRadius: px(RADIUS.pill),
           background: accent(ctx),
-          color: INK.onDark,
-          fontSize: px(TYPE.h3),
-          fontWeight: WEIGHT.heavy,
-          letterSpacing: TRACK.tight,
-          whiteSpace: "nowrap",
-          fontFamily: font(ctx),
         }}
       >
-        {price}
+        {body}
       </span>
     );
+  }
+  return <span style={row}>{body}</span>;
+}
+
+/**
+ * The short urgent line: last minute, five places left, book by Friday.
+ *
+ * It reads `additionalText`, a field that had been in the content model and in
+ * every placeholder from the start while no part drew it and no form offered
+ * it. An offer post without one of these is a leaflet.
+ */
+/** As long as a stamp can be before it stops being a stamp. The form caps its
+ * input, but posts saved before this field was drawn can carry a whole
+ * sentence, and a ribbon that wraps to three lines is not a ribbon. */
+const STAMP_MAX = 40;
+
+function Stamp({ ctx, tone, as }: { ctx: RenderCtx; tone: Tone; as: "ribbon" | "tag" }) {
+  const label = (ctx.content.additionalText ?? "").trim().slice(0, STAMP_MAX);
+  if (!label) return null;
+  const shared: React.CSSProperties = {
+    fontSize: px(TYPE.label),
+    fontWeight: WEIGHT.heavy,
+    letterSpacing: TRACK.wide,
+    textTransform: "uppercase",
+    fontFamily: fontSecondary(ctx),
+    borderRadius: px(RADIUS.xs),
+    padding: `${px(SPACE.xs)} ${px(SPACE.md)}`,
+    // The stamp is an aside, so it never stretches to the block's width.
+    alignSelf: "inherit",
+  };
+  if (as === "ribbon") {
+    return <span style={{ ...shared, background: accent(ctx), color: INK.onDark }}>{label}</span>;
   }
   return (
     <span
       style={{
-        fontSize: px(TYPE.h2),
-        fontWeight: WEIGHT.heavy,
-        letterSpacing: TRACK.tight,
-        whiteSpace: "nowrap",
+        ...shared,
+        background: "transparent",
+        border: `${px(0.25)} solid ${accent(ctx)}`,
         color: ink(tone).strong,
-        fontFamily: font(ctx),
       }}
     >
-      {price}
+      {label}
     </span>
+  );
+}
+
+/**
+ * Several destinations and their prices, as one list.
+ *
+ * Agencies post these every week and the design system could not make one: a
+ * spec carries a single headline and a single price, so three destinations had
+ * to become three posts. The rows come from the post's own offers, and any row
+ * missing either half is dropped rather than printed half empty.
+ */
+function Offers({ ctx, tone, limit = 4 }: { ctx: RenderCtx; tone: Tone; limit?: number }) {
+  const rows = offerRows(ctx, limit);
+  if (!rows.length) return null;
+  const c = ink(tone);
+  return (
+    <div style={{ display: "grid", gap: px(SPACE.sm), width: "100%" }}>
+      {rows.map((row, i) => (
+        <div
+          key={row.id}
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            justifyContent: "space-between",
+            gap: px(SPACE.md),
+            // A hairline between rows, never above the first or below the last.
+            paddingTop: i === 0 ? 0 : px(SPACE.sm),
+            borderTop: i === 0 ? "none" : `${px(0.15)} solid ${c.faint}`,
+          }}
+        >
+          <span
+            style={{
+              fontSize: px(TYPE.lead),
+              fontWeight: WEIGHT.bold,
+              letterSpacing: TRACK.snug,
+              color: c.strong,
+              fontFamily: font(ctx),
+              minWidth: 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {row.label}
+          </span>
+          <span
+            style={{
+              fontSize: px(TYPE.lead),
+              fontWeight: WEIGHT.heavy,
+              letterSpacing: TRACK.tight,
+              color: accent(ctx),
+              fontFamily: font(ctx),
+              whiteSpace: "nowrap",
+            }}
+          >
+            {formatPrice(row.price, ctx.brand.currency)}
+          </span>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -279,6 +460,7 @@ function Facts({ ctx, tone, limit = 3 }: { ctx: RenderCtx; tone: Tone; limit?: n
   const values = [
     labelledValue(content.location, content.labels?.["location"]),
     labelledValue(content.meta1, content.labels?.["meta1"]),
+    labelledValue(content.meta2, content.labels?.["meta2"]),
     labelledValue(content.date, content.labels?.["date"]),
   ]
     .filter((v) => v && v.trim())
@@ -315,6 +497,14 @@ function Facts({ ctx, tone, limit = 3 }: { ctx: RenderCtx; tone: Tone; limit?: n
 function includedItems(ctx: RenderCtx, limit?: number): string[] {
   const items = ctx.content.services.filter((s) => s && s.trim());
   return limit === undefined ? items : items.slice(0, limit);
+}
+
+/** The offer rows worth drawing: a row needs both a destination and a price,
+ * or it prints as a dangling label with nothing beside it. */
+function offerRows(ctx: RenderCtx, limit: number) {
+  return (ctx.content.offers ?? [])
+    .filter((row) => row.label.trim() && row.price.trim())
+    .slice(0, limit);
 }
 
 function Included({
@@ -532,6 +722,12 @@ function renderPart(
       );
     case "price":
       return <Price key={key} ctx={ctx} tone={tone} as={part.as} />;
+    case "stamp":
+      return <Stamp key={key} ctx={ctx} tone={tone} as={part.as} />;
+    case "offers":
+      return (
+        <Offers key={key} ctx={ctx} tone={tone} {...(part.limit ? { limit: part.limit } : {})} />
+      );
     case "facts":
       return (
         <Facts key={key} ctx={ctx} tone={tone} {...(part.limit ? { limit: part.limit } : {})} />

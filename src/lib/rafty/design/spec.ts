@@ -28,8 +28,16 @@ export type Part =
   | { t: "kicker" }
   /** The headline. A design has exactly one, and it leads the frame. */
   | { t: "headline"; size: "hero" | "large" | "medium" }
-  /** The number. Plain reads as editorial, badge reads as an offer. */
+  /** The number. Plain reads as editorial, badge reads as an offer.
+   * Whatever the post filled in rides along: a starting-from price, what it
+   * buys, and the figure it was reduced from. */
   | { t: "price"; as: "plain" | "badge" }
+  /** The short urgent line over an offer: last minute, five places left.
+   * A ribbon shouts, a tag is quiet enough to sit beside a headline. */
+  | { t: "stamp"; as: "ribbon" | "tag" }
+  /** Several destinations and their prices, for a post that sells a season
+   * rather than one trip. */
+  | { t: "offers"; limit?: number }
   /** Where, how long, when: whatever the post actually filled in. */
   | { t: "facts"; limit?: number }
   /** What the offer includes: one quiet line, a ticked list, or the same tags
@@ -126,6 +134,12 @@ export function checkSpec(spec: DesignSpec): Finding[] {
   // evidence is a post that does not say breakfast is included.
   if (!parts.some((p) => p.t === "included")) {
     say("prints what is included", "no part of this design shows the Included choices");
+  }
+
+  // An offers list is the frame's whole content. Setting a single price beside
+  // it asks which of the two the reader is meant to believe.
+  if (parts.some((p) => p.t === "offers") && parts.some((p) => p.t === "price")) {
+    say("one price story", "a design lists offers or sets one price, never both");
   }
 
   // A design that writes light ink straight onto an untreated photograph is a

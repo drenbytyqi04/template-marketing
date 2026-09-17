@@ -383,11 +383,28 @@ export type PostTextItem = {
 export const MAX_TEXT_ITEMS = 3;
 
 /** Post text/media content. Field relevance is suggested by business type. */
+/** One line of a post that carries several offers: where, and what it costs. */
+export type OfferRow = { id: string; label: string; price: string };
+
 export type PostContent = {
   title: string;
   subject: string;
   location: string;
   price: string;
+  /**
+   * What the price used to be, printed struck through beside it.
+   *
+   * These four price fields are optional because posts saved before they
+   * existed have no such key, and a renderer that assumed a string would throw
+   * on the first old post someone reopened.
+   */
+  priceWas?: string;
+  /** What the price buys: per person, per night. Printed after the figure. */
+  priceUnit?: string;
+  /** Whether the figure is where the price starts rather than what it is. */
+  priceFrom?: boolean;
+  /** Several destinations and prices in one post, for the price list designs. */
+  offers?: OfferRow[];
   date: string;
   meta1: string;
   meta2: string;
@@ -525,6 +542,10 @@ export const emptyContent: PostContent = {
   subject: "",
   location: "",
   price: "",
+  priceWas: "",
+  priceUnit: "",
+  priceFrom: false,
+  offers: [],
   date: "",
   meta1: "",
   meta2: "",

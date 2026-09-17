@@ -270,8 +270,11 @@ export const TYPE_FIELDS: Record<BusinessType, { key: FieldKey; labelKey: string
     { key: "subject", labelKey: "field.destination" },
     { key: "location", labelKey: "field.hotel" },
     { key: "price", labelKey: "field.price" },
-    { key: "date", labelKey: "field.date" },
+    { key: "date", labelKey: "field.dates" },
     { key: "meta1", labelKey: "field.nights" },
+    // Where the trip leaves from decides whether it is an offer for this
+    // customer at all, and until now a travel post had nowhere to say it.
+    { key: "meta2", labelKey: "field.departure" },
   ],
   real_estate: [
     { key: "title", labelKey: "field.property" },

@@ -2,7 +2,7 @@ import { formatPrice } from "./constants";
 import { INK } from "./tokens";
 import { renderDesign } from "./design/render";
 import { TRAVEL_DESIGNS } from "./design/travel";
-import type { DesignSpec } from "./design/spec";
+import type { DesignSpec, Part } from "./design/spec";
 import type {
   BrandProfile,
   BusinessType,
@@ -354,6 +354,24 @@ const OWN_COLLECTION: Partial<Record<BusinessType, TemplateCollection>> = {};
  * does not cover would otherwise offer nothing at all, so there the plain
  * library stands in, without occasion designs or another trade's set.
  */
+/**
+ * Whether the design behind a template draws a given part.
+ *
+ * Create asks this so the form can follow the design rather than the other way
+ * round: the offers list only earns its place in the editor when the chosen
+ * design is one that prints offers, and a design that prints them with no rows
+ * filled in would otherwise be a blank panel nobody knows how to fill.
+ */
+export function isSpecDesign(templateId: string): boolean {
+  return designById.has(templateId);
+}
+
+export function designDraws(templateId: string, part: Part["t"]): boolean {
+  const design = designById.get(templateId);
+  if (!design) return false;
+  return design.blocks.some((block) => block.parts.some((p) => p.t === part));
+}
+
 export function templatesForBusinessType(all: Template[], type: BusinessType): Template[] {
   const open = all.filter((tpl) => !tpl.onlyFor || tpl.onlyFor.includes(type));
   const own = OWN_COLLECTION[type];
