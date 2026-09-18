@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Facebook, Instagram, Linkedin, LogOut, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/rafty/AppShell";
+import { SocialAccounts } from "@/components/rafty/SocialAccounts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -226,52 +227,7 @@ function SettingsPage() {
         ) : null}
       </section>
 
-      <section className="card-soft grid gap-3 p-4">
-        <p className="text-sm font-bold">Social connections</p>
-        <p className="text-xs text-muted-foreground">
-          Direct publishing is not connected yet, so nothing is ever posted for you. Save the handle
-          you want used and we will activate publishing for it once the connection is approved.
-        </p>
-        {SOCIAL_PLATFORMS.map(({ platform, label, note, available }) => {
-          const Icon = PLATFORM_ICON[platform] ?? Instagram;
-          const row = connections.find((c) => c.platform === platform);
-          return (
-            <div key={platform} className="grid gap-2 rounded-xl border border-border bg-card p-3">
-              <div className="flex items-center gap-2">
-                <Icon className="size-4 text-muted-foreground" />
-                <p className="text-sm font-semibold">{label}</p>
-                <Badge variant="outline" className="ml-auto text-[10px]">
-                  {available ? (row?.status ?? "not connected") : "Connect when available"}
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">{note}</p>
-              <div className="flex gap-2">
-                <div className="grid flex-1 gap-1">
-                  <Label htmlFor={`handle-${platform}`} className="text-xs">
-                    Account or page
-                  </Label>
-                  <Input
-                    id={`handle-${platform}`}
-                    value={labels[platform] ?? ""}
-                    maxLength={80}
-                    onChange={(e) => setLabels((prev) => ({ ...prev, [platform]: e.target.value }))}
-                    placeholder="@yourbusiness"
-                    className="h-10 rounded-xl"
-                  />
-                </div>
-                <Button
-                  variant="outline"
-                  className="mt-auto h-10 shrink-0 rounded-xl"
-                  disabled={savingPlatform === platform}
-                  onClick={() => void saveLabel(platform)}
-                >
-                  {savingPlatform === platform ? "Saving..." : "Save"}
-                </Button>
-              </div>
-            </div>
-          );
-        })}
-      </section>
+      <SocialAccounts businessId={business.id} />
 
       <section className="card-soft grid gap-2 p-4">
         <p className="text-sm font-bold">Support</p>

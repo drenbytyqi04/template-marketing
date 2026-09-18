@@ -1,25 +1,16 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
-import {
-  Check,
-  Copy,
-  Download,
-  Facebook,
-  Instagram,
-  Linkedin,
-  Loader2,
-  Save,
-  Share2,
-} from "lucide-react";
+import { Check, Copy, Download, Instagram, Loader2, Save, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   downloadNode,
   nodeToPngFile,
   reasonFor,
+  renderNodeToDataUrl,
   slugify,
   type ExportSize,
 } from "@/lib/rafty/download";
+import { PublishDialog } from "./PublishDialog";
 
 type Props = {
   canvasRef: React.RefObject<HTMLElement | null>;
@@ -34,13 +25,20 @@ type Props = {
   exportable?: boolean;
   /** Shown instead of the export buttons when export is unavailable. */
   unavailableNote?: string;
+  /**
+   * Publishing straight to a connected account.
+   *
+   * `savePost` writes the post and its rendered image and returns the id,
+   * because Instagram is told to fetch that image by url: there is nothing to
+   * publish until both exist. Absent on surfaces that cannot publish.
+   */
+  publish?: { businessId: string; savePost: () => Promise<string | null> };
 };
 
 /**
  * Primary actions once content has been generated. Every export goes through
- * the one deterministic renderer. Meta publishing is not implemented, so
- * Instagram and Facebook are clearly disabled with an explanation instead of
- * pretending to publish anything.
+ * the one deterministic renderer, and so does the image that gets published:
+ * what Instagram receives is the file the Download button would have given you.
  */
 export function ShareActions({
   canvasRef,
@@ -52,9 +50,43 @@ export function ShareActions({
   size,
   exportable = true,
   unavailableNote,
+  publish,
 }: Props) {
   const [copied, setCopied] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [publishPostId, setPublishPostId] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  /**
+   * Saves, renders, then opens the dialog.
+   *
+   * Done before the dialog rather than inside it so the preview it shows and
+   * the file Instagram fetches are the same render, produced once.
+   */
+  async function openPublish() {
+    if (!publish || publishing) return;
+    setPublishing(true);
+    try {
+      const node = canvasRef.current;
+      if (node) {
+        try {
+          setPreviewUrl(await renderNodeToDataUrl(node, size));
+        } catch {
+          /* the dialog simply shows no preview */
+        }
+      }
+      const id = await publish.savePost();
+      if (!id) return;
+      setPublishPostId(id);
+      setPublishOpen(true);
+    } catch (error) {
+      toast.error(reasonFor(error));
+    } finally {
+      setPublishing(false);
+    }
+  }
 
   async function copyCaption() {
     try {
@@ -147,28 +179,21 @@ export function ShareActions({
         Copy caption
       </Button>
 
-      <div className="rounded-xl border border-dashed bg-muted/40 p-3">
-        <p className="text-xs font-semibold">Post to</p>
-        <div className="mt-2 grid grid-cols-3 gap-2">
-          {[
-            { key: "instagram", label: "Instagram", Icon: Instagram },
-            { key: "facebook", label: "Facebook", Icon: Facebook },
-            { key: "linkedin", label: "LinkedIn", Icon: Linkedin },
-          ].map(({ key, label, Icon }) => (
-            <Link key={key} to="/settings" className="block">
-              <span className="flex h-14 flex-col items-center justify-center gap-1 rounded-lg border border-border bg-card px-1 text-center transition hover:border-primary/60">
-                <Icon className="size-4 text-muted-foreground" />
-                <span className="text-[10px] font-semibold text-muted-foreground">Connect</span>
-                <span className="sr-only">{label}</span>
-              </span>
-            </Link>
-          ))}
-        </div>
-        <p className="mt-2 text-[11px] text-muted-foreground">
-          Direct publishing is not connected yet, so nothing is published automatically. Manage
-          connections in Settings and use Save to device meanwhile.
-        </p>
-      </div>
+      {publish && exportable ? (
+        <Button
+          variant="outline"
+          className="h-12 w-full rounded-xl"
+          onClick={() => void openPublish()}
+          disabled={publishing || saving}
+        >
+          {publishing ? (
+            <Loader2 className="mr-1.5 size-4 animate-spin" aria-hidden />
+          ) : (
+            <Instagram className="mr-1.5 size-4" aria-hidden />
+          )}
+          {publishing ? "Preparing..." : "Publish to Instagram"}
+        </Button>
+      ) : null}
 
       {exportable ? (
         <Button
@@ -184,6 +209,17 @@ export function ShareActions({
           )}
           {downloading ? "Preparing…" : "Download PNG"}
         </Button>
+      ) : null}
+
+      {publish ? (
+        <PublishDialog
+          open={publishOpen}
+          onOpenChange={setPublishOpen}
+          businessId={publish.businessId}
+          postId={publishPostId}
+          defaultCaption={caption}
+          previewUrl={previewUrl}
+        />
       ) : null}
     </div>
   );

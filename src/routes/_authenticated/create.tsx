@@ -699,11 +699,15 @@ function CreatePage() {
     setShowAdjust(false);
   }
 
-  async function persist() {
-    // Whether this was an edit has to be read before the save, because saving a
-    // new post assigns it an id and would make every save look like an edit.
-    const wasEditing = postId !== null;
-    setSaving(true);
+  /**
+   * Writes the post and its rendered image, and returns the id.
+   *
+   * Split out from `persist` because publishing needs exactly this and none of
+   * what follows it: a post has to exist, and its render has to be in storage,
+   * before Instagram can be told to fetch it - but the editor must not empty
+   * itself while the publish dialog is still open over it.
+   */
+  async function savePost(): Promise<string | null> {
     try {
       // Upload freshly picked footage before writing the post, so the row keeps a
       // storage path rather than an object url that dies with the tab. The result
@@ -714,8 +718,7 @@ function CreatePage() {
         const uploaded = await repo.uploadFile(business.id, "posts", videoFile);
         if (!uploaded) {
           toast.error("Could not upload the video. Please try a smaller file.");
-          setSaving(false);
-          return;
+          return null;
         }
         videoPath = uploaded;
         setVideoFile(null);
@@ -746,7 +749,7 @@ function CreatePage() {
       const saved = await createPost(post);
       if (!saved) {
         toast.error("Could not save the post. Please try again.");
-        return;
+        return null;
       }
       setPostId(saved.id);
 
@@ -764,12 +767,29 @@ function CreatePage() {
             width: size.width,
             height: size.height,
           });
-          // Left to finish on its own, so the catch has to travel with it.
-          void repo.savePostRender(business!.id, saved.id, dataUrl).catch(() => {});
+          // Awaited, not detached. Publishing hands Instagram a url into this
+          // same object, so the upload has to have happened before the publish
+          // call is allowed to go: a detached upload would race it and the post
+          // would be told to fetch an image that is not there yet.
+          await repo.savePostRender(business!.id, saved.id, dataUrl).catch(() => {});
         } catch {
           /* the Website page re-renders anything still missing */
         }
       }
+      return saved.id;
+    } finally {
+      /* the caller decides what saving means for the UI */
+    }
+  }
+
+  async function persist() {
+    // Whether this was an edit has to be read before the save, because saving a
+    // new post assigns it an id and would make every save look like an edit.
+    const wasEditing = postId !== null;
+    setSaving(true);
+    try {
+      const savedId = await savePost();
+      if (!savedId) return;
 
       toast.success(t("create.saved"));
 
@@ -1150,6 +1170,7 @@ function CreatePage() {
               saving={saving}
               size={{ width: size.width, height: size.height }}
               exportable={spec.exportable}
+              publish={{ businessId: business.id, savePost }}
             />
           ) : (
             <Button className="h-12 w-full rounded-xl" onClick={generate} disabled={locked}>

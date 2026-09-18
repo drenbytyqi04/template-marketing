@@ -118,6 +118,83 @@ preset without configuration (locally it falls back to `cloudflare-module`). If 
 deployment ever builds for the wrong target, set `NITRO_PRESET=vercel` as an
 environment variable - no code change needed.
 
+## Instagram publishing
+
+The app can publish a finished design straight to an Instagram Professional
+account. It uses Meta's official Graph API and the standard OAuth flow: nobody
+is ever asked for an Instagram password, and no unofficial endpoint is touched.
+
+Without `META_APP_ID` and `META_APP_SECRET` the app runs normally and the
+Instagram card says it is not configured. Nothing crashes and nothing pretends
+to be connected.
+
+### What Instagram requires
+
+Meta only allows publishing to a **Professional** account (Business or Creator)
+that is **linked to a Facebook Page**. A personal Instagram account cannot be
+published to by any application, including this one. The person who connects it
+must be an admin of that Page.
+
+### 1. Create the Meta app
+
+At <https://developers.facebook.com/apps>, create an app of type **Business**
+and add the **Facebook Login** product. Copy the App ID and App Secret from
+Settings → Basic into `META_APP_ID` and `META_APP_SECRET`.
+
+### 2. Register the redirect URI
+
+Under Facebook Login → Settings, add to **Valid OAuth Redirect URIs**:
+
+```
+https://<your-domain>/api/public/oauth/meta
+```
+
+Add the localhost form too if you will connect while developing. The value must
+match exactly - scheme, host and path.
+
+### 3. Permissions
+
+The connect flow requests:
+
+| Permission | Why |
+| --- | --- |
+| `pages_show_list` | find the Pages the person administers |
+| `pages_read_engagement` | read the Page the Instagram account is linked to |
+| `pages_manage_posts` | publish to the Facebook Page |
+| `instagram_basic` | read the linked Instagram account |
+| `instagram_content_publish` | publish to Instagram |
+| `business_management` | resolve accounts held in a Business portfolio |
+
+### 4. App Review
+
+While the app is in development mode these permissions work **only for people
+with a role on the Meta app** (admin, developer, tester). That is enough to
+test the whole flow end to end with your own accounts.
+
+To let your customers connect, Meta requires **App Review** for
+`instagram_content_publish`, `instagram_basic`, `pages_show_list`,
+`pages_read_engagement` and `pages_manage_posts`, plus **Business
+Verification** for the business that owns the app. Prepare a screencast of the
+connect-and-publish flow and a description of why each permission is needed.
+Until that is granted, connecting works for your own accounts and for nobody
+else's.
+
+### How publishing works
+
+1. The editor renders the design through the same exporter the Download button
+   uses, so what is published is the file you would have downloaded.
+2. That image is stored in the private `rafty-media` bucket.
+3. On publish the server signs a one-hour URL to it. Meta fetches the image with
+   its own servers, which is why a public URL is needed at all; the bucket stays
+   private and the link expires.
+4. For Instagram the server creates a media container, waits for Meta to finish
+   processing it, then publishes it, and finally asks for the post's permalink.
+5. The result is written to `social_publications`, successful or not.
+
+Access tokens live in `social_oauth_accounts`, a table with `revoke all` for
+`anon` and `authenticated`: only the service role can read it, and no endpoint
+returns a token to the browser.
+
 ## Development
 
 Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).

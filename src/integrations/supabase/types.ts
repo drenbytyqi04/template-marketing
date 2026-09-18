@@ -686,9 +686,11 @@ export type Database = {
           external_id: string
           id: string
           platform: Database["public"]["Enums"]["social_platform"]
+          profile_picture_url: string | null
           refresh_token: string | null
           scopes: string
           updated_at: string
+          username: string
         }
         Insert: {
           access_token: string
@@ -699,9 +701,11 @@ export type Database = {
           external_id?: string
           id?: string
           platform: Database["public"]["Enums"]["social_platform"]
+          profile_picture_url?: string | null
           refresh_token?: string | null
           scopes?: string
           updated_at?: string
+          username?: string
         }
         Update: {
           access_token?: string
@@ -712,9 +716,11 @@ export type Database = {
           external_id?: string
           id?: string
           platform?: Database["public"]["Enums"]["social_platform"]
+          profile_picture_url?: string | null
           refresh_token?: string | null
           scopes?: string
           updated_at?: string
+          username?: string
         }
         Relationships: [
           {
@@ -722,6 +728,79 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_publications: {
+        Row: {
+          account_label: string
+          business_id: string
+          caption: string
+          created_at: string
+          error_message: string | null
+          external_post_id: string | null
+          id: string
+          media_path: string | null
+          platform: Database["public"]["Enums"]["social_platform"]
+          post_id: string | null
+          published_at: string | null
+          social_account_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_label?: string
+          business_id: string
+          caption?: string
+          created_at?: string
+          error_message?: string | null
+          external_post_id?: string | null
+          id?: string
+          media_path?: string | null
+          platform: Database["public"]["Enums"]["social_platform"]
+          post_id?: string | null
+          published_at?: string | null
+          social_account_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_label?: string
+          business_id?: string
+          caption?: string
+          created_at?: string
+          error_message?: string | null
+          external_post_id?: string | null
+          id?: string
+          media_path?: string | null
+          platform?: Database["public"]["Enums"]["social_platform"]
+          post_id?: string | null
+          published_at?: string | null
+          social_account_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_publications_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_publications_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_publications_social_account_id_fkey"
+            columns: ["social_account_id"]
+            isOneToOne: false
+            referencedRelation: "social_oauth_accounts"
             referencedColumns: ["id"]
           },
         ]

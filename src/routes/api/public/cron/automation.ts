@@ -201,7 +201,7 @@ export const Route = createFileRoute("/api/public/cron/automation")({
             }
 
             try {
-              const remoteId = await publishToMeta({
+              const result = await publishToMeta({
                 platform: item.platform,
                 externalId: token.external_id,
                 accessToken: token.access_token,
@@ -212,14 +212,16 @@ export const Route = createFileRoute("/api/public/cron/automation")({
                 .from("scheduled_posts")
                 .update({
                   status: "published",
-                  remote_post_id: remoteId,
+                  remote_post_id: result.id,
                   published_at: new Date().toISOString(),
                   failure_reason: null,
                 } as never)
                 .eq("id", item.id);
               report.published++;
             } catch (error) {
-              await fail(error instanceof Error ? error.message.slice(0, 300) : "Publishing failed");
+              await fail(
+                error instanceof Error ? error.message.slice(0, 300) : "Publishing failed",
+              );
             }
           }
         }
