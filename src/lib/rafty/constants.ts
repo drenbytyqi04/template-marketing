@@ -78,7 +78,13 @@ export const CUSTOM_TYPE_SUGGESTIONS = [
 /* --------------------------------- fonts ---------------------------------- */
 
 export type FontCategory =
-  "Modern Sans" | "Editorial Serif" | "Luxury" | "Bold Display" | "Clean Business";
+  | "Modern Sans"
+  | "Editorial Serif"
+  | "Luxury"
+  | "Bold Display"
+  | "Clean Business"
+  /** Not a body face. A design reaches for it by name; a brand never picks it. */
+  | "Script";
 
 export type FontOption = { family: string; category: FontCategory; weights: string };
 
@@ -108,7 +114,16 @@ export const FONT_LIBRARY: FontOption[] = [
   { family: "Source Sans 3", category: "Clean Business", weights: "400;600;700" },
   { family: "Figtree", category: "Clean Business", weights: "400;600;800" },
   { family: "Public Sans", category: "Clean Business", weights: "400;600;700" },
+  // The one script in the library. It belongs to the designs rather than to a
+  // brand: a travel poster sets the hotel name in a hand over the destination,
+  // and nothing else in the library can do that. It is in FONT_LIBRARY so the
+  // root route loads it and the exporter embeds it like any other face, and out
+  // of FONT_CATEGORIES so no brand can accidentally choose it to set body copy.
+  { family: "Dancing Script", category: "Script", weights: "400;700" },
 ];
+
+/** The face a design uses for a line set in a hand. */
+export const SCRIPT_FONT = "Dancing Script";
 
 export const FONT_CATEGORIES: FontCategory[] = [
   "Modern Sans",
@@ -118,7 +133,11 @@ export const FONT_CATEGORIES: FontCategory[] = [
   "Clean Business",
 ];
 
-export const FONTS = FONT_LIBRARY.map((f) => f.family);
+/** What a brand may choose to set its posts in. Script faces are excluded:
+ * they are a design's accent, not a typeface to run a business on. */
+export const BODY_FONTS = FONT_LIBRARY.filter((f) => FONT_CATEGORIES.includes(f.category));
+
+export const FONTS = BODY_FONTS.map((f) => f.family);
 
 /** Google Fonts stylesheet covering the whole curated library. */
 export const FONT_STYLESHEET_HREF = `https://fonts.googleapis.com/css2?${FONT_LIBRARY.map(

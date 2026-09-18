@@ -38,6 +38,10 @@ export const TYPE = {
   h2: 7,
   h1: 9,
   hero: 11.5,
+  /** One step past hero, for a design whose whole idea is a destination read
+   * from across a room. Measured off a printed travel offer, where the place
+   * name ran to a little over a ninth of the frame's height. */
+  display: 13.5,
 } as const;
 
 /** Corner radii. Four steps and a pill, nothing between them. */

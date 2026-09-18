@@ -338,4 +338,73 @@ export const TRAVEL_DESIGNS: DesignSpec[] = [
       },
     ],
   },
+  {
+    /**
+     * Adria 1.0, built to the proportions of a printed travel offer rather than
+     * invented: the reference was measured rather than eyeballed, and the
+     * numbers are what this design is made of.
+     *
+     *   page margin   10.7% of the width, where the rest of the library uses 7
+     *   logo          top left, on the margin
+     *   ribbon        just under it, at a fifth of the width
+     *   empty         the whole middle third carries nothing at all
+     *   hotel         set in a hand, leaning on the headline below it
+     *   destination   the largest thing in the frame by a distance
+     *   foot          the details on the left, the price square to their right
+     *
+     * The wide margin and the empty middle are the design. Everything sits on
+     * one left edge and nothing competes with the destination, which is why it
+     * reads from across a room.
+     *
+     * It carries no photograph. The frame is the brand's own colour, so the
+     * design works on the day there is no picture worth showing - and a brand
+     * whose colour is too bright for white type has it taken down first rather
+     * than trusted. Wanting the picture back is one word: `solid` becomes
+     * `scrimBottom`.
+     */
+    id: "tr_10",
+    name: "Adria 1.0",
+    tags: ["bold", "offer"],
+    for: ["travel_agency"],
+    tone: "light",
+    photo: { treatment: "solid" },
+    page: 10.7,
+    blocks: [
+      {
+        area: [1, 13, 1, 4],
+        gap: "md",
+        parts: [{ t: "brand" }, { t: "stamp", as: "ribbon" }],
+      },
+      {
+        // The middle of the frame is deliberately not addressed by any block.
+        area: [1, 13, 5, 9],
+        justify: "end",
+        gap: "sm",
+        parts: [
+          { t: "kicker", as: "script" },
+          { t: "headline", size: "display" },
+        ],
+      },
+      {
+        // The foot is two columns, which is what the field is for. Splitting it
+        // with a row of parts instead let the details run the full width and
+        // pushed the price onto its own line, which is the one arrangement this
+        // design must not have.
+        area: [1, 7, 10, 13],
+        justify: "end",
+        gap: "sm",
+        parts: [{ t: "facts" }, { t: "included", as: "line" }, { t: "contact" }],
+      },
+      {
+        area: [7, 13, 10, 13],
+        align: "end",
+        justify: "end",
+        gap: "sm",
+        parts: [
+          { t: "price", as: "block" },
+          { t: "cta", as: "tag" },
+        ],
+      },
+    ],
+  },
 ];

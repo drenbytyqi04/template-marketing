@@ -1,5 +1,5 @@
-import { fieldLabel, formatPrice } from "../constants";
-import { alpha, INK, RADIUS, shade, SPACE, TRACK, TYPE, WEIGHT } from "../tokens";
+import { fieldLabel, formatPrice, SCRIPT_FONT } from "../constants";
+import { alpha, INK, luminance, RADIUS, shade, SPACE, TRACK, TYPE, WEIGHT } from "../tokens";
 import { FitText } from "@/components/rafty/FitText";
 import type { RenderCtx } from "../templates";
 import type { LanguageCode } from "../types";
@@ -59,6 +59,19 @@ const ink = (tone: Tone) => ({
 
 /* ---------------------------------- photo ---------------------------------- */
 
+/**
+ * The frame's own colour, for a design that carries no photograph.
+ *
+ * It has to be dark enough for light type whatever the brand's colour is, so a
+ * bright primary is taken down first rather than trusted. A slight gradient
+ * rather than a flat fill: a poster printed on one flat colour looks like a
+ * fallback, the same colour with a little depth looks chosen.
+ */
+function solidGround(primary: string): string {
+  const base = luminance(primary) > 0.3 ? shade(primary, 0.55) : primary;
+  return `linear-gradient(160deg, ${base}, ${shade(base, 0.42)})`;
+}
+
 function Photo({
   ctx,
   treatment,
@@ -77,6 +90,8 @@ function Photo({
     scrimTop: `linear-gradient(to bottom, ${alpha(deep, 0.82 * s)} 0%, ${alpha(deep, 0.26 * s)} 28%, ${alpha(deep, 0)} 56%)`,
     scrimBoth: `linear-gradient(to bottom, ${alpha(deep, 0.7 * s)} 0%, ${alpha(deep, 0)} 32%, ${alpha(deep, 0)} 50%, ${alpha(deep, 0.9 * s)} 96%)`,
     wash: `linear-gradient(150deg, ${alpha(brand.primary, 0.84 * s)}, ${alpha(deep, 0.92 * s)})`,
+    // Opaque, so whatever picture is behind it does not show through at all.
+    solid: solidGround(brand.primary),
   };
   const ramp = ramps[treatment];
   const fill: React.CSSProperties = {
@@ -86,6 +101,12 @@ function Photo({
     width: "100%",
     objectFit: "cover",
   };
+  // A solid ground is the whole point of the design that asks for it, so the
+  // picture is not drawn at all - not covered, not drawn. An opaque layer over
+  // a decoded photograph would cost the same memory for something nobody sees.
+  if (treatment === "solid") {
+    return <div style={{ ...fill, background: ramp ?? undefined }} />;
+  }
   return (
     <>
       {content.videoDataUrl ? (
@@ -115,11 +136,47 @@ function Photo({
 
 /* ---------------------------------- parts ---------------------------------- */
 
-const HEADLINE_SIZE = { hero: TYPE.hero, large: TYPE.h1, medium: TYPE.h2 } as const;
+const HEADLINE_SIZE = {
+  display: TYPE.display,
+  hero: TYPE.hero,
+  large: TYPE.h1,
+  medium: TYPE.h2,
+} as const;
 
-function Kicker({ ctx, tone }: { ctx: RenderCtx; tone: Tone }) {
+function Kicker({
+  ctx,
+  tone,
+  as = "caps",
+}: {
+  ctx: RenderCtx;
+  tone: Tone;
+  as?: "caps" | "script";
+}) {
   const value = (ctx.content.subject || ctx.content.location).trim();
   if (!value) return null;
+  // The brand colour is only legible where the design put a ground under it.
+  // Over a photograph the kicker keeps the design's own ink, and the accent is
+  // spent on the price and the call to action instead.
+  const color = tone === "dark" ? accent(ctx) : INK.onDarkBody;
+  if (as === "script") {
+    // Set in a hand, large, and leaning into the headline beneath it. Travel
+    // posters have named the hotel this way for as long as there have been
+    // travel posters, and it is the one place a display face earns its keep.
+    return (
+      <span
+        style={{
+          fontSize: px(TYPE.h3),
+          fontWeight: WEIGHT.bold,
+          lineHeight: 1,
+          letterSpacing: TRACK.normal,
+          color: tone === "dark" ? INK.strong : INK.onDark,
+          fontFamily: `"${SCRIPT_FONT}", ui-rounded, cursive`,
+        }}
+      >
+        {value}
+      </span>
+    );
+  }
   return (
     <span
       style={{
@@ -127,10 +184,7 @@ function Kicker({ ctx, tone }: { ctx: RenderCtx; tone: Tone }) {
         fontWeight: WEIGHT.bold,
         letterSpacing: TRACK.wider,
         textTransform: "uppercase",
-        // The brand colour is only legible where the design put a ground under
-        // it. Over a photograph the kicker keeps the design's own ink, and the
-        // accent is spent on the price and the call to action instead.
-        color: tone === "dark" ? accent(ctx) : INK.onDarkBody,
+        color,
         fontFamily: fontSecondary(ctx),
       }}
     >
@@ -155,12 +209,18 @@ function reserveOf(part: Part, ctx: RenderCtx): number {
   const has = (value: string | undefined) => !!value && value.trim().length > 0;
   switch (part.t) {
     case "kicker":
-      return has(content.subject) || has(content.location) ? TYPE.label * 1.4 : 0;
+      if (!has(content.subject) && !has(content.location)) return 0;
+      return (part.as === "script" ? TYPE.h3 : TYPE.label) * 1.4;
     case "headline":
       return 0;
     case "price": {
       if (!formatPrice(content.price, ctx.brand.currency)) return 0;
-      const base = part.as === "badge" ? TYPE.h3 * 1.2 + SPACE.sm * 2 : TYPE.h2 * 1.2;
+      const base =
+        part.as === "badge"
+          ? TYPE.h3 * 1.2 + SPACE.sm * 2
+          : part.as === "block"
+            ? TYPE.h2 * 1.2 + SPACE.md * 2
+            : TYPE.h2 * 1.2;
       // "from", a struck old price and a unit wrap onto a second line in a
       // narrow block, so they are worth a line of small type between them.
       const extras =
@@ -225,7 +285,7 @@ function Headline({
 }: {
   ctx: RenderCtx;
   tone: Tone;
-  size: "hero" | "large" | "medium";
+  size: keyof typeof HEADLINE_SIZE;
   room?: number;
 }) {
   const max = HEADLINE_SIZE[size];
@@ -297,10 +357,13 @@ function priceParts(ctx: RenderCtx) {
   };
 }
 
-function Price({ ctx, tone, as }: { ctx: RenderCtx; tone: Tone; as: "plain" | "badge" }) {
+function Price({ ctx, tone, as }: { ctx: RenderCtx; tone: Tone; as: "plain" | "badge" | "block" }) {
   const { now, was, unit, from } = priceParts(ctx);
   if (!now) return null;
-  const onBadge = as === "badge";
+  // Badge and block are both the accent colour carrying white type; the pill
+  // reads as something to press, the square corners read as a price sticker
+  // stuck on the poster. Which one a design wants is a question of voice.
+  const onBadge = as === "badge" || as === "block";
   const c = ink(tone);
   const quiet = onBadge ? INK.onDarkBody : c.muted;
 
@@ -316,7 +379,7 @@ function Price({ ctx, tone, as }: { ctx: RenderCtx; tone: Tone; as: "plain" | "b
     whiteSpace: "nowrap",
   };
   const figure: React.CSSProperties = {
-    fontSize: px(onBadge ? TYPE.h3 : TYPE.h2),
+    fontSize: px(as === "block" ? TYPE.h2 : as === "badge" ? TYPE.h3 : TYPE.h2),
     fontWeight: WEIGHT.heavy,
     letterSpacing: TRACK.tight,
     whiteSpace: "nowrap",
@@ -346,8 +409,10 @@ function Price({ ctx, tone, as }: { ctx: RenderCtx; tone: Tone; as: "plain" | "b
       <span
         style={{
           ...row,
-          padding: `${px(SPACE.sm)} ${px(SPACE.lg)}`,
-          borderRadius: px(RADIUS.pill),
+          alignItems: "center",
+          padding:
+            as === "block" ? `${px(SPACE.md)} ${px(SPACE.lg)}` : `${px(SPACE.sm)} ${px(SPACE.lg)}`,
+          borderRadius: as === "block" ? px(RADIUS.xs) : px(RADIUS.pill),
           background: accent(ctx),
         }}
       >
@@ -746,7 +811,7 @@ function renderPart(
 ): React.ReactNode {
   switch (part.t) {
     case "kicker":
-      return <Kicker key={key} ctx={ctx} tone={tone} />;
+      return <Kicker key={key} ctx={ctx} tone={tone} {...(part.as ? { as: part.as } : {})} />;
     case "headline":
       return (
         <Headline
@@ -891,7 +956,8 @@ export function renderDesign(spec: DesignSpec, ctx: RenderCtx): React.ReactNode 
   // is measured in. The canvas is 100 units wide whatever its pixel size, so
   // its height follows from its shape.
   const shape = ctx.canvas ? ctx.canvas.height / ctx.canvas.width : 1.25;
-  const rowHeight = (100 * shape - SPACE.page * 2) / GRID;
+  const page = spec.page ?? SPACE.page;
+  const rowHeight = (100 * shape - page * 2) / GRID;
   const adjust = ctx.adjustments?.text;
   const x = clamp(adjust?.x ?? 0, -12, 12);
   const y = clamp(adjust?.y ?? 0, -12, 12);
@@ -915,7 +981,7 @@ export function renderDesign(spec: DesignSpec, ctx: RenderCtx): React.ReactNode 
         style={{
           position: "absolute",
           inset: 0,
-          padding: px(SPACE.page),
+          padding: px(page),
           display: "grid",
           gridTemplateColumns: `repeat(${GRID}, 1fr)`,
           gridTemplateRows: `repeat(${GRID}, 1fr)`,

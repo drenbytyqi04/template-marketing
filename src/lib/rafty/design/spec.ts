@@ -24,14 +24,15 @@ export const GRID = 12;
 /** The parts a design can be built from. Each one knows how to draw itself from
  * the post's content, so a design never names a font, a size or a colour. */
 export type Part =
-  /** The small tracked line over a headline: what the post is about. */
-  | { t: "kicker" }
+  /** The small line over a headline: what the post is about. Caps read as a
+   * label, a hand reads as a travel poster naming the hotel. */
+  | { t: "kicker"; as?: "caps" | "script" }
   /** The headline. A design has exactly one, and it leads the frame. */
-  | { t: "headline"; size: "hero" | "large" | "medium" }
+  | { t: "headline"; size: "display" | "hero" | "large" | "medium" }
   /** The number. Plain reads as editorial, badge reads as an offer.
    * Whatever the post filled in rides along: a starting-from price, what it
    * buys, and the figure it was reduced from. */
-  | { t: "price"; as: "plain" | "badge" }
+  | { t: "price"; as: "plain" | "badge" | "block" }
   /** The short urgent line over an offer: last minute, five places left.
    * A ribbon shouts, a tag is quiet enough to sit beside a headline. */
   | { t: "stamp"; as: "ribbon" | "tag" }
@@ -65,7 +66,15 @@ export type Block = {
 };
 
 /** How the photograph under the design is prepared. */
-export type PhotoTreatment = "plain" | "scrimBottom" | "scrimTop" | "scrimBoth" | "wash";
+export type PhotoTreatment =
+  | "plain"
+  | "scrimBottom"
+  | "scrimTop"
+  | "scrimBoth"
+  | "wash"
+  /** No picture at all: the frame is the brand's own colour. For a design that
+   * has to work when there is no photograph worth showing. */
+  | "solid";
 
 export type DesignSpec = {
   id: string;
@@ -76,6 +85,10 @@ export type DesignSpec = {
   /** Which ink the design writes in over the picture. */
   tone: "light" | "dark";
   photo: { treatment: PhotoTreatment; strength?: number };
+  /** This design's page margin, in cqw. Designs share one by default, which is
+   * most of what makes a set look like a set; a design states its own only when
+   * the wider frame is the point of it. */
+  page?: number;
   blocks: Block[];
 };
 
@@ -90,7 +103,12 @@ export type DesignSpec = {
  */
 export type Finding = { id: string; rule: string; detail: string };
 
-const MAX_BLOCKS = 3;
+// Four, not three. Three was set when a design carried whatever its author felt
+// like; now every design has to draw all nine parts, and a frame that wants the
+// details and the price side by side genuinely needs a fourth region. It is
+// still a limit: the point was never the number, it was that a frame with a
+// region per part is not a design.
+const MAX_BLOCKS = 4;
 
 /**
  * Every part a post can fill in, and therefore every part a design must draw.

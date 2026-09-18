@@ -20,7 +20,7 @@ import {
   CURRENCIES,
   CUSTOM_TYPE_SUGGESTIONS,
   DEFAULT_BRAND,
-  FONT_LIBRARY,
+  BODY_FONTS,
   LANGUAGES,
   SERVICE_SUGGESTIONS,
 } from "@/lib/rafty/constants";
@@ -61,8 +61,7 @@ const SUBMIT_STEPS = [
 ];
 
 function OnboardingPage() {
-  const { ready, user, business, brand, completeOnboarding, t, language, setLanguage } =
-    useRafty();
+  const { ready, user, business, brand, completeOnboarding, t, language, setLanguage } = useRafty();
   const navigate = useNavigate();
 
   const [step, setStep] = useState(0);
@@ -329,7 +328,7 @@ function OnboardingPage() {
               <div className="grid gap-2">
                 <Label>{t("onb.font")}</Label>
                 <div className="grid max-h-60 gap-2 overflow-y-auto rounded-xl border bg-card p-2">
-                  {FONT_LIBRARY.map((f) => (
+                  {BODY_FONTS.map((f) => (
                     <button
                       key={f.family}
                       type="button"
@@ -361,7 +360,7 @@ function OnboardingPage() {
                   ) : null}
                 </div>
                 <div className="grid max-h-48 gap-2 overflow-y-auto rounded-xl border bg-card p-2">
-                  {FONT_LIBRARY.map((f) => (
+                  {BODY_FONTS.map((f) => (
                     <button
                       key={f.family}
                       type="button"
