@@ -356,18 +356,19 @@ export const TRAVEL_DESIGNS: DesignSpec[] = [
      * one left edge and nothing competes with the destination, which is why it
      * reads from across a room.
      *
-     * It carries no photograph. The frame is the brand's own colour, so the
-     * design works on the day there is no picture worth showing - and a brand
-     * whose colour is too bright for white type has it taken down first rather
-     * than trusted. Wanting the picture back is one word: `solid` becomes
-     * `scrimBottom`.
+     * The scrim is heavier than the reference, which laid its type straight
+     * onto the picture and got away with it because that particular photograph
+     * happened to be dark where the words sat. A template cannot count on the
+     * next photograph doing the same, so the lower half is darkened and the top
+     * lightly, which keeps the open middle the composition depends on while the
+     * logo and the destination stay readable over anything.
      */
     id: "tr_10",
     name: "Adria 1.0",
     tags: ["bold", "offer"],
     for: ["travel_agency"],
     tone: "light",
-    photo: { treatment: "solid" },
+    photo: { treatment: "scrimBoth", strength: 0.85 },
     page: 10.7,
     blocks: [
       {

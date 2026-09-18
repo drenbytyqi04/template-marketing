@@ -66,15 +66,7 @@ export type Block = {
 };
 
 /** How the photograph under the design is prepared. */
-export type PhotoTreatment =
-  | "plain"
-  | "scrimBottom"
-  | "scrimTop"
-  | "scrimBoth"
-  | "wash"
-  /** No picture at all: the frame is the brand's own colour. For a design that
-   * has to work when there is no photograph worth showing. */
-  | "solid";
+export type PhotoTreatment = "plain" | "scrimBottom" | "scrimTop" | "scrimBoth" | "wash";
 
 export type DesignSpec = {
   id: string;

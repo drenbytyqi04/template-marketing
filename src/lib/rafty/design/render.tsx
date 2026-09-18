@@ -60,12 +60,18 @@ const ink = (tone: Tone) => ({
 /* ---------------------------------- photo ---------------------------------- */
 
 /**
- * The frame's own colour, for a design that carries no photograph.
+ * The ground under a post that has no picture yet.
  *
  * It has to be dark enough for light type whatever the brand's colour is, so a
  * bright primary is taken down first rather than trusted. A slight gradient
  * rather than a flat fill: a poster printed on one flat colour looks like a
  * fallback, the same colour with a little depth looks chosen.
+ *
+ * This is where "a design that works without a photograph" belongs - in the one
+ * place that already decides what to draw when there is no photograph - rather
+ * than as a treatment a design opts into. A design that refused to draw the
+ * picture ignored one the customer had uploaded, which is not a design choice,
+ * it is a design losing their work.
  */
 function solidGround(primary: string): string {
   const base = luminance(primary) > 0.3 ? shade(primary, 0.55) : primary;
@@ -90,8 +96,6 @@ function Photo({
     scrimTop: `linear-gradient(to bottom, ${alpha(deep, 0.82 * s)} 0%, ${alpha(deep, 0.26 * s)} 28%, ${alpha(deep, 0)} 56%)`,
     scrimBoth: `linear-gradient(to bottom, ${alpha(deep, 0.7 * s)} 0%, ${alpha(deep, 0)} 32%, ${alpha(deep, 0)} 50%, ${alpha(deep, 0.9 * s)} 96%)`,
     wash: `linear-gradient(150deg, ${alpha(brand.primary, 0.84 * s)}, ${alpha(deep, 0.92 * s)})`,
-    // Opaque, so whatever picture is behind it does not show through at all.
-    solid: solidGround(brand.primary),
   };
   const ramp = ramps[treatment];
   const fill: React.CSSProperties = {
@@ -101,12 +105,6 @@ function Photo({
     width: "100%",
     objectFit: "cover",
   };
-  // A solid ground is the whole point of the design that asks for it, so the
-  // picture is not drawn at all - not covered, not drawn. An opaque layer over
-  // a decoded photograph would cost the same memory for something nobody sees.
-  if (treatment === "solid") {
-    return <div style={{ ...fill, background: ramp ?? undefined }} />;
-  }
   return (
     <>
       {content.videoDataUrl ? (
@@ -125,7 +123,7 @@ function Photo({
         <div
           style={{
             ...fill,
-            background: `linear-gradient(140deg, ${alpha(brand.primary, 0.25)}, ${alpha(deep, 0.5)})`,
+            background: solidGround(brand.primary),
           }}
         />
       )}
