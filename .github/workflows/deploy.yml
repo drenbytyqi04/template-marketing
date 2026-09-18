@@ -1,0 +1,76 @@
+# Deploy to Vercel from GitHub, without waiting on Vercel to build.
+#
+# Vercel's own Git integration stopped being dependable for this project: a push
+# would either produce no deployment at all, or one that sat in INITIALIZING
+# until it was cancelled without a single line of build log. Two of three
+# deployments died that way in one afternoon. Nothing about the repository
+# changed; the builds that did start finished in fifteen seconds.
+#
+# So the build moves here. GitHub compiles the app on its own runner and hands
+# Vercel the finished output, which means neither Vercel's webhook nor its build
+# queue is between a push and the live site. `vercel build` writes the Build
+# Output API bundle this project already produces - a server function and the
+# static assets - and `--prebuilt` uploads exactly that.
+#
+# Setup, once: add a repository secret named VERCEL_TOKEN, from
+# https://vercel.com/account/settings/tokens. The two ids below are not secrets;
+# Vercel's own documentation prints them in workflows like this one.
+#
+# Vercel's Git integration is deliberately left switched on. While it is broken
+# it does nothing, and this workflow carries the deploy; if it recovers, the
+# worst that happens is two deployments of the same commit, and the cure for
+# that is one line in vercel.json - "git": { "deploymentEnabled": false }.
+
+name: Deploy to Vercel
+
+on:
+  push:
+    branches:
+      - main
+      - claude/poster-forge-craft-clone-ubigl2
+  workflow_dispatch:
+
+# A newer push makes an older one pointless. Cancelling it keeps the queue at
+# one and means the live site always reflects the newest commit rather than
+# whichever build happened to finish last.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VERCEL_ORG_ID: team_r8WN2triJc8McdBF0WeZ7DrH
+  VERCEL_PROJECT_ID: prj_AUgQb1hGBUZMcVX1uQ0WX3B1vDJj
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # The project runs on Node 24 on Vercel; the runner matches it so the
+      # build here and the runtime there do not disagree.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - run: bun install --frozen-lockfile
+
+      - name: Install the Vercel CLI
+        run: npm install --global vercel@latest
+
+      # Brings down the project's settings and its production environment
+      # variables, so the bundle is built with the same values Vercel would
+      # have used rather than with whatever the fallbacks are.
+      - name: Pull the project settings
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}

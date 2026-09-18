@@ -11,6 +11,8 @@ node_modules
 dist
 dist-ssr
 .output
+# Written by `vercel build` and by a local build that thinks it is on Vercel.
+.vercel
 .vinxi
 .tanstack/**
 .nitro
