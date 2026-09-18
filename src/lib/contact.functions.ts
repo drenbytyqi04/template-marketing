@@ -25,7 +25,7 @@ function escapeHtml(value: string) {
  * email when delivery failed — the stored row keeps the lead safe either way.
  */
 export const submitContactRequestFn = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => schema.parse(data))
+  .validator((data: unknown) => schema.parse(data))
   .handler(async ({ data }) => {
     const { createClient } = await import("@supabase/supabase-js");
     const supabase = createClient(

@@ -30,7 +30,7 @@ function callbackUrl(): string {
 /** Starts the Meta (Instagram + Facebook) connection for one brand. */
 export const startMetaConnect = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => businessInput.parse(input))
+  .validator((input: unknown) => businessInput.parse(input))
   .handler(async ({ data, context }) => {
     await assertMember(context.supabase, data.businessId, context.userId);
     const { metaAuthUrl, signState } = await import("./publish.server");
@@ -46,7 +46,7 @@ export const startMetaConnect = createServerFn({ method: "POST" })
 
 export const disconnectSocial = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
+  .validator((input: unknown) =>
     businessInput.extend({ platform: z.enum(["instagram", "facebook"]) }).parse(input),
   )
   .handler(async ({ data, context }) => {

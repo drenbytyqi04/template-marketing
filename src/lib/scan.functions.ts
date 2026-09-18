@@ -30,7 +30,7 @@ async function assertMember(
 
 export const scanBrandWebsite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => scanInput.parse(input))
+  .validator((input: unknown) => scanInput.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertMember(supabase as never, data.businessId, userId);
@@ -57,16 +57,14 @@ export const scanBrandWebsite = createServerFn({ method: "POST" })
       if (!error) added++;
     }
 
-    await supabase
-      .from("brand_websites")
-      .upsert(
-        {
-          business_id: data.businessId,
-          url: data.url,
-          last_scanned_at: new Date().toISOString(),
-        } as never,
-        { onConflict: "business_id" },
-      );
+    await supabase.from("brand_websites").upsert(
+      {
+        business_id: data.businessId,
+        url: data.url,
+        last_scanned_at: new Date().toISOString(),
+      } as never,
+      { onConflict: "business_id" },
+    );
 
     return { ok: true as const, added, found: result.items.length, pagesRead: result.pagesRead };
   });
@@ -78,9 +76,7 @@ export const scanBrandWebsite = createServerFn({ method: "POST" })
  */
 export const fetchDiscoveredImage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    businessInput.extend({ itemId: z.string().uuid() }).parse(input),
-  )
+  .validator((input: unknown) => businessInput.extend({ itemId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertMember(supabase as never, data.businessId, userId);
