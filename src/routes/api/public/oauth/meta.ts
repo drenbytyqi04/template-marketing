@@ -36,7 +36,14 @@ export const Route = createFileRoute("/api/public/oauth/meta")({
         if (!parsed) return back("expired");
 
         try {
-          const accounts = await exchangeMetaCode(code, `${url.origin}/api/public/oauth/meta`);
+          // Meta checks that the redirect_uri sent here is byte for byte the
+          // one the authorization request carried, so both are derived the same
+          // way: the configured value when there is one, the request origin
+          // otherwise. Deriving it here alone would fail every exchange on an
+          // install that sets META_REDIRECT_URI.
+          const redirectUri =
+            process.env["META_REDIRECT_URI"] || `${url.origin}/api/public/oauth/meta`;
+          const accounts = await exchangeMetaCode(code, redirectUri);
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
           // The state proves membership at the moment the flow was started;

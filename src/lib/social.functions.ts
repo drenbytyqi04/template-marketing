@@ -34,7 +34,18 @@ async function assertMember(
   if (!data) throw new Error("You do not have access to this brand.");
 }
 
+/**
+ * Where Meta sends the person back.
+ *
+ * It has to match a Valid OAuth Redirect URI on the Meta app character for
+ * character, so it is configurable: behind a proxy or a custom domain the
+ * origin the server sees is not always the one the browser used, and Meta
+ * rejects the mismatch. Left unset it is derived from the request, which is
+ * what makes preview deployments work without registering each one.
+ */
 function callbackUrl(): string {
+  const configured = process.env["META_REDIRECT_URI"];
+  if (configured) return configured;
   const request = getRequest();
   const origin = new URL(request!.url).origin;
   return `${origin}/api/public/oauth/meta`;
