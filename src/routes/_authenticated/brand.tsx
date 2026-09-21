@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Loader2, Lock, Plus, Save, Trash2, Upload, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Loader2, Plus, Save, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -634,38 +634,29 @@ function BrandPage() {
               <img src={brand.logoDataUrl} alt="" className="size-full object-contain p-1" />
             ) : null}
           </div>
-          {brand.logoLocked ? (
-            <div className="flex items-start gap-2 text-xs text-muted-foreground">
-              <Lock className="mt-0.5 size-3.5 shrink-0" />
-              <p>
-                This logo is locked. Only a krijo24 admin can change it, the database enforces this
-                rule.
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-1.5">
-              <label className="inline-flex w-fit">
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    await saveBrand({ logoDataUrl: await readFileAsDataUrl(file) });
-                    toast.success(t("brand.saved"));
-                  }}
-                />
-                <span className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border px-4 text-sm font-semibold">
-                  <Upload className="size-4" />
-                  {t("onb.uploadLogo")}
-                </span>
-              </label>
-              <p className="text-xs text-muted-foreground">
-                A logo can only be set once. After saving, only a krijo24 admin can replace it.
-              </p>
-            </div>
-          )}
+          <div className="flex flex-col gap-1.5">
+            <label className="inline-flex w-fit">
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  await saveBrand({ logoDataUrl: await readFileAsDataUrl(file) });
+                  toast.success(t("brand.saved"));
+                }}
+              />
+              <span className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border px-4 text-sm font-semibold">
+                <Upload className="size-4" />
+                {brand.logoDataUrl ? "Replace logo" : t("onb.uploadLogo")}
+              </span>
+            </label>
+            <p className="text-xs text-muted-foreground">
+              Used on every design that shows your brand. A new one replaces it everywhere from the
+              next post on; posts already saved keep the logo they were made with.
+            </p>
+          </div>
         </div>
       </div>
 

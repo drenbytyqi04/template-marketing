@@ -220,7 +220,6 @@ export type BrandProfile = {
   /** Short lived signed url used for rendering only. */
   logoDataUrl: string | null;
   /** Once a logo is saved only a krijo24 admin can replace it. */
-  logoLocked: boolean;
   primary: string;
   secondary: string;
   accent: string;

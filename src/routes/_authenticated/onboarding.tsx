@@ -282,8 +282,7 @@ function OnboardingPage() {
                 </span>
               </label>
               <p className="text-xs text-muted-foreground">
-                A logo can only be set once. After you finish setup, only a krijo24 admin can
-                replace it.
+                Used on every design that shows your brand. You can change it later from Brand.
               </p>
             </div>
           ) : null}

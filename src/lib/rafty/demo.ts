@@ -28,7 +28,6 @@ export type DemoPost = {
 const brand = (primary: string, secondary: string, fontFamily: string): BrandProfile => ({
   businessId: "preview",
   logoDataUrl: null,
-  logoLocked: false,
   primary,
   secondary,
   accent: "#ff7a59",

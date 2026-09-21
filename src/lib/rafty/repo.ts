@@ -235,7 +235,6 @@ export async function updateBusiness(businessId: string, patch: Partial<Business
 type BrandRow = {
   business_id: string;
   logo_path: string | null;
-  logo_locked: boolean;
   primary_color: string;
   secondary_color: string;
   accent_color: string;
@@ -260,7 +259,6 @@ export async function getBrand(businessId: string): Promise<BrandProfile | null>
     businessId: row.business_id,
     logoPath: row.logo_path,
     logoDataUrl: await signedUrl(row.logo_path),
-    logoLocked: !!row.logo_locked,
     primary: row.primary_color,
     secondary: row.secondary_color,
     accent: row.accent_color ?? DEFAULT_BRAND.accent,
@@ -295,22 +293,22 @@ export async function saveBrand(businessId: string, patch: Partial<BrandProfile>
   if (patch.logoDataUrl !== undefined) {
     const current = await supabase
       .from("brand_profiles")
-      .select("logo_path, logo_locked")
+      .select("logo_path")
       .eq("business_id", businessId)
       .maybeSingle();
-    const currentRow = current.data as { logo_path: string | null; logo_locked: boolean } | null;
+    const currentRow = current.data as { logo_path: string | null } | null;
     const oldPath = currentRow?.logo_path ?? null;
-    // The database also blocks this. A locked logo can only be changed by an admin.
-    if (!currentRow?.logo_locked) {
-      if (patch.logoDataUrl === null) {
+    // The old file is removed only once its replacement is safely uploaded, so
+    // a failed upload leaves the brand with the logo it already had rather than
+    // with none.
+    if (patch.logoDataUrl === null) {
+      await removeFile(oldPath);
+      row["logo_path"] = null;
+    } else if (isDataUrl(patch.logoDataUrl)) {
+      const path = await uploadDataUrl(businessId, "logos", patch.logoDataUrl);
+      if (path) {
         await removeFile(oldPath);
-        row["logo_path"] = null;
-      } else if (isDataUrl(patch.logoDataUrl)) {
-        const path = await uploadDataUrl(businessId, "logos", patch.logoDataUrl);
-        if (path) {
-          await removeFile(oldPath);
-          row["logo_path"] = path;
-        }
+        row["logo_path"] = path;
       }
     }
   }

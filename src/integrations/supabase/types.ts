@@ -89,7 +89,6 @@ export type Database = {
           font_family: string
           font_secondary: string | null
           language: string
-          logo_locked: boolean
           logo_path: string | null
           primary_color: string
           secondary_color: string
@@ -107,7 +106,6 @@ export type Database = {
           font_family?: string
           font_secondary?: string | null
           language?: string
-          logo_locked?: boolean
           logo_path?: string | null
           primary_color?: string
           secondary_color?: string
@@ -125,7 +123,6 @@ export type Database = {
           font_family?: string
           font_secondary?: string | null
           language?: string
-          logo_locked?: boolean
           logo_path?: string | null
           primary_color?: string
           secondary_color?: string

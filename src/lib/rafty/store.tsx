@@ -503,7 +503,6 @@ export function useRafty() {
 export const previewBrand: BrandProfile = {
   businessId: "preview",
   logoDataUrl: null,
-  logoLocked: false,
   accent: DEFAULT_BRAND.accent,
   background: null,
   fontSecondary: null,
