@@ -1170,7 +1170,12 @@ function CreatePage() {
               saving={saving}
               size={{ width: size.width, height: size.height }}
               exportable={spec.exportable}
-              publish={{ businessId: business.id, savePost }}
+              // Only stills. Publishing hands Instagram a url to the saved
+              // render, and a video post has no render: savePostRender runs for
+              // the post format alone, and the Graph call sends image_url, which
+              // is not how a Reel is published. Offering the button here would
+              // be offering an action that cannot succeed.
+              {...(format === "post" ? { publish: { businessId: business.id, savePost } } : {})}
             />
           ) : (
             <Button className="h-12 w-full rounded-xl" onClick={generate} disabled={locked}>

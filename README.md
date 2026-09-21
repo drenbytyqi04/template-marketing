@@ -179,6 +179,17 @@ connect-and-publish flow and a description of why each permission is needed.
 Until that is granted, connecting works for your own accounts and for nobody
 else's.
 
+### What can be published, and what cannot
+
+Images only, for now. The Graph call sends `image_url`, which is how a photo
+post is created; a Reel is a different flow - `media_type=REELS` with a
+`video_url`, and a much longer wait while Meta transcodes. Video posts
+therefore do not offer the Publish button, and their clips are downloaded and
+uploaded by hand.
+
+That download is an MP4 with H.264 video and AAC audio wherever the browser can
+encode it, which is what Instagram accepts for both a feed post and a story.
+
 ### How publishing works
 
 1. The editor renders the design through the same exporter the Download button
