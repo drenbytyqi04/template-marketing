@@ -1,6 +1,11 @@
 import { toPng } from "html-to-image";
 import { FONT_LIBRARY } from "./constants";
-import { canExportVideo, renderVideoPosterToDataUrl, renderVideoPostToBlob } from "./video-export";
+import {
+  canExportVideo,
+  renderVideoPosterToDataUrl,
+  renderVideoPostToBlob,
+  videoExtension,
+} from "./video-export";
 import { tagSrgbDataUrl } from "./png-srgb";
 
 /** Always embedded: every template declares these as its fallback faces. */
@@ -243,7 +248,11 @@ export async function downloadNode(
     isVideoPost && video && canExportVideo()
       ? await renderVideoPostToBlob(node, video, size ?? { width: 1080, height: 1920 })
       : await renderPostToBlob(node, filename, size);
-  const extension = blob.type.startsWith("video/") ? "webm" : "png";
+  // Named from what the file is, not from what the exporter used to produce.
+  // Every clip was called .webm because WebM was once the only possible output;
+  // now that an MP4 can come back, a fixed extension would put the wrong name on
+  // it and a file named .webm holding MP4 opens nowhere.
+  const extension = blob.type.startsWith("video/") ? videoExtension(blob) : "png";
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -261,7 +270,7 @@ export async function downloadNode(
   // why saving an image "sometimes" did nothing. Hold the URL until the transfer
   // has certainly begun.
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
-  return extension === "webm" ? "video" : "image";
+  return extension === "png" ? "image" : "video";
 }
 
 /** Same export, returned as a File so it can be handed to the Web Share API. */

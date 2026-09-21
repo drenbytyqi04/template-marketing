@@ -8,8 +8,8 @@ import { toPng } from "html-to-image";
  * stream, plus the clip's own audio, is captured by MediaRecorder.
  *
  * Capture is real time by construction: MediaRecorder records a live stream, so a
- * fifteen second clip takes fifteen seconds. The output is WebM, the only format
- * MediaRecorder is guaranteed to produce.
+ * fifteen second clip takes fifteen seconds. The container is MP4 wherever the
+ * browser can encode H.264, and WebM where it cannot.
  */
 
 export type VideoExportSize = { width: number; height: number };
@@ -31,17 +31,37 @@ type FootageRect = { x: number; y: number; width: number; height: number };
 type Overlay = { gain: HTMLCanvasElement; constant: HTMLCanvasElement; rect: FootageRect };
 
 /**
- * WebM with a codec this browser will actually encode.
+ * The best container and codec this browser will actually encode.
  *
- * VP8 leads rather than VP9. isTypeSupported answers whether the browser knows
- * the codec, not whether it can encode a 1080x1920 stream in real time on this
- * machine, and a VP9 encoder that cannot keep up gives up part way: the
- * recorder emits its first chunk and then errors, which lands as a file holding
- * a single frame. VP8 is the encoder every browser that offers MediaRecorder
- * has actually shipped.
+ * MP4 with H.264 leads, because that is the file people can use: it opens on a
+ * phone, it uploads to Instagram, it drops into any editor. WebM does none of
+ * those reliably, and a clip nobody can post is not an export.
+ *
+ * H.264 is asked for by name rather than by container. Requesting bare
+ * "video/mp4" reports supported on builds that have no H.264 encoder at all and
+ * then hands back VP9 inside an MP4 - measured, not assumed: a test recording
+ * on Chromium 141 came out carrying a `vp09` sample entry. That file has the
+ * right extension and fails everywhere the extension promised it would work,
+ * which is worse than an honest WebM. Bare "video/mp4" still appears, last of
+ * the MP4 options, because Safari answers only to that spelling and does
+ * produce H.264 - the ordering means it is reached only when no explicit H.264
+ * string was accepted.
+ *
+ * VP8 leads the WebM fallbacks rather than VP9. isTypeSupported answers whether
+ * the browser knows the codec, not whether it can encode a 1080x1920 stream in
+ * real time on this machine, and a VP9 encoder that cannot keep up gives up part
+ * way: the recorder emits its first chunk and then errors, which lands as a file
+ * holding a single frame. VP8 is the encoder every browser that offers
+ * MediaRecorder has actually shipped.
  */
 function pickMimeType(): string | undefined {
   const candidates = [
+    // H.264 baseline with AAC: the combination with the fewest ways to fail.
+    "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+    "video/mp4;codecs=avc1.42E01E",
+    "video/mp4;codecs=avc1",
+    "video/mp4;codecs=h264",
+    "video/mp4",
     "video/webm;codecs=vp8,opus",
     "video/webm;codecs=vp8",
     "video/webm;codecs=vp9,opus",
@@ -49,6 +69,42 @@ function pickMimeType(): string | undefined {
     "video/webm",
   ];
   return candidates.find((type) => MediaRecorder.isTypeSupported(type));
+}
+
+/**
+ * The file extension a blob has earned, from what it actually is.
+ *
+ * The download used to name every clip `.webm` because that was the only thing
+ * the recorder produced. Now that it can produce either, the name has to follow
+ * the bytes: a `.mp4` holding WebM is a file that opens nowhere.
+ */
+export function videoExtension(blob: Blob): "mp4" | "webm" {
+  return blob.type.includes("mp4") ? "mp4" : "webm";
+}
+
+/**
+ * Whether an MP4 really carries H.264.
+ *
+ * Only a warning, never a reason to refuse the file: it plays in a browser
+ * either way, and re-recording to find out would cost the person the whole
+ * length of their clip a second time. It exists so that if someone reports a
+ * clip Instagram would not take, the reason is already in the console.
+ */
+async function warnIfNotH264(blob: Blob): Promise<void> {
+  if (!blob.type.includes("mp4")) return;
+  try {
+    const head = new Uint8Array(await blob.slice(0, 4096).arrayBuffer());
+    let text = "";
+    for (const byte of head) text += String.fromCharCode(byte);
+    if (text.includes("avc1")) return;
+    const codec = ["vp09", "vp08", "av01", "hvc1"].find((name) => text.includes(name));
+    console.warn(
+      `[video-export] This browser wrote ${codec ?? "an unknown codec"} into the MP4 rather than ` +
+        "H.264. The clip plays in a browser but some platforms will refuse it.",
+    );
+  } catch {
+    /* a sniff that fails tells us nothing, and must not fail the export */
+  }
 }
 
 /**
@@ -496,8 +552,12 @@ export async function renderVideoPostToBlob(
       }
       best = attempt.blob;
       // Within a tenth of the time it was recorded over is a faithful clip.
-      if (clip.seconds >= (attempt.wallMs / 1000) * 0.9) return attempt.blob;
+      if (clip.seconds >= (attempt.wallMs / 1000) * 0.9) {
+        await warnIfNotH264(attempt.blob);
+        return attempt.blob;
+      }
     }
+    await warnIfNotH264(best!);
     return best!;
   } finally {
     release();
