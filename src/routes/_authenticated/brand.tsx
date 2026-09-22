@@ -515,10 +515,14 @@ function BrandPage() {
     if (!dirty || savingBrand) return;
     setSavingBrand(true);
     try {
-      await saveBrand({
+      const result = await saveBrand({
         ...(brandDirty && draft ? draft : {}),
         ...(instructionsDirty && instructions ? { instructions } : {}),
       });
+      if (!result.ok) {
+        toast.error(result.error ?? "Could not save the changes. Please try again.");
+        return;
+      }
       setInstructions(null);
       toast.success(t("brand.saved"));
     } catch {
@@ -643,8 +647,12 @@ function BrandPage() {
                 onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
-                  await saveBrand({ logoDataUrl: await readFileAsDataUrl(file) });
-                  toast.success(t("brand.saved"));
+                  const result = await saveBrand({ logoDataUrl: await readFileAsDataUrl(file) });
+                  // The old code said "Brand saved" whatever happened, which is
+                  // how a refused write looked identical to a successful one.
+                  if (result.ok) toast.success(t("brand.saved"));
+                  else toast.error(result.error ?? "Could not change the logo.");
+                  e.target.value = "";
                 }}
               />
               <span className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border px-4 text-sm font-semibold">
@@ -722,7 +730,9 @@ function BrandPage() {
 
       <ContactForm
         value={brand.contact ?? emptyContact}
-        onSave={(contact) => saveBrand({ contact })}
+        onSave={async (contact) => {
+          await saveBrand({ contact });
+        }}
       />
 
       <div className="card-soft grid gap-3 p-4">

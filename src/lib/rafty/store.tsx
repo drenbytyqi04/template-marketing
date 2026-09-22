@@ -79,7 +79,7 @@ type Ctx = {
   signUp: (input: { name: string; email: string; password: string }) => Promise<Result>;
   signOut: () => Promise<void>;
   completeOnboarding: (input: OnboardingInput) => Promise<void>;
-  saveBrand: (patch: Partial<BrandProfile>) => Promise<void>;
+  saveBrand: (patch: Partial<BrandProfile>) => Promise<Result>;
   renameBusiness: (name: string) => Promise<void>;
   addService: (name: string) => Promise<Result>;
   renameService: (serviceId: string, name: string) => Promise<Result>;
@@ -252,7 +252,10 @@ export function RaftyProvider({ children }: { children: React.ReactNode }) {
         customType: input.customType ?? null,
         onboarded: true,
       });
-      await repo.saveBrand(businessId, {
+      // Onboarding writes the whole brand at once. A refused write here used to
+      // leave a business created with no styling and no word about it, so the
+      // reason is carried back rather than dropped.
+      const saved = await repo.saveBrand(businessId, {
         logoDataUrl: input.logoDataUrl,
         primary: input.primary,
         secondary: input.secondary,
@@ -262,6 +265,9 @@ export function RaftyProvider({ children }: { children: React.ReactNode }) {
         currency: input.currency,
         language: input.language,
       });
+      // Onboarding continues either way - the business exists and can be
+      // styled from Brand - but a refusal is written down rather than lost.
+      if (!saved.ok) console.error("[onboarding] brand not saved:", saved.error);
       const current = await repo.listServices(businessId);
       await Promise.all(current.map((s) => repo.removeService(s.id)));
       for (const name of input.services) await repo.addService(businessId, name);
@@ -279,10 +285,13 @@ export function RaftyProvider({ children }: { children: React.ReactNode }) {
   );
 
   const saveBrandFn = useCallback(
-    async (patch: Partial<BrandProfile>) => {
-      if (!business) return;
-      await repo.saveBrand(business.id, patch);
+    async (patch: Partial<BrandProfile>): Promise<Result> => {
+      if (!business) return { ok: false, error: "No brand is selected." };
+      const result = await repo.saveBrand(business.id, patch);
+      // Refreshed even on failure, so the screen shows what was actually
+      // stored rather than the value the form hoped it had written.
       refresh();
+      return result;
     },
     [business, refresh],
   );

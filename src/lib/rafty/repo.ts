@@ -276,7 +276,19 @@ export async function getBrand(businessId: string): Promise<BrandProfile | null>
   };
 }
 
-export async function saveBrand(businessId: string, patch: Partial<BrandProfile>) {
+/**
+ * Writes the brand, and says whether it worked.
+ *
+ * It used to return nothing and throw nothing: the upload could fail, the write
+ * could be refused by a database rule, and the caller would show "Brand saved"
+ * either way. Somebody replacing a logo saw the confirmation, saw the old logo,
+ * and had no way to find out which of the two was lying. A write that can fail
+ * has to report it.
+ */
+export async function saveBrand(
+  businessId: string,
+  patch: Partial<BrandProfile>,
+): Promise<{ ok: boolean; error?: string }> {
   const row: Record<string, any> = {};
   if (patch.primary !== undefined) row["primary_color"] = patch.primary;
   if (patch.secondary !== undefined) row["secondary_color"] = patch.secondary;
@@ -306,17 +318,26 @@ export async function saveBrand(businessId: string, patch: Partial<BrandProfile>
       row["logo_path"] = null;
     } else if (isDataUrl(patch.logoDataUrl)) {
       const path = await uploadDataUrl(businessId, "logos", patch.logoDataUrl);
-      if (path) {
-        await removeFile(oldPath);
-        row["logo_path"] = path;
+      // A failed upload is reported instead of being skipped. Carrying on would
+      // write every other field and leave the logo untouched, which looks
+      // exactly like success.
+      if (!path) {
+        return { ok: false, error: "The logo could not be uploaded. Please try a smaller image." };
       }
+      await removeFile(oldPath);
+      row["logo_path"] = path;
     }
   }
 
-  if (Object.keys(row).length === 0) return;
-  await supabase
+  if (Object.keys(row).length === 0) return { ok: true };
+  const { error } = await supabase
     .from("brand_profiles")
     .upsert({ business_id: businessId, ...row } as never, { onConflict: "business_id" });
+  if (error) {
+    console.error("[brand] save refused:", error.message);
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
 }
 
 /* ---------------------------------- plan ---------------------------------- */
