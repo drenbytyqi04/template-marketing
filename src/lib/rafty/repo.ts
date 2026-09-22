@@ -868,14 +868,34 @@ export async function savePost(post: PostWithContact): Promise<PostWithContact |
   return saved;
 }
 
+/**
+ * Deletes a post and every file it owns.
+ *
+ * It used to take the uploaded picture and the slide pictures and leave the
+ * other two behind: the rendered export, which every saved post has, and the
+ * footage on a video post, which is by far the largest thing anyone uploads.
+ * Storage is billed whether or not a row still points at a file, and nothing
+ * else ever went looking for these - a brand that made and deleted fifty video
+ * posts was paying for fifty clips nothing could reach.
+ */
 export async function deletePost(postId: string) {
   const { data } = await supabase
     .from("posts")
-    .select("image_path, slides")
+    .select("image_path, render_path, content, slides")
     .eq("id", postId)
     .maybeSingle();
-  const row = data as { image_path: string | null; slides: StoredSlide[] | null } | null;
+  const row = data as {
+    image_path: string | null;
+    render_path: string | null;
+    // The footage path rides inside the content json rather than in a column
+    // of its own, which is most of why it was missed here.
+    content: { videoPath?: string | null } | null;
+    slides: StoredSlide[] | null;
+  } | null;
+
   await removeFile(row?.image_path ?? null);
+  await removeFile(row?.render_path ?? null);
+  await removeFile(row?.content?.videoPath ?? null);
   for (const slide of row?.slides ?? []) await removeFile(slide.imagePath ?? null);
   await supabase.from("posts").delete().eq("id", postId);
 }
