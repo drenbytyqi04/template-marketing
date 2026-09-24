@@ -23,6 +23,7 @@ import { TextItemsEditor } from "@/components/rafty/TextItemsEditor";
 import { AppShell } from "@/components/rafty/AppShell";
 import { PostCanvas } from "@/components/rafty/PostCanvas";
 import { AdjustControls } from "@/components/rafty/AdjustControls";
+import { LogoControls } from "@/components/rafty/LogoControls";
 import { ShareActions } from "@/components/rafty/ShareActions";
 import { FormatPicker } from "@/components/rafty/FormatPicker";
 import { includedOptions, snapshotOfBrand, type OfferRow } from "@/lib/rafty/types";
@@ -1048,6 +1049,11 @@ function CreatePage() {
                 <p className="text-sm font-semibold">Show brand name</p>
                 <Switch checked={showBrandName} onCheckedChange={setShowBrandName} />
               </div>
+
+              {/* Only worth showing to a brand that has a mark to place. */}
+              {brand?.logoDataUrl ? (
+                <LogoControls adjustments={active.adjustments} onChange={setAdjustments} />
+              ) : null}
 
               <div className="grid gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
                 <div className="flex items-center justify-between">
