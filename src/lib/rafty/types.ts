@@ -219,7 +219,6 @@ export type BrandProfile = {
   logoPath?: string | null;
   /** Short lived signed url used for rendering only. */
   logoDataUrl: string | null;
-  /** Once a logo is saved only a krijo24 admin can replace it. */
   primary: string;
   secondary: string;
   accent: string;
@@ -435,9 +434,32 @@ export type LayerAdjust = {
   align: "left" | "center" | "right";
 };
 
+/**
+ * Where the brand mark sits on a post.
+ *
+ * "design" is the template's own answer: the mark stays in the lockup, beside
+ * the business name, wherever that design chose to put it. A corner is the
+ * customer overriding that - it lifts the mark out of the lockup and pins it to
+ * the frame instead, which is what someone means when they say "put my logo top
+ * right". The name stays where the design had it either way; only the mark
+ * moves, because only the mark was asked about.
+ */
+export type LogoPlace = "design" | "topLeft" | "topRight" | "bottomLeft" | "bottomRight";
+
+export type LogoAdjust = {
+  place: LogoPlace;
+  /** Multiplier on the size the design gives the mark, not an absolute size, so
+   * a post keeps its proportions when it is exported at another shape. */
+  scale: number;
+  /** Nudges from the chosen corner, in the same units as the text nudges. */
+  x: number;
+  y: number;
+};
+
 export type PostAdjustments = {
   text?: LayerAdjust;
   image?: { x: number; y: number; scale: number };
+  logo?: LogoAdjust;
 };
 
 export type ShareStatus = {
@@ -556,6 +578,8 @@ export const emptyContent: PostContent = {
 };
 
 export const defaultAdjust: LayerAdjust = { x: 0, y: 0, scale: 1, align: "left" };
+
+export const defaultLogoAdjust: LogoAdjust = { place: "design", scale: 1, x: 0, y: 0 };
 
 /* ------------------------- scheduling and connections ---------------------- */
 

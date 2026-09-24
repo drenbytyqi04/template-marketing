@@ -13,7 +13,14 @@ import {
   ZoomOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { defaultAdjust, type LayerAdjust, type PostAdjustments } from "@/lib/rafty/types";
+import {
+  defaultLogoAdjust,
+  defaultAdjust,
+  type LayerAdjust,
+  type LogoAdjust,
+  type LogoPlace,
+  type PostAdjustments,
+} from "@/lib/rafty/types";
 
 type Props = {
   adjustments: PostAdjustments;
@@ -29,6 +36,26 @@ const clampOffset = (v: number) => Math.max(-OFFSET_LIMIT, Math.min(OFFSET_LIMIT
 const clampScale = (v: number) =>
   Math.round(Math.max(SCALE_MIN, Math.min(SCALE_MAX, v)) * 100) / 100;
 
+// The mark has far more room to move than the text does: the text is a whole
+// block that the design balanced, while the logo is one object the customer is
+// placing on purpose. Kept in step with the bounds the renderer enforces, which
+// are the ones that actually hold.
+const LOGO_SCALE_MIN = 0.5;
+const LOGO_SCALE_MAX = 3;
+const LOGO_STEP = 0.1;
+
+const clampLogoScale = (v: number) =>
+  Math.round(Math.max(LOGO_SCALE_MIN, Math.min(LOGO_SCALE_MAX, v)) * 10) / 10;
+
+/** Where the mark can go, in the order the buttons read. */
+const LOGO_PLACES: { id: LogoPlace; label: string }[] = [
+  { id: "design", label: "Template" },
+  { id: "topLeft", label: "Top left" },
+  { id: "topRight", label: "Top right" },
+  { id: "bottomLeft", label: "Bottom left" },
+  { id: "bottomRight", label: "Bottom right" },
+];
+
 /**
  * Compact touch friendly adjust panel for the dynamic content layer and the
  * uploaded image. It only ever edits PostAdjustments, never the template.
@@ -36,11 +63,14 @@ const clampScale = (v: number) =>
 export function AdjustControls({ adjustments, onChange }: Props) {
   const text: LayerAdjust = { ...defaultAdjust, ...(adjustments.text ?? {}) };
   const image = { x: 0, y: 0, scale: 1, ...(adjustments.image ?? {}) };
+  const logo: LogoAdjust = { ...defaultLogoAdjust, ...(adjustments.logo ?? {}) };
 
   const setText = (patch: Partial<LayerAdjust>) =>
     onChange({ ...adjustments, text: { ...text, ...patch } });
   const setImage = (patch: Partial<{ x: number; y: number; scale: number }>) =>
     onChange({ ...adjustments, image: { ...image, ...patch } });
+  const setLogo = (patch: Partial<LogoAdjust>) =>
+    onChange({ ...adjustments, logo: { ...logo, ...patch } });
 
   const nudgeText = (dx: number, dy: number) =>
     setText({ x: clampOffset(text.x + dx), y: clampOffset(text.y + dy) });
@@ -50,9 +80,20 @@ export function AdjustControls({ adjustments, onChange }: Props) {
     setImage({ x: clampOffset(image.x + dx), y: clampOffset(image.y + dy) });
   const resizeImage = (delta: number) => setImage({ scale: clampScale(image.scale + delta) });
 
+  const nudgeLogo = (dx: number, dy: number) =>
+    setLogo({ x: clampOffset(logo.x + dx), y: clampOffset(logo.y + dy) });
+  const resizeLogo = (delta: number) => setLogo({ scale: clampLogoScale(logo.scale + delta) });
+  /** True while the template still decides where the mark goes. */
+  const pinned = logo.place === "design";
+
   const resetAll = () => onChange({});
 
-  const dirButton = (icon: React.ReactNode, onClick: () => void, label: string) => (
+  const dirButton = (
+    icon: React.ReactNode,
+    onClick: () => void,
+    label: string,
+    disabled = false,
+  ) => (
     <Button
       type="button"
       variant="outline"
@@ -60,6 +101,7 @@ export function AdjustControls({ adjustments, onChange }: Props) {
       className="size-11 rounded-xl"
       aria-label={label}
       onClick={onClick}
+      disabled={disabled}
     >
       {icon}
     </Button>
@@ -137,8 +179,73 @@ export function AdjustControls({ adjustments, onChange }: Props) {
         {dirButton(<ZoomIn className="size-4" />, () => resizeImage(STEP / 100), "Zoom image in")}
       </div>
 
+      <div className="h-px bg-border" />
+
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold">Logo</p>
+        <span className="text-xs text-muted-foreground">{Math.round(logo.scale * 100)}%</span>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {LOGO_PLACES.map((option) => (
+          <Button
+            key={option.id}
+            type="button"
+            variant={logo.place === option.id ? "default" : "outline"}
+            size="sm"
+            className="h-10 rounded-xl"
+            onClick={() => setLogo({ place: option.id })}
+          >
+            {option.label}
+          </Button>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {dirButton(
+          <Minus className="size-4" />,
+          () => resizeLogo(-LOGO_STEP),
+          "Make the logo smaller",
+        )}
+        {dirButton(
+          <Plus className="size-4" />,
+          () => resizeLogo(LOGO_STEP),
+          "Make the logo bigger",
+        )}
+        <div className="mx-1 h-8 w-px bg-border" />
+        {/* The nudges move the mark away from the corner it is pinned to, so
+            they have nothing to act on while the template is placing it.
+            Disabled rather than hidden: a control that vanishes reads as a bug,
+            and one that does nothing when pressed reads as a broken one. */}
+        {dirButton(
+          <ArrowUp className="size-4" />,
+          () => nudgeLogo(0, -1),
+          "Move the logo up",
+          pinned,
+        )}
+        {dirButton(
+          <ArrowDown className="size-4" />,
+          () => nudgeLogo(0, 1),
+          "Move the logo down",
+          pinned,
+        )}
+        {dirButton(
+          <ArrowLeft className="size-4" />,
+          () => nudgeLogo(-1, 0),
+          "Move the logo left",
+          pinned,
+        )}
+        {dirButton(
+          <ArrowRight className="size-4" />,
+          () => nudgeLogo(1, 0),
+          "Move the logo right",
+          pinned,
+        )}
+      </div>
+
       <p className="text-xs text-muted-foreground">
-        Nudges are kept small so the layout always stays on brand.
+        Text and picture nudges are kept small so the layout always stays on brand. The logo is
+        yours to place: pick a corner, or leave it where the template puts it.
       </p>
     </div>
   );

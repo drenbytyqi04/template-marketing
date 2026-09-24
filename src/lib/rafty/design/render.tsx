@@ -17,6 +17,8 @@ import { GRID } from "./spec";
 
 const px = (n: number) => `${n}cqw`;
 
+const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+
 /**
  * The brand mark's box in the lockup.
  *
@@ -29,7 +31,85 @@ const px = (n: number) => `${n}cqw`;
  * it down inside the box, so a banner-shaped logo takes a sensible share of the
  * row instead of pushing the business name off the end of it.
  */
-const LOGO = { height: 8, maxWidth: 38 } as const;
+const LOGO = {
+  height: 8,
+  maxWidth: 38,
+  /** What the customer may scale the mark to. Half size still reads; past three
+   * times it stops being a logo on a post and becomes the post. */
+  minScale: 0.5,
+  maxScale: 3,
+} as const;
+
+/** The mark itself, at a multiple of the size the design gives it. Both the
+ * lockup and a corner placement draw it through here, so a logo moved out of
+ * the lockup is the same drawing in a different spot rather than a second
+ * implementation that drifts from the first. */
+function LogoMark({ src, scale, page }: { src: string; scale: number; page: number }) {
+  return (
+    <img
+      src={src}
+      alt=""
+      crossOrigin="anonymous"
+      style={{
+        height: px(LOGO.height * scale),
+        // Never wider than the design's own content width, whatever the scale:
+        // a banner-shaped mark scaled up should grow until it spans the page
+        // and then stop, not run off both sides of the frame.
+        maxWidth: px(Math.min(LOGO.maxWidth * scale, 100 - page * 2)),
+        width: "auto",
+        objectFit: "contain",
+      }}
+    />
+  );
+}
+
+/** How far a nudge may carry the mark from its corner, in cqw. The same bound
+ * the text nudges use, for the same reason: a post that can be pushed out of
+ * its own frame is not an adjustment, it is a way to ruin an export. */
+const LOGO_NUDGE = 12;
+
+/** The customer's own logo settings, resolved and clamped. A post saved before
+ * this existed has none, and gets the design's answer. */
+function logoAdjust(ctx: RenderCtx) {
+  const a = ctx.adjustments?.logo;
+  return {
+    place: a?.place ?? "design",
+    scale: clamp(a?.scale ?? 1, LOGO.minScale, LOGO.maxScale),
+    x: clamp(a?.x ?? 0, -LOGO_NUDGE, LOGO_NUDGE),
+    y: clamp(a?.y ?? 0, -LOGO_NUDGE, LOGO_NUDGE),
+  };
+}
+
+/**
+ * The mark pinned to a corner of the frame, when the customer has moved it out
+ * of the lockup.
+ *
+ * It is drawn after the field, so it sits over the design rather than under it:
+ * somebody who has deliberately placed their logo somewhere should not find a
+ * headline on top of it. The insets start from the design's own page margin, so
+ * a logo in a corner lines up with everything else on the page, and the nudges
+ * stop at the edge rather than carrying it off the canvas.
+ */
+function FloatingLogo({ ctx, page }: { ctx: RenderCtx; page: number }) {
+  const logo = ctx.brand.logoDataUrl;
+  const { place, scale, x, y } = logoAdjust(ctx);
+  if (!logo || place === "design") return null;
+  const top = place === "topLeft" || place === "topRight";
+  const left = place === "topLeft" || place === "bottomLeft";
+  const inset = (base: number) => px(Math.max(0, base));
+  return (
+    <div
+      style={{
+        position: "absolute",
+        ...(top ? { top: inset(page + y) } : { bottom: inset(page - y) }),
+        ...(left ? { left: inset(page + x) } : { right: inset(page - x) }),
+        display: "flex",
+      }}
+    >
+      <LogoMark src={logo} scale={scale} page={page} />
+    </div>
+  );
+}
 
 const font = (ctx: RenderCtx) =>
   `"${ctx.brand.fontFamily}", "Sora", ui-sans-serif, system-ui, sans-serif`;
@@ -281,9 +361,14 @@ function reserveOf(part: Part, ctx: RenderCtx): number {
     case "brand": {
       // The row is as tall as its tallest half, not a flat 5 for either. A
       // lockup that is only a name asked for a mark's worth of room it never
-      // used, and now that the mark is the taller of the two it has to say so.
+      // used, and now that the mark is the taller of the two it has to say so -
+      // at whatever size the customer set, and only while the mark is still in
+      // the lockup at all. A logo moved to a corner hands its room back to the
+      // headline, which is the whole point of having moved it.
+      const { place, scale } = logoAdjust(ctx);
       const name = ctx.showBrandName && ctx.businessName ? TYPE.body * 1.5 : 0;
-      return Math.max(ctx.brand.logoDataUrl ? LOGO.height : 0, name);
+      const mark = ctx.brand.logoDataUrl && place === "design" ? LOGO.height * scale : 0;
+      return Math.max(mark, name);
     }
     case "contact":
       return ctx.showContact ? TYPE.label * 1.5 : 0;
@@ -761,27 +846,19 @@ function Cta({ ctx, tone, as }: { ctx: RenderCtx; tone: Tone; as: "bar" | "tag" 
   );
 }
 
-function Brand({ ctx, tone }: { ctx: RenderCtx; tone: Tone }) {
+function Brand({ ctx, tone, page }: { ctx: RenderCtx; tone: Tone; page: number }) {
   const showName = !!ctx.showBrandName && !!ctx.businessName;
-  const logo = ctx.brand.logoDataUrl;
+  const { place, scale } = logoAdjust(ctx);
+  // A mark the customer has pinned to a corner is drawn there, by FloatingLogo,
+  // and must not also be drawn here - that is the one way this feature could
+  // put two copies of a logo on one post.
+  const logo = place === "design" ? ctx.brand.logoDataUrl : null;
   // Always a box, even when empty: a block that spreads its parts between the
   // top and the foot of the frame loses that arrangement when a part vanishes.
   if (!showName && !logo) return <span aria-hidden style={{ display: "block" }} />;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: px(SPACE.md) }}>
-      {logo ? (
-        <img
-          src={logo}
-          alt=""
-          crossOrigin="anonymous"
-          style={{
-            height: px(LOGO.height),
-            maxWidth: px(LOGO.maxWidth),
-            width: "auto",
-            objectFit: "contain",
-          }}
-        />
-      ) : null}
+      {logo ? <LogoMark src={logo} scale={scale} page={page} /> : null}
       {showName ? (
         <span
           style={{
@@ -829,6 +906,7 @@ function renderPart(
   ctx: RenderCtx,
   tone: Tone,
   key: number,
+  page: number,
   room?: number,
 ): React.ReactNode {
   switch (part.t) {
@@ -869,7 +947,7 @@ function renderPart(
     case "cta":
       return <Cta key={key} ctx={ctx} tone={tone} as={part.as} />;
     case "brand":
-      return <Brand key={key} ctx={ctx} tone={tone} />;
+      return <Brand key={key} ctx={ctx} tone={tone} page={page} />;
     case "contact":
       return <Contact key={key} ctx={ctx} tone={tone} />;
     case "rule":
@@ -917,11 +995,13 @@ function BlockNode({
   ctx,
   tone,
   rowHeight,
+  page,
 }: {
   block: Block;
   ctx: RenderCtx;
   tone: Tone;
   rowHeight: number;
+  page: number;
 }) {
   const [c1, c2, r1, r2] = block.area;
   const own = blockTone(block, tone);
@@ -962,14 +1042,12 @@ function BlockNode({
         ...panelStyle(block, ctx),
       }}
     >
-      {block.parts.map((part, i) => renderPart(part, ctx, own, i, room))}
+      {block.parts.map((part, i) => renderPart(part, ctx, own, i, page, room))}
     </div>
   );
 }
 
 /* ---------------------------------- design --------------------------------- */
-
-const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
 /** Draws one design. The page margin and the field are the same for every
  * design, which is most of what makes a set look like a set. */
@@ -1014,9 +1092,17 @@ export function renderDesign(spec: DesignSpec, ctx: RenderCtx): React.ReactNode 
         }}
       >
         {spec.blocks.map((block, i) => (
-          <BlockNode key={i} block={block} ctx={ctx} tone={spec.tone} rowHeight={rowHeight} />
+          <BlockNode
+            key={i}
+            block={block}
+            ctx={ctx}
+            tone={spec.tone}
+            rowHeight={rowHeight}
+            page={page}
+          />
         ))}
       </div>
+      <FloatingLogo ctx={ctx} page={page} />
     </div>
   );
 }
