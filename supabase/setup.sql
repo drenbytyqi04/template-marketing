@@ -1592,4 +1592,213 @@ where lower(u.email) = 'dren.bytyqi19@gmail.com'
 on conflict (user_id, role) do nothing;
 
 
+-- ============================================================
+-- 20260907230000_unlimited_brands_all_plans.sql
+-- ============================================================
+
+-- Brands are no longer gated by plan. create_brand() enforced a per-plan cap and
+-- raised "Your plan allows N brand(s)", so enabling the Add brand button in the UI
+-- alone would have produced a save that fails at the database instead.
+--
+-- The brand_limit column and my_brand_limit() are kept so the cap can be
+-- reintroduced later without a schema change; nothing reads them to block a
+-- create any more.
+create or replace function public.create_brand(_name text, _type business_type, _custom_type text default null)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  _uid uuid := auth.uid();
+  _id uuid;
+begin
+  if _uid is null then
+    raise exception 'Authentication required';
+  end if;
+
+  insert into public.account_plans (user_id) values (_uid) on conflict (user_id) do nothing;
+
+  insert into public.businesses (name, type, custom_type, owner_id, status, onboarded)
+  values (
+    coalesce(nullif(btrim(_name), ''), 'My brand'),
+    _type,
+    nullif(btrim(coalesce(_custom_type, '')), ''),
+    _uid, 'pending', false
+  )
+  returning id into _id;
+
+  insert into public.business_members (business_id, user_id, role) values (_id, _uid, 'owner');
+  insert into public.brand_profiles (business_id) values (_id);
+  insert into public.trial_usage (business_id) values (_id);
+
+  return _id;
+end;
+$$;
+
+revoke all on function public.create_brand(text, business_type, text) from public, anon;
+grant execute on function public.create_brand(text, business_type, text) to authenticated;
+
+-- Existing accounts keep a limit only as a display value; raise it so nothing
+-- reports "0 slots left".
+update public.account_plans set brand_limit = 999 where brand_limit < 999;
+
+-- businesses_owner_unique made one brand per owner a physical constraint, so no
+-- plan limit or UI change could ever have allowed a second one: the insert above
+-- would fail on the unique index. The upstream schema shipped this index in its
+-- first migration and added multi-brand plans afterwards, so the feature could
+-- not have worked as sold.
+drop index if exists public.businesses_owner_unique;
+
+-- Owner lookups still need an index, just not a unique one.
+create index if not exists businesses_owner_idx on public.businesses (owner_id);
+
+
+-- ============================================================
+-- 20260908010000_post_brand_snapshot.sql
+-- ============================================================
+
+-- Saved posts rendered with the brand's CURRENT colours and fonts, so editing the
+-- palette silently restyled every post ever made, including ones already
+-- downloaded and published. A post is a finished artefact: it should keep the
+-- brand it was made with.
+--
+-- The snapshot holds only what the templates read while rendering. Contact block
+-- and "show brand name" are already stored per post.
+alter table public.posts
+  add column if not exists brand_snapshot jsonb;
+
+comment on column public.posts.brand_snapshot is
+  'Brand styling as it was when the post was saved: colours, fonts, logo path, currency, language. Null on posts created before this column, which fall back to the live brand.';
+
+-- Freeze posts that already exist at exactly how they render today. Nothing
+-- changes visually; they simply stop following future palette edits.
+update public.posts p
+set brand_snapshot = jsonb_build_object(
+  'primary',       bp.primary_color,
+  'secondary',     bp.secondary_color,
+  'accent',        bp.accent_color,
+  'background',    bp.background_color,
+  'fontFamily',    bp.font_family,
+  'fontSecondary', bp.font_secondary,
+  'logoPath',      bp.logo_path,
+  'currency',      bp.currency,
+  'language',      bp.language
+)
+from public.brand_profiles bp
+where bp.business_id = p.business_id
+  and p.brand_snapshot is null;
+
+
+-- ============================================================
+-- 20260909230000_members_delete_pending_template_requests.sql
+-- ============================================================
+
+-- A brand owner can withdraw a custom template request while it is still
+-- waiting for review. Once it is ready or rejected the record is history and
+-- only a platform admin may touch it.
+create policy "Members delete own pending template requests"
+  on public.custom_template_requests
+  for delete
+  to authenticated
+  using (is_business_member(business_id) and status = 'processing');
+
+
+-- ============================================================
+-- 20260918220000_instagram_publish_now.sql
+-- ============================================================
+
+-- Publishing to Instagram from the editor, not only from the schedule.
+--
+-- Three things were missing for that. A brand could hold one account per
+-- platform, so an agency with two Instagram profiles had to disconnect one to
+-- reach the other. Nothing recorded what had been published, so a post that
+-- went out left no trace outside the schedule row that happened to trigger it.
+-- And the account row knew a label but not the handle or the avatar, so the UI
+-- could not show which profile it was about to post to.
+
+-- 1. More than one account per platform.
+--
+-- The old key was (business_id, platform). Widening it to include the account's
+-- own id is what lets a brand hold several profiles; the callback upserts on
+-- the wider key, so reconnecting an account it already knows still updates that
+-- row rather than adding a duplicate.
+alter table public.social_oauth_accounts drop constraint if exists social_oauth_accounts_business_id_platform_key;
+create unique index if not exists social_oauth_accounts_business_platform_external_key
+  on public.social_oauth_accounts (business_id, platform, external_id);
+
+-- What the picker needs to show a profile without ever reading the token.
+alter table public.social_oauth_accounts add column if not exists username text not null default '';
+alter table public.social_oauth_accounts add column if not exists profile_picture_url text;
+
+-- 2. What was published, and what happened.
+--
+-- Kept separate from scheduled_posts: that table is a queue, and a queue row is
+-- deleted or rescheduled. This is a record, and it outlives both the schedule
+-- and the connection - disconnecting an account must not erase the history of
+-- what it posted, so the account reference goes null rather than cascading.
+create table if not exists public.social_publications (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references public.businesses(id) on delete cascade,
+  post_id uuid references public.posts(id) on delete set null,
+  social_account_id uuid references public.social_oauth_accounts(id) on delete set null,
+  platform social_platform not null,
+  account_label text not null default '',
+  external_post_id text,
+  caption text not null default '',
+  media_path text,
+  status text not null default 'pending',
+  error_message text,
+  published_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint social_publications_status_check
+    check (status in ('pending', 'publishing', 'published', 'failed'))
+);
+
+create index if not exists social_publications_business_created_idx
+  on public.social_publications (business_id, created_at desc);
+
+alter table public.social_publications enable row level security;
+
+-- A member reads their brand's history. Nobody writes it from a browser: the
+-- only writer is the server, which holds the token and knows the real outcome.
+drop policy if exists "members read publications" on public.social_publications;
+create policy "members read publications" on public.social_publications
+  for select
+  using (public.is_business_member(business_id) or public.is_super_admin());
+
+revoke insert, update, delete on public.social_publications from anon, authenticated;
+grant all on public.social_publications to service_role;
+
+drop trigger if exists social_publications_updated_at on public.social_publications;
+create trigger social_publications_updated_at before update on public.social_publications
+for each row execute function public.update_updated_at_column();
+
+
+-- ============================================================
+-- 20260921120000_unlock_brand_logo.sql
+-- ============================================================
+
+-- A brand may change its own logo.
+--
+-- The rule was that the first save fixed the logo for good and only a krijo24
+-- admin could replace it, enforced by a trigger so the app could not talk its
+-- way around it. In practice it is the customer's own mark on the customer's
+-- own posts: they rebrand, they upload the wrong file, they get a version with
+-- a transparent background a week later. Every one of those turned into a
+-- support request for something they should simply be able to do.
+--
+-- The trigger goes before the column, because the function it runs raises an
+-- exception on any attempt to clear the flag - including this migration's.
+drop trigger if exists brand_profiles_guard_identity on public.brand_profiles;
+drop function if exists public.guard_brand_identity();
+
+-- Unlock what is already locked, then remove the flag entirely rather than
+-- leaving a column that no longer decides anything. A field that is read but
+-- never true is a rule waiting to be reintroduced by accident.
+update public.brand_profiles set logo_locked = false where logo_locked;
+alter table public.brand_profiles drop column if exists logo_locked;
+
+
 commit;
