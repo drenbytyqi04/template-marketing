@@ -17,6 +17,7 @@ import {
 import { AppShell } from "@/components/rafty/AppShell";
 import { useRafty } from "@/lib/rafty/store";
 import { readFileAsDataUrl } from "@/lib/rafty/file";
+import { trimTransparentEdges } from "@/lib/rafty/logo-trim";
 import {
   BUSINESS_TYPES,
   BUSINESS_TYPE_NAMES,
@@ -647,7 +648,10 @@ function BrandPage() {
                 onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
-                  const result = await saveBrand({ logoDataUrl: await readFileAsDataUrl(file) });
+                  // Trimmed before it is stored, so every template's logo box
+                  // holds the mark rather than the exporter's artboard.
+                  const logoDataUrl = await trimTransparentEdges(await readFileAsDataUrl(file));
+                  const result = await saveBrand({ logoDataUrl });
                   // The old code said "Brand saved" whatever happened, which is
                   // how a refused write looked identical to a successful one.
                   if (result.ok) toast.success(t("brand.saved"));

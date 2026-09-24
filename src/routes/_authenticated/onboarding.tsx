@@ -15,6 +15,7 @@ import {
 import { Logo } from "@/components/rafty/Logo";
 import { useRafty } from "@/lib/rafty/store";
 import { readFileAsDataUrl } from "@/lib/rafty/file";
+import { trimTransparentEdges } from "@/lib/rafty/logo-trim";
 import {
   BUSINESS_TYPES,
   CURRENCIES,
@@ -274,7 +275,7 @@ function OnboardingPage() {
                   className="hidden"
                   onChange={async (e) => {
                     const file = e.target.files?.[0];
-                    if (file) setLogo(await readFileAsDataUrl(file));
+                    if (file) setLogo(await trimTransparentEdges(await readFileAsDataUrl(file)));
                   }}
                 />
                 <span className="inline-flex h-11 cursor-pointer items-center rounded-xl border bg-card px-4 text-sm font-semibold">

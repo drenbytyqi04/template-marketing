@@ -17,6 +17,20 @@ import { GRID } from "./spec";
 
 const px = (n: number) => `${n}cqw`;
 
+/**
+ * The brand mark's box in the lockup.
+ *
+ * It was 5cqw, which put the mark at roughly the optical size of the words
+ * beside it - and the mark is the one thing on a post that has to be
+ * recognisable from a thumbnail in a feed, before anybody reads a word of it.
+ *
+ * The height can be raised safely only because of the width cap. A wordmark
+ * three times wider than it is tall hits `maxWidth` first, and `contain` scales
+ * it down inside the box, so a banner-shaped logo takes a sensible share of the
+ * row instead of pushing the business name off the end of it.
+ */
+const LOGO = { height: 8, maxWidth: 38 } as const;
+
 const font = (ctx: RenderCtx) =>
   `"${ctx.brand.fontFamily}", "Sora", ui-sans-serif, system-ui, sans-serif`;
 
@@ -264,8 +278,13 @@ function reserveOf(part: Part, ctx: RenderCtx): number {
     case "cta":
       if (!has(content.cta)) return 0;
       return part.as === "bar" ? TYPE.body * 1.4 + SPACE.sm * 2 : TYPE.body * 1.4 + SPACE.xs * 2;
-    case "brand":
-      return ctx.brand.logoDataUrl || (ctx.showBrandName && ctx.businessName) ? 5 : 0;
+    case "brand": {
+      // The row is as tall as its tallest half, not a flat 5 for either. A
+      // lockup that is only a name asked for a mark's worth of room it never
+      // used, and now that the mark is the taller of the two it has to say so.
+      const name = ctx.showBrandName && ctx.businessName ? TYPE.body * 1.5 : 0;
+      return Math.max(ctx.brand.logoDataUrl ? LOGO.height : 0, name);
+    }
     case "contact":
       return ctx.showContact ? TYPE.label * 1.5 : 0;
     case "rule":
@@ -755,7 +774,12 @@ function Brand({ ctx, tone }: { ctx: RenderCtx; tone: Tone }) {
           src={logo}
           alt=""
           crossOrigin="anonymous"
-          style={{ height: px(5), width: "auto", objectFit: "contain" }}
+          style={{
+            height: px(LOGO.height),
+            maxWidth: px(LOGO.maxWidth),
+            width: "auto",
+            objectFit: "contain",
+          }}
         />
       ) : null}
       {showName ? (
