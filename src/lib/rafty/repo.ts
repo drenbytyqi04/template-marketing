@@ -302,6 +302,15 @@ export async function saveBrand(
   if (patch.language !== undefined) row["language"] = patch.language;
   if (patch.contact !== undefined) row["contact_info"] = patch.contact;
 
+  // Files the save makes unreachable, deleted once the row that stops pointing
+  // at them is safely written. Deleting first is what the code used to do, and
+  // it is wrong in both directions: a write that is then refused leaves the
+  // brand pointing at a file that no longer exists, and leaves the file that
+  // was going to replace it behind with nothing referring to it. The database
+  // refusing to unlock the logo made both happen repeatedly.
+  let supersededLogo: string | null = null;
+  let uploadedLogo: string | null = null;
+
   if (patch.logoDataUrl !== undefined) {
     const current = await supabase
       .from("brand_profiles")
@@ -310,11 +319,8 @@ export async function saveBrand(
       .maybeSingle();
     const currentRow = current.data as { logo_path: string | null } | null;
     const oldPath = currentRow?.logo_path ?? null;
-    // The old file is removed only once its replacement is safely uploaded, so
-    // a failed upload leaves the brand with the logo it already had rather than
-    // with none.
     if (patch.logoDataUrl === null) {
-      await removeFile(oldPath);
+      supersededLogo = oldPath;
       row["logo_path"] = null;
     } else if (isDataUrl(patch.logoDataUrl)) {
       const path = await uploadDataUrl(businessId, "logos", patch.logoDataUrl);
@@ -324,7 +330,8 @@ export async function saveBrand(
       if (!path) {
         return { ok: false, error: "The logo could not be uploaded. Please try a smaller image." };
       }
-      await removeFile(oldPath);
+      supersededLogo = oldPath;
+      uploadedLogo = path;
       row["logo_path"] = path;
     }
   }
@@ -335,8 +342,12 @@ export async function saveBrand(
     .upsert({ business_id: businessId, ...row } as never, { onConflict: "business_id" });
   if (error) {
     console.error("[brand] save refused:", error.message);
+    // Nothing points at the file that was uploaded for this save, so it goes
+    // with the save. The brand keeps the logo it already had.
+    await removeFile(uploadedLogo);
     return { ok: false, error: error.message };
   }
+  await removeFile(supersededLogo);
   return { ok: true };
 }
 
