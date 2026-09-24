@@ -335,7 +335,13 @@ export const globalTemplates: Template[] = DESIGNS.map((design) => ({
   scope: "global" as const,
   businessId: null,
   archived: false,
+  // The shape a design is previewed at when nothing asks for another, and the
+  // formats it may be picked for. Every one of these is a specification drawn on
+  // a field sized relative to the frame, so a 9:16 clip is the same design at
+  // another shape rather than a layout it was never meant for. Leaving them as
+  // post only is what left the video format with nothing at all to choose.
   format: "post" as const,
+  formats: ["post", "video"] as ContentFormat[],
 }));
 
 /** The set of designs a trade owns. A trade listed here is shown its own set
@@ -382,10 +388,21 @@ export function templatesForBusinessType(all: Template[], type: BusinessType): T
   return [...mine, ...open.filter((tpl) => !tpl.category && !tpl.collection)];
 }
 
-/** Templates available for one format. Custom uploads stay in the post format
- * unless they declare otherwise, since their design is locked to its canvas. */
+/**
+ * Whether a template can be picked for a format.
+ *
+ * A template that lists its formats is read from that list; one that does not
+ * covers the single format it declares, which defaults to post. Custom uploads
+ * stay there unless they say otherwise, since their design is a picture locked
+ * to the canvas it was drawn on.
+ */
+export function templateCoversFormat(tpl: Template, format: ContentFormat): boolean {
+  return tpl.formats ? tpl.formats.includes(format) : (tpl.format ?? "post") === format;
+}
+
+/** Templates available for one format. */
 export function templatesForFormat(all: Template[], format: ContentFormat): Template[] {
-  return all.filter((tpl) => (tpl.format ?? "post") === format && !tpl.hidden);
+  return all.filter((tpl) => templateCoversFormat(tpl, format) && !tpl.hidden);
 }
 
 /** Sorts templates suggested for a business type first, without removing or

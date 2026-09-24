@@ -327,6 +327,16 @@ export type Template = {
   category?: TemplateCategory | undefined;
   /** Which content format this template renders. Defaults to post. */
   format?: ContentFormat;
+  /**
+   * Every format this template can be picked for, when it is more than one.
+   *
+   * A design written as a specification is not tied to a canvas shape: it is
+   * placed on a twelve by twelve field and sized in units relative to the frame,
+   * so the same design draws itself on a 4:5 feed post and on a 9:16 clip. A
+   * custom upload is the opposite - it is a picture, locked to the canvas it was
+   * drawn on - so it declares one `format` and nothing more.
+   */
+  formats?: ContentFormat[];
   /** Multi card formats: how many slides the design supports. */
   slides?: { min: number; max: number; default: number };
   /** Video: clip timing plus its transition. */

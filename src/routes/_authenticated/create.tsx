@@ -35,6 +35,7 @@ import {
   designDraws,
   isSpecDesign,
   recommendedFirst,
+  templateCoversFormat,
   templatesForBusinessType,
   templatesForFormat,
 } from "@/lib/rafty/templates";
@@ -452,7 +453,7 @@ function CreatePage() {
       type,
     );
     const inUse = existing?.templateId
-      ? templates.find((tpl) => tpl.id === existing.templateId && (tpl.format ?? "post") === format)
+      ? templates.find((tpl) => tpl.id === existing.templateId && templateCoversFormat(tpl, format))
       : undefined;
     if (!inUse || allowed.some((tpl) => tpl.id === inUse.id)) return allowed;
     return [inUse, ...allowed];

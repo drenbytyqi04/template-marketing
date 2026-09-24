@@ -653,7 +653,8 @@ export const FORMAT_SPECS: Record<ContentFormat, FormatSpec> = {
     maxDuration: 0,
     defaultDuration: 0,
     // A video post exports as a real clip once footage is uploaded: the design
-    // is composited onto the frames and recorded to WebM. Without footage the
+    // is composited onto the frames and recorded as MP4 where the browser can
+    // encode H.264, falling back to WebM where it cannot. Without footage the
     // download falls back to a still of the current card.
     exportable: true,
   },
