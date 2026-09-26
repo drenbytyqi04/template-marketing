@@ -5,7 +5,7 @@ import type { RenderCtx } from "../templates";
 import type { LanguageCode } from "../types";
 import type { Block, DesignSpec, Part, PhotoTreatment } from "./spec";
 import { GRID } from "./spec";
-import { INTRO } from "./animation";
+import { ARRIVAL_ATTR, INTRO } from "./animation";
 
 /**
  * The one renderer every design is drawn by.
@@ -114,7 +114,7 @@ function FloatingLogo({ ctx, page, arrival }: { ctx: RenderCtx; page: number; ar
 
   return (
     <div
-      {...(arrival === undefined ? {} : { className: "krijo-intro" })}
+      {...(arrival === undefined ? {} : { className: "krijo-intro", [ARRIVAL_ATTR]: arrival })}
       style={{
         ...(arrival === undefined
           ? {}
@@ -1036,21 +1036,44 @@ function panelStyle(block: Block, ctx: RenderCtx): React.CSSProperties {
   }
 }
 
+/**
+ * One line of the design, wrapped so it can arrive on its own.
+ *
+ * The wrapper is what the stylesheet animates and what the exporter solves as a
+ * layer, and it carries its place in the order as an attribute so the two read
+ * the same number instead of each counting the lines for itself - they would
+ * count differently, because a line the post left empty is still in the
+ * document and the exporter has no use for it.
+ */
+function Arriving({ at, children }: { at: number; children: React.ReactNode }) {
+  return (
+    <div
+      className="krijo-intro"
+      {...{ [ARRIVAL_ATTR]: at }}
+      style={{ "--krijo-delay": `${at * INTRO.stagger}ms` } as React.CSSProperties}
+    >
+      {children}
+    </div>
+  );
+}
+
 function BlockNode({
   block,
   ctx,
   tone,
   rowHeight,
   page,
-  arrival,
+  arrivalBase,
 }: {
   block: Block;
   ctx: RenderCtx;
   tone: Tone;
   rowHeight: number;
   page: number;
-  /** Where this block comes in the intro, or absent when nothing is arriving. */
-  arrival?: number;
+  /** The place in the arrival order this block's first line takes, or absent
+   * when nothing is arriving. The lines come in one at a time, not the block in
+   * one piece: a design reads line by line and so should arrive that way. */
+  arrivalBase?: number;
 }) {
   const [c1, c2, r1, r2] = block.area;
   const own = blockTone(block, tone);
@@ -1063,13 +1086,7 @@ function BlockNode({
   const room = (r2 - r1) * rowHeight - reserved;
   return (
     <div
-      {...(arrival === undefined ? {} : { className: "krijo-intro" })}
       style={{
-        // The stylesheet reads its delay from here, so the order the parts
-        // arrive in is decided by the design rather than by the class.
-        ...(arrival === undefined
-          ? {}
-          : ({ "--krijo-delay": `${arrival * INTRO.stagger}ms` } as React.CSSProperties)),
         gridColumn: `${c1} / ${c2}`,
         gridRow: `${r1} / ${r2}`,
         // A block is as tall as what it holds, capped at the area it was given
@@ -1097,12 +1114,27 @@ function BlockNode({
         ...panelStyle(block, ctx),
       }}
     >
-      {block.parts.map((part, i) => renderPart(part, ctx, own, i, page, room))}
+      {block.parts.map((part, i) =>
+        arrivalBase === undefined ? (
+          renderPart(part, ctx, own, i, page, room)
+        ) : (
+          <Arriving key={i} at={arrivalBase + i}>
+            {renderPart(part, ctx, own, i, page, room)}
+          </Arriving>
+        ),
+      )}
     </div>
   );
 }
 
 /* ---------------------------------- design --------------------------------- */
+
+/** Where a block's first line falls in the arrival order: everything the blocks
+ * before it hold. Counted from the design rather than from the rendered tree so
+ * it is the same number on every render. */
+function arrivalOf(spec: DesignSpec, blockIndex: number): number {
+  return spec.blocks.slice(0, blockIndex).reduce((n, b) => n + b.parts.length, 0);
+}
 
 /** Draws one design. The page margin and the field are the same for every
  * design, which is most of what makes a set look like a set. */
@@ -1154,7 +1186,7 @@ export function renderDesign(spec: DesignSpec, ctx: RenderCtx): React.ReactNode 
             tone={spec.tone}
             rowHeight={rowHeight}
             page={page}
-            {...(ctx.animate ? { arrival: i } : {})}
+            {...(ctx.animate ? { arrivalBase: arrivalOf(spec, i) } : {})}
           />
         ))}
       </div>
@@ -1163,7 +1195,7 @@ export function renderDesign(spec: DesignSpec, ctx: RenderCtx): React.ReactNode 
       <FloatingLogo
         ctx={ctx}
         page={page}
-        {...(ctx.animate ? { arrival: spec.blocks.length } : {})}
+        {...(ctx.animate ? { arrival: arrivalOf(spec, spec.blocks.length) } : {})}
       />
     </div>
   );

@@ -1,5 +1,5 @@
 import { toPng } from "html-to-image";
-import { introAt, introDurationMs, STILL_ATTR } from "./design/animation";
+import { ARRIVAL_ATTR, introAt, introDurationMs, STILL_ATTR } from "./design/animation";
 
 /**
  * Renders a video post to a real clip.
@@ -35,6 +35,10 @@ type FootageRect = { x: number; y: number; width: number; height: number };
 type Layer = {
   gain: HTMLCanvasElement;
   constant: HTMLCanvasElement;
+  /** This line's place in the arrival order, read from the document rather than
+   * counted here: lines the post left empty are in the document but have no
+   * layer, so counting would put every later line on the wrong beat. */
+  arrival: number;
   /** Where this piece belongs, in overlay pixels. Only the box the part draws
    * in is kept: everywhere else was the identity of the compositing model, and
    * a full frame of identity is eight megabytes of nothing. */
@@ -405,12 +409,18 @@ async function buildOverlay(
     // everywhere else is the identity, so the parts can be laid back over the
     // clip one at a time, at whatever opacity and offset the moment calls for,
     // and at full opacity with no offset they add back up to `whole`.
-    const groups = [...node.querySelectorAll<HTMLElement>(".krijo-intro")];
+    // Lines that draw nothing are in the document but take no room and have
+    // nothing to animate, so they are not worth two rasters each.
+    const groups = [...node.querySelectorAll<HTMLElement>(".krijo-intro")].filter((el) => {
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && r.height > 0;
+    });
     let layers: Layer[] | undefined;
     if (groups.length > 1) {
       layers = [];
       for (const only of groups) {
         const box = boxOf(only, nodeBox, scale, size);
+        const arrival = Number(only.getAttribute(ARRIVAL_ATTR) ?? layers.length);
         const hidden = groups.filter((g) => g !== only);
         for (const g of hidden) g.style.visibility = "hidden";
         try {
@@ -418,6 +428,7 @@ async function buildOverlay(
           layers.push({
             gain: cropTo(solved.gain, box),
             constant: cropTo(solved.constant, box),
+            arrival,
             ...box,
           });
         } finally {
@@ -551,7 +562,8 @@ function composite(
   drawCover(ctx, video, rect);
 
   const layers = overlay.layers;
-  const arriving = layers && elapsedMs < introDurationMs(layers.length);
+  const lastArrival = layers ? Math.max(...layers.map((l) => l.arrival)) : 0;
+  const arriving = layers && elapsedMs < introDurationMs(lastArrival + 1);
   if (!arriving) {
     // Settled, or never animating: the whole design in one pass.
     ctx.globalCompositeOperation = "multiply";
@@ -580,23 +592,23 @@ function composite(
   // barred from overlapping blocks at all. It is also confined to the intro:
   // the moment everything has arrived the whole design is drawn in one piece
   // again, so what stays on screen for the rest of the clip is exact.
-  for (let i = 0; i < layers.length; i += 1) {
-    const { alpha, rise } = introAt(i, elapsedMs);
-    if (alpha <= 0) continue;
-    // The rise is written in cqw, the unit the designs are drawn in, so it is
-    // the same fraction of the frame whatever this recording's size is.
-    const dy = (rise / 100) * size.width;
-    const l = layers[i]!;
+  for (const l of layers) {
+    const { alpha, reveal } = introAt(l.arrival, elapsedMs);
+    if (alpha <= 0 || reveal <= 0) continue;
     // `k` carries the layer's box from overlay pixels to this recording's,
     // which differ whenever a clip is re-recorded at half size.
     const dx = l.x * k;
-    const dw = l.width * k;
+    const dy = l.y * k;
     const dh = l.height * k;
+    // The wipe: only the uncovered part of the line is drawn, and the rest of
+    // its box is left alone - which in this model means the footage, untouched.
+    const sw = Math.max(1, Math.round(l.gain.width * reveal));
+    const dw = l.width * k * reveal;
     ctx.globalAlpha = alpha;
     ctx.globalCompositeOperation = "multiply";
-    ctx.drawImage(l.gain, dx, l.y * k + dy, dw, dh);
+    ctx.drawImage(l.gain, 0, 0, sw, l.gain.height, dx, dy, dw, dh);
     ctx.globalCompositeOperation = "lighter";
-    ctx.drawImage(l.constant, dx, l.y * k + dy, dw, dh);
+    ctx.drawImage(l.constant, 0, 0, sw, l.constant.height, dx, dy, dw, dh);
   }
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = "source-over";

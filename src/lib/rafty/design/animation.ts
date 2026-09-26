@@ -3,9 +3,14 @@
  *
  * A still post is read all at once, so it has nothing to time. A clip is
  * watched, and a design that is simply there from the first frame looks like a
- * screenshot someone laid over a video. The parts arrive instead: each block of
- * the frame fades up and settles, one after another, and then the design is
- * just the design for the rest of the clip.
+ * screenshot someone laid over a video. The lines arrive instead: each one is
+ * wiped in from the left, one after another, and then the design is just the
+ * design for the rest of the clip.
+ *
+ * A wipe rather than a fade because that is what the customer asked for, with a
+ * reference clip to point at: heavy type uncovering itself line by line over
+ * footage. A line that fades up reads as a caption switching on; a line that
+ * wipes in reads as typography.
  *
  * The timing lives here rather than in the stylesheet because two very
  * different things have to agree on it. The preview animates in CSS, where the
@@ -32,12 +37,13 @@ const DURATION = 620;
  * one movement rather than as a queue. */
 const STAGGER = 130;
 
-/** How far a part rises as it arrives, in cqw - the same container relative
- * unit the designs themselves are measured in, so the movement is the same
- * fraction of the frame on a thumbnail and on a 1080 pixel export. */
-const RISE = 3.2;
+export const INTRO = { duration: DURATION, stagger: STAGGER } as const;
 
-export const INTRO = { duration: DURATION, stagger: STAGGER, rise: RISE } as const;
+/** The attribute a part carries its place in the order on, so the stylesheet
+ * and the exporter read the same number rather than each counting for itself.
+ * They count differently: a part that draws nothing is still in the document,
+ * and the exporter skips it. */
+export const ARRIVAL_ATTR = "data-krijo-arrival";
 
 /** The whole intro, for a design with this many parts. */
 export function introDurationMs(groups: number): number {
@@ -83,15 +89,19 @@ export function introEase(progress: number): number {
 /**
  * Where one part of the design is at a moment in the clip.
  *
- * `alpha` is how present it is, from absent to fully drawn. `rise` is how far
- * below its resting place it still sits, in cqw. Both are settled - 1 and 0 -
- * once the part's own window has passed, which is what lets the exporter stop
- * compositing part by part and go back to drawing the design in one piece.
+ * `reveal` is how much of the line has been uncovered, left to right: the line
+ * is wiped in rather than simply appearing, which is what reads as typography
+ * on a clip rather than as a caption that blinked on. `alpha` fades it up over
+ * the same window so the leading edge of the wipe is not a hard cut.
+ *
+ * Both are settled - 1 and 1 - once the part's own window has passed, which is
+ * what lets the exporter stop compositing part by part and go back to drawing
+ * the design in one piece.
  */
-export function introAt(index: number, elapsedMs: number): { alpha: number; rise: number } {
+export function introAt(index: number, elapsedMs: number): { alpha: number; reveal: number } {
   const started = elapsedMs - index * STAGGER;
-  if (started >= DURATION) return { alpha: 1, rise: 0 };
-  if (started <= 0) return { alpha: 0, rise: RISE };
+  if (started >= DURATION) return { alpha: 1, reveal: 1 };
+  if (started <= 0) return { alpha: 0, reveal: 0 };
   const eased = introEase(started / DURATION);
-  return { alpha: eased, rise: RISE * (1 - eased) };
+  return { alpha: eased, reveal: eased };
 }

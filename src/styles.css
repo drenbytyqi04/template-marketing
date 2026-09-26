@@ -248,11 +248,14 @@
 @keyframes krijo-intro {
   from {
     opacity: 0;
-    transform: translateY(3.2cqw);
+    clip-path: inset(0 100% 0 0);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    /* Past the edge rather than on it: the animation fills forwards, so this is
+       the state the line keeps, and an inset of exactly zero would shave a
+       descender or a soft edge off every line for the rest of the clip. */
+    clip-path: inset(0 -8% 0 0);
   }
 }
 
@@ -273,4 +276,14 @@
 
 [data-krijo-still] .krijo-intro {
   animation: none;
+}
+
+/*
+ * A line the post did not fill in draws nothing, and its wrapper would still be
+ * a row in the block - an empty one, with the gap either side of it. This takes
+ * it out of the layout entirely, so an unused field costs no space, exactly as
+ * it did before the lines were wrapped at all.
+ */
+.krijo-intro:empty {
+  display: none;
 }
