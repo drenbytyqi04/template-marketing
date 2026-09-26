@@ -119,7 +119,7 @@ export async function renderNodeToDataUrl(node: HTMLElement, size?: ExportSize):
 
 async function rasterise(node: HTMLElement, size?: ExportSize): Promise<string> {
   const outWidth = size?.width ?? EXPORT_WIDTH;
-  const outHeight = size?.height ?? EXPORT_HEIGHT;
+  let outHeight = size?.height ?? EXPORT_HEIGHT;
 
   // A cloned <video> paints nothing, so rasterising a video post this way would
   // return the design over an empty background. Composite a real frame instead.
@@ -167,6 +167,19 @@ async function rasterise(node: HTMLElement, size?: ExportSize): Promise<string> 
 
     // Force layout, then let the resize-driven re-fit settle before capturing.
     node.getBoundingClientRect();
+
+    // The frame is as tall as the design actually lays out, not as tall as the
+    // caller believed it would be.
+    //
+    // The height used to be whatever was passed in, and a caller that passed
+    // nothing got 1350 - the shape of a feed post. A story is 1920 tall, so
+    // downloading one from the Posts page cut 570 pixels off the bottom and
+    // took the price, the call to action and the phone number with them. The
+    // file looked like a finished post, which is the worst way for an export to
+    // be wrong. The node has just been laid out at the export width and knows
+    // its own height; asking it cannot disagree with itself.
+    const laidOut = Math.round(node.getBoundingClientRect().height);
+    if (laidOut > 0) outHeight = laidOut;
     await document.fonts.ready;
     await waitForImages(node);
     await nextFrame();

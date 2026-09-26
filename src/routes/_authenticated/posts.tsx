@@ -18,6 +18,7 @@ import { PostCanvas } from "@/components/rafty/PostCanvas";
 import { LazyMount } from "@/components/rafty/LazyMount";
 import { useRafty } from "@/lib/rafty/store";
 import { downloadNode, reasonFor, slugify } from "@/lib/rafty/download";
+import { sizeFor } from "@/lib/rafty/constants";
 import { removedTemplate } from "@/lib/rafty/templates";
 import { id as newId } from "@/lib/rafty/repo";
 import { brandForPost } from "@/lib/rafty/types";
@@ -67,7 +68,14 @@ function PostsPage() {
     if (!node || downloadingId) return;
     setDownloadingId(post.id);
     try {
-      const kind = await downloadNode(node, slugify(post.content.title || "krijo24-post"));
+      // The size this post was made at, resolved the same way the canvas above
+      // resolved it. A download that guesses is a download that crops.
+      const content = post.slides?.[0]?.content ?? post.content;
+      const size = sizeFor(post.format ?? "post", content.sizeKey);
+      const kind = await downloadNode(node, slugify(post.content.title || "krijo24-post"), {
+        width: size.width,
+        height: size.height,
+      });
       toast.success(kind === "video" ? "Video downloaded." : "Image downloaded.");
     } catch (err) {
       toast.error(reasonFor(err));

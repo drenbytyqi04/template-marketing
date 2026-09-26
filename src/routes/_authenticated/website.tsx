@@ -20,7 +20,7 @@ import { PostCanvas } from "@/components/rafty/PostCanvas";
 import { useRafty } from "@/lib/rafty/store";
 import * as repo from "@/lib/rafty/repo";
 import { renderNodeToDataUrl } from "@/lib/rafty/download";
-import { FORMAT_SPECS } from "@/lib/rafty/constants";
+import { sizeFor } from "@/lib/rafty/constants";
 import { scanBrandWebsite } from "@/lib/scan.functions";
 import { startMetaConnect, disconnectSocial, publishingAvailable } from "@/lib/social.functions";
 import type {
@@ -511,10 +511,12 @@ function RenderBooth({
         const node = nodes.current[post.id];
         if (!node) continue;
         try {
-          const spec = FORMAT_SPECS[post.format ?? "post"];
+          // The post's own size, not its format's default one: a story saved
+          // as 9:16 was being rendered into the 4:5 frame of a feed post.
+          const size = sizeFor(post.format ?? "post", post.content.sizeKey);
           const dataUrl = await renderNodeToDataUrl(node, {
-            width: spec.width,
-            height: spec.height,
+            width: size.width,
+            height: size.height,
           });
           await repo.savePostRender(businessId, post.id, dataUrl);
           handled.current.add(post.id);
