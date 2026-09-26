@@ -87,6 +87,18 @@ type Overlay = {
   gain: HTMLCanvasElement;
   constant: HTMLCanvasElement;
   rect: FootageRect;
+  /**
+   * Everything the design draws that does not arrive: the treatment over the
+   * photograph, a block's panel, anything not a line of type.
+   *
+   * Without it the intro drew the lines and nothing else, so a clip began with
+   * no scrim under its type and then, the instant the last line landed, the
+   * whole treatment appeared in a single frame. Measured on a customer's
+   * export: the bottom of the frame held steady at 107 for the whole intro and
+   * dropped to 35 between two frames. The shadow belongs to the picture, not to
+   * the writing, so it is there from the first frame and never moves.
+   */
+  base?: { gain: HTMLCanvasElement; constant: HTMLCanvasElement };
   /** The design taken apart, in the order its parts arrive. Absent when nothing
    * is animating, and unused once the intro has finished - the whole design in
    * one piece is two draws a frame, and taking it apart is five times that. */
@@ -416,7 +428,16 @@ async function buildOverlay(
       return r.width > 0 && r.height > 0;
     });
     let layers: Layer[] | undefined;
+    let base: { gain: HTMLCanvasElement; constant: HTMLCanvasElement } | undefined;
     if (groups.length > 1) {
+      // The design with none of its writing: hidden rather than removed, so the
+      // panels a block draws keep the size their content gave them.
+      for (const g of groups) g.style.visibility = "hidden";
+      try {
+        base = await solve();
+      } finally {
+        for (const g of groups) g.style.visibility = "";
+      }
       layers = [];
       for (const only of groups) {
         const box = boxOf(only, nodeBox, scale, size);
@@ -437,7 +458,7 @@ async function buildOverlay(
       }
     }
 
-    return { ...whole, rect, ...(layers ? { layers } : {}) };
+    return { ...whole, rect, ...(base ? { base } : {}), ...(layers ? { layers } : {}) };
   } finally {
     node.removeAttribute(STILL_ATTR);
     node.style.width = saved.width;
@@ -562,8 +583,9 @@ function composite(
   drawCover(ctx, video, rect);
 
   const layers = overlay.layers;
+  const base = overlay.base;
   const lastArrival = layers ? Math.max(...layers.map((l) => l.arrival)) : 0;
-  const arriving = layers && elapsedMs < introDurationMs(lastArrival + 1);
+  const arriving = layers && base && elapsedMs < introDurationMs(lastArrival + 1);
   if (!arriving) {
     // Settled, or never animating: the whole design in one pass.
     ctx.globalCompositeOperation = "multiply";
@@ -592,6 +614,13 @@ function composite(
   // barred from overlapping blocks at all. It is also confined to the intro:
   // the moment everything has arrived the whole design is drawn in one piece
   // again, so what stays on screen for the rest of the clip is exact.
+  // The picture's own treatment first, whole and at full strength. It is the
+  // shadow the type is written on, not a thing that arrives with the type.
+  ctx.globalCompositeOperation = "multiply";
+  ctx.drawImage(base.gain, 0, 0, size.width, size.height);
+  ctx.globalCompositeOperation = "lighter";
+  ctx.drawImage(base.constant, 0, 0, size.width, size.height);
+
   for (const l of layers) {
     const { alpha, reveal } = introAt(l.arrival, elapsedMs);
     if (alpha <= 0 || reveal <= 0) continue;
@@ -600,15 +629,30 @@ function composite(
     const dx = l.x * k;
     const dy = l.y * k;
     const dh = l.height * k;
-    // The wipe: only the uncovered part of the line is drawn, and the rest of
-    // its box is left alone - which in this model means the footage, untouched.
+    // The wipe: only the uncovered part of the line is drawn.
     const sw = Math.max(1, Math.round(l.gain.width * reveal));
     const dw = l.width * k * reveal;
+
+    // A line replaces what is under it rather than stacking on top of it.
+    //
+    // Each line was solved with the treatment in place, so its answer already
+    // contains the shadow within its own box. Laying that over a backdrop that
+    // has the treatment on it too would darken those pixels twice, and the
+    // writing would sit in a patch visibly deeper than the picture around it.
+    // Putting the untouched footage back inside the uncovered strip first makes
+    // the line's answer land on what it was solved against.
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(dx, dy, dw, dh);
+    ctx.clip();
     ctx.globalAlpha = alpha;
+    ctx.globalCompositeOperation = "source-over";
+    drawCover(ctx, video, rect);
     ctx.globalCompositeOperation = "multiply";
     ctx.drawImage(l.gain, 0, 0, sw, l.gain.height, dx, dy, dw, dh);
     ctx.globalCompositeOperation = "lighter";
     ctx.drawImage(l.constant, 0, 0, sw, l.constant.height, dx, dy, dw, dh);
+    ctx.restore();
   }
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = "source-over";

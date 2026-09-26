@@ -33,9 +33,16 @@ export const STILL_ATTR = "data-krijo-still";
 /** Milliseconds one part takes to arrive. */
 const DURATION = 620;
 
-/** Milliseconds between one part starting and the next. Short enough to read as
- * one movement rather than as a queue. */
-const STAGGER = 130;
+/**
+ * Milliseconds between one line starting and the next.
+ *
+ * Tight enough that the lines overlap and the whole thing reads as one
+ * movement. At 130 a nine line design took over a second and a half and each
+ * line waited visibly for the one before it, which reads as a queue rather than
+ * as an arrival; at 95 the design is in place in under a second and a half with
+ * the lines still clearly in order.
+ */
+const STAGGER = 95;
 
 export const INTRO = { duration: DURATION, stagger: STAGGER } as const;
 
