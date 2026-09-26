@@ -30,19 +30,23 @@
  */
 export const STILL_ATTR = "data-krijo-still";
 
-/** Milliseconds one part takes to arrive. */
-const DURATION = 620;
+/**
+ * Milliseconds one line takes to uncover.
+ *
+ * Long enough to watch. At 620 the writing appeared rather than arrived - the
+ * customer's word for it was that it was too fast - and a wipe that quick over
+ * a headline is closer to a cut than to a movement.
+ */
+const DURATION = 950;
 
 /**
  * Milliseconds between one line starting and the next.
  *
- * Tight enough that the lines overlap and the whole thing reads as one
- * movement. At 130 a nine line design took over a second and a half and each
- * line waited visibly for the one before it, which reads as a queue rather than
- * as an arrival; at 95 the design is in place in under a second and a half with
- * the lines still clearly in order.
+ * Well under the time one line takes, so the lines overlap and the whole reads
+ * as one movement rather than as a queue of separate ones. Each line is still
+ * clearly after the one before it.
  */
-const STAGGER = 95;
+const STAGGER = 110;
 
 export const INTRO = { duration: DURATION, stagger: STAGGER } as const;
 

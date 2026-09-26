@@ -267,7 +267,7 @@
  * watching a clip does the intro play.
  */
 [data-krijo-play] .krijo-intro {
-  animation: krijo-intro 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: krijo-intro 950ms cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: var(--krijo-delay, 0ms);
 }
 

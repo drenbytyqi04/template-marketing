@@ -48,8 +48,20 @@ type Layer = {
   height: number;
 };
 
-/** A part's box, in overlay pixels, with a little room for a shadow or a soft
- * edge to fall outside the element's own rectangle. */
+/**
+ * A line's box, in overlay pixels: its own rectangle and not a pixel more.
+ *
+ * It used to be given a margin, for a shadow or a soft edge falling outside the
+ * element. That margin was wider than the gap between two lines, so neighbouring
+ * boxes overlapped by about twenty pixels - and a line's answer, solved with the
+ * others hidden, holds only the picture where those others would be. Drawing a
+ * line therefore rubbed out a strip of the line above it, which read as a band
+ * moving with the wipe and was exactly what a customer photographed twice.
+ *
+ * Lines are laid out as siblings with a gap, so their own rectangles never
+ * overlap. Anything a line paints outside its rectangle is lost for the length
+ * of the intro, and these designs paint nothing there.
+ */
 function boxOf(
   el: HTMLElement,
   nodeBox: DOMRect,
@@ -57,11 +69,10 @@ function boxOf(
   size: VideoExportSize,
 ): { x: number; y: number; width: number; height: number } {
   const r = el.getBoundingClientRect();
-  const margin = size.width * 0.02;
-  const x = Math.max(0, Math.floor((r.left - nodeBox.left) * scale - margin));
-  const y = Math.max(0, Math.floor((r.top - nodeBox.top) * scale - margin));
-  const right = Math.min(size.width, Math.ceil((r.right - nodeBox.left) * scale + margin));
-  const bottom = Math.min(size.height, Math.ceil((r.bottom - nodeBox.top) * scale + margin));
+  const x = Math.max(0, Math.floor((r.left - nodeBox.left) * scale));
+  const y = Math.max(0, Math.floor((r.top - nodeBox.top) * scale));
+  const right = Math.min(size.width, Math.ceil((r.right - nodeBox.left) * scale));
+  const bottom = Math.min(size.height, Math.ceil((r.bottom - nodeBox.top) * scale));
   return { x, y, width: Math.max(1, right - x), height: Math.max(1, bottom - y) };
 }
 
