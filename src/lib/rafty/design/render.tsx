@@ -94,15 +94,38 @@ function FloatingLogo({ ctx, page }: { ctx: RenderCtx; page: number }) {
   const logo = ctx.brand.logoDataUrl;
   const { place, scale, x, y } = logoAdjust(ctx);
   if (!logo || place === "design") return null;
-  const top = place === "topLeft" || place === "topRight";
+
+  // A centred placement is pinned to the middle of the frame rather than to one
+  // of its edges, so it is measured from 50% and pulled back by half its own
+  // size. An edge placement starts from the page margin, which is what makes a
+  // logo in a corner line up with everything else on the page.
+  const middleX = place === "topCenter" || place === "center" || place === "bottomCenter";
+  const middleY = place === "center";
+  const top = place === "topLeft" || place === "topCenter" || place === "topRight";
   const left = place === "topLeft" || place === "bottomLeft";
+
+  // The nudges stop at the edge rather than carrying the mark off the canvas.
   const inset = (base: number) => px(Math.max(0, base));
+  const middle = (offset: number) => `calc(50% + ${offset}cqw)`;
+  const pullBack = [middleX ? "translateX(-50%)" : "", middleY ? "translateY(-50%)" : ""]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <div
       style={{
         position: "absolute",
-        ...(top ? { top: inset(page + y) } : { bottom: inset(page - y) }),
-        ...(left ? { left: inset(page + x) } : { right: inset(page - x) }),
+        ...(middleY
+          ? { top: middle(y) }
+          : top
+            ? { top: inset(page + y) }
+            : { bottom: inset(page - y) }),
+        ...(middleX
+          ? { left: middle(x) }
+          : left
+            ? { left: inset(page + x) }
+            : { right: inset(page - x) }),
+        ...(pullBack ? { transform: pullBack } : {}),
         display: "flex",
       }}
     >

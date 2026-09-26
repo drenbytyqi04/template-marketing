@@ -20,12 +20,16 @@ const OFFSET_LIMIT = 12;
 const clampScale = (v: number) => Math.round(Math.max(SCALE_MIN, Math.min(SCALE_MAX, v)) * 10) / 10;
 const clampOffset = (v: number) => Math.max(-OFFSET_LIMIT, Math.min(OFFSET_LIMIT, v));
 
-/** Where the mark can go, in the order the buttons read. */
+/** Where the mark can go, in the order the buttons read: the template's own
+ * answer, then the frame read left to right, top to bottom. */
 const PLACES: { id: LogoPlace; label: string }[] = [
   { id: "design", label: "Template" },
   { id: "topLeft", label: "Top left" },
+  { id: "topCenter", label: "Top center" },
   { id: "topRight", label: "Top right" },
+  { id: "center", label: "Center" },
   { id: "bottomLeft", label: "Bottom left" },
+  { id: "bottomCenter", label: "Bottom center" },
   { id: "bottomRight", label: "Bottom right" },
 ];
 

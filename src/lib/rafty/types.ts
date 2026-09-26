@@ -454,7 +454,15 @@ export type LayerAdjust = {
  * right". The name stays where the design had it either way; only the mark
  * moves, because only the mark was asked about.
  */
-export type LogoPlace = "design" | "topLeft" | "topRight" | "bottomLeft" | "bottomRight";
+export type LogoPlace =
+  | "design"
+  | "topLeft"
+  | "topCenter"
+  | "topRight"
+  | "center"
+  | "bottomLeft"
+  | "bottomCenter"
+  | "bottomRight";
 
 export type LogoAdjust = {
   place: LogoPlace;
