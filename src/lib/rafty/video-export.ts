@@ -32,7 +32,52 @@ type FootageRect = { x: number; y: number; width: number; height: number };
 /** One part of the design, solved on its own so it can arrive on its own.
  * Everywhere the part does not draw, gain is full and constant is nothing, which
  * is the identity of the compositing model: the footage passes through. */
-type Layer = { gain: HTMLCanvasElement; constant: HTMLCanvasElement };
+type Layer = {
+  gain: HTMLCanvasElement;
+  constant: HTMLCanvasElement;
+  /** Where this piece belongs, in overlay pixels. Only the box the part draws
+   * in is kept: everywhere else was the identity of the compositing model, and
+   * a full frame of identity is eight megabytes of nothing. */
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+/** A part's box, in overlay pixels, with a little room for a shadow or a soft
+ * edge to fall outside the element's own rectangle. */
+function boxOf(
+  el: HTMLElement,
+  nodeBox: DOMRect,
+  scale: number,
+  size: VideoExportSize,
+): { x: number; y: number; width: number; height: number } {
+  const r = el.getBoundingClientRect();
+  const margin = size.width * 0.02;
+  const x = Math.max(0, Math.floor((r.left - nodeBox.left) * scale - margin));
+  const y = Math.max(0, Math.floor((r.top - nodeBox.top) * scale - margin));
+  const right = Math.min(size.width, Math.ceil((r.right - nodeBox.left) * scale + margin));
+  const bottom = Math.min(size.height, Math.ceil((r.bottom - nodeBox.top) * scale + margin));
+  return { x, y, width: Math.max(1, right - x), height: Math.max(1, bottom - y) };
+}
+
+function cropTo(
+  source: HTMLCanvasElement,
+  box: { x: number; y: number; width: number; height: number },
+): HTMLCanvasElement {
+  const out = document.createElement("canvas");
+  out.width = box.width;
+  out.height = box.height;
+  const ctx = out.getContext("2d");
+  if (!ctx) return source;
+  ctx.drawImage(source, box.x, box.y, box.width, box.height, 0, 0, box.width, box.height);
+  return out;
+}
+
+/** Frames a second the clip is drawn and recorded at. Thirty is what a feed
+ * plays, what an encoder keeps up with, and what a phone expects. */
+const CAPTURE_FPS = 30;
+const FRAME_MS = 1000 / CAPTURE_FPS;
 
 type Overlay = {
   gain: HTMLCanvasElement;
@@ -318,7 +363,7 @@ async function buildOverlay(
       height: videoBox.height * scale,
     };
 
-    const solve = async (): Promise<Layer> => {
+    const solve = async (): Promise<{ gain: HTMLCanvasElement; constant: HTMLCanvasElement }> => {
       let restore = standIn(video, "#000000");
       let black: Uint8ClampedArray;
       try {
@@ -365,10 +410,16 @@ async function buildOverlay(
     if (groups.length > 1) {
       layers = [];
       for (const only of groups) {
+        const box = boxOf(only, nodeBox, scale, size);
         const hidden = groups.filter((g) => g !== only);
         for (const g of hidden) g.style.visibility = "hidden";
         try {
-          layers.push(await solve());
+          const solved = await solve();
+          layers.push({
+            gain: cropTo(solved.gain, box),
+            constant: cropTo(solved.constant, box),
+            ...box,
+          });
         } finally {
           for (const g of hidden) g.style.visibility = "";
         }
@@ -535,11 +586,17 @@ function composite(
     // The rise is written in cqw, the unit the designs are drawn in, so it is
     // the same fraction of the frame whatever this recording's size is.
     const dy = (rise / 100) * size.width;
+    const l = layers[i]!;
+    // `k` carries the layer's box from overlay pixels to this recording's,
+    // which differ whenever a clip is re-recorded at half size.
+    const dx = l.x * k;
+    const dw = l.width * k;
+    const dh = l.height * k;
     ctx.globalAlpha = alpha;
     ctx.globalCompositeOperation = "multiply";
-    ctx.drawImage(layers[i]!.gain, 0, dy, size.width, size.height);
+    ctx.drawImage(l.gain, dx, l.y * k + dy, dw, dh);
     ctx.globalCompositeOperation = "lighter";
-    ctx.drawImage(layers[i]!.constant, 0, dy, size.width, size.height);
+    ctx.drawImage(l.constant, dx, l.y * k + dy, dw, dh);
   }
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = "source-over";
@@ -696,7 +753,7 @@ async function recordOnce(input: {
   const manual = canvas.captureStream(0);
   const manualTrack = manual.getVideoTracks()[0] as
     (MediaStreamTrack & { requestFrame?: () => void }) | undefined;
-  const stream = manualTrack?.requestFrame ? manual : canvas.captureStream(30);
+  const stream = manualTrack?.requestFrame ? manual : canvas.captureStream(CAPTURE_FPS);
   const requestFrame = manualTrack?.requestFrame ? () => manualTrack.requestFrame?.() : () => {};
 
   const source = video as HTMLVideoElement & { captureStream?: () => MediaStream };
@@ -739,10 +796,29 @@ async function recordOnce(input: {
     stop();
     throw new Error("The uploaded video would not play, so there was nothing to record.");
   }
+  // Paced to a frame rate rather than to the display's.
+  //
+  // This used to composite and hand over a frame on every animation frame, which
+  // is the screen's refresh rate, not a video's. On a 165Hz monitor that is 165
+  // frames a second, each one two full-size composites and one more picture for
+  // the encoder to swallow - measured on a customer's export: 1648 frames in
+  // 10.27 seconds, a 1080x1920 clip at 160fps. Nothing plays that rate the way
+  // it was meant, the file is several times the size it should be, and the work
+  // is five times what the machine was asked for. The clock stays the animation
+  // frame, because a detached video presents no frames of its own to follow, but
+  // only every thirtieth of a second is drawn and offered.
+  let nextFrameAt = startedAt;
   const tick = () => {
-    composite(ctx, video, overlay, size, performance.now() - startedAt);
-    requestFrame();
-    if (video.ended || performance.now() - startedAt > limitMs) return stop();
+    const now = performance.now();
+    if (now >= nextFrameAt) {
+      composite(ctx, video, overlay, size, now - startedAt);
+      requestFrame();
+      // Anchored to the schedule, not to now: one late frame must not push the
+      // whole clip later, and a very late one should not fire a burst to catch
+      // up either.
+      nextFrameAt = Math.max(now, nextFrameAt + FRAME_MS);
+    }
+    if (video.ended || now - startedAt > limitMs) return stop();
     handle = requestAnimationFrame(tick);
   };
   video.addEventListener("ended", stop, { once: true });
