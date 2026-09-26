@@ -596,24 +596,27 @@ function composite(
     return;
   }
 
-  // Laid back over the clip one part at a time.
+  // Laid back over the clip one line at a time, and every pixel is either the
+  // design or the picture - never a blend of the two.
   //
-  // `globalAlpha` on a blended draw interpolates between the backdrop and the
-  // blended result, which is exactly what a part half arrived means here: the
-  // footage shows through the rest of the way. Measured in a browser rather
-  // than assumed - at alpha 0 the footage is untouched, at 1 the part is fully
-  // drawn, and the steps between land on the arithmetic.
+  // A line used to fade up as it uncovered, and that left a visible rectangle
+  // behind it: laying a line down means putting the untouched footage back
+  // inside the uncovered strip first, and at less than full strength the strip
+  // keeps some of that raw footage and reads brighter than the shadow around
+  // it. A box that tracks the wipe is worse than no softness at all, so the
+  // strip is drawn whole or not drawn, and the wipe's own edge is the only edge
+  // in the frame.
   //
-  // Where this is exact, and where it is not. Parts that do not overlap add
-  // back up to the whole design pixel for pixel, and so does an opaque part
-  // over another - its gain is zero, so it wipes what is under it exactly as a
-  // single raster would. The one case that differs is a *semi-transparent* part
-  // over another: applied in sequence it lets the part beneath show through,
-  // where a single raster would simply have replaced it. In this library that
-  // is the soft edge of a pinned logo lying over a block, the designs being
-  // barred from overlapping blocks at all. It is also confined to the intro:
-  // the moment everything has arrived the whole design is drawn in one piece
-  // again, so what stays on screen for the rest of the clip is exact.
+  // Where this is exact, and where it is not. Lines that do not overlap add
+  // back up to the whole design pixel for pixel, and so does an opaque line
+  // over another - its gain is zero, so it replaces what is under it exactly as
+  // a single raster would. The one case that differs is a semi-transparent line
+  // over another: in this library that is the soft edge of a pinned logo lying
+  // over a block, the designs being barred from overlapping blocks at all. It
+  // is also confined to the intro: the moment everything has arrived the whole
+  // design is drawn in one piece again, so what stays on screen for the rest of
+  // the clip is exact.
+
   // The picture's own treatment first, whole and at full strength. It is the
   // shadow the type is written on, not a thing that arrives with the type.
   ctx.globalCompositeOperation = "multiply";
@@ -622,8 +625,8 @@ function composite(
   ctx.drawImage(base.constant, 0, 0, size.width, size.height);
 
   for (const l of layers) {
-    const { alpha, reveal } = introAt(l.arrival, elapsedMs);
-    if (alpha <= 0 || reveal <= 0) continue;
+    const { reveal } = introAt(l.arrival, elapsedMs);
+    if (reveal <= 0) continue;
     // `k` carries the layer's box from overlay pixels to this recording's,
     // which differ whenever a clip is re-recorded at half size.
     const dx = l.x * k;
@@ -645,7 +648,6 @@ function composite(
     ctx.beginPath();
     ctx.rect(dx, dy, dw, dh);
     ctx.clip();
-    ctx.globalAlpha = alpha;
     ctx.globalCompositeOperation = "source-over";
     drawCover(ctx, video, rect);
     ctx.globalCompositeOperation = "multiply";

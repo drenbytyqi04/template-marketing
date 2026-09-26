@@ -247,11 +247,9 @@
  */
 @keyframes krijo-intro {
   from {
-    opacity: 0;
     clip-path: inset(0 100% 0 0);
   }
   to {
-    opacity: 1;
     /* Past the edge rather than on it: the animation fills forwards, so this is
        the state the line keeps, and an inset of exactly zero would shave a
        descender or a soft edge off every line for the rest of the clip. */

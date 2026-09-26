@@ -94,21 +94,24 @@ export function introEase(progress: number): number {
 }
 
 /**
- * Where one part of the design is at a moment in the clip.
+ * Where one line of the design is at a moment in the clip.
  *
- * `reveal` is how much of the line has been uncovered, left to right: the line
- * is wiped in rather than simply appearing, which is what reads as typography
- * on a clip rather than as a caption that blinked on. `alpha` fades it up over
- * the same window so the leading edge of the wipe is not a hard cut.
+ * `reveal` is how much of it has been uncovered, left to right. There is
+ * nothing else: the line is either uncovered at a pixel or it is not.
  *
- * Both are settled - 1 and 1 - once the part's own window has passed, which is
- * what lets the exporter stop compositing part by part and go back to drawing
- * the design in one piece.
+ * It used to fade up over the same window as well, and that left a visible
+ * rectangle. A line is laid down by putting the untouched footage back inside
+ * the uncovered strip and then applying the line's own answer, which is only
+ * correct at full strength - at anything less, the strip keeps some of the raw
+ * footage and reads brighter than the shadow around it. So the strip is drawn
+ * whole or not at all, and the edge of the wipe is the only edge there is.
+ *
+ * `reveal` is 1 once the line's window has passed, which is what lets the
+ * exporter stop compositing line by line and draw the design in one piece.
  */
-export function introAt(index: number, elapsedMs: number): { alpha: number; reveal: number } {
+export function introAt(index: number, elapsedMs: number): { reveal: number } {
   const started = elapsedMs - index * STAGGER;
-  if (started >= DURATION) return { alpha: 1, reveal: 1 };
-  if (started <= 0) return { alpha: 0, reveal: 0 };
-  const eased = introEase(started / DURATION);
-  return { alpha: eased, reveal: eased };
+  if (started >= DURATION) return { reveal: 1 };
+  if (started <= 0) return { reveal: 0 };
+  return { reveal: introEase(started / DURATION) };
 }
