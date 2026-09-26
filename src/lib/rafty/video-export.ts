@@ -89,6 +89,23 @@ function cropTo(
   return out;
 }
 
+/**
+ * Bits a second for a frame of this size, at the rate it is recorded.
+ *
+ * Left unset, a browser picks one number for every clip - Chrome settles near
+ * 2.5 Mbps whether the frame is 480p or 1080p - and a customer's vertical 1080
+ * export came back at 2242 kb/s, which is heavy compression on two million
+ * pixels and reads as a picture softer than the footage that went in. Asked for
+ * by area instead: about a fifth of a bit per pixel per frame, which is a
+ * comfortable rate for H.264 on detailed video, then held inside a range so a
+ * small frame is not starved and a large one does not ask for a file nobody can
+ * upload.
+ */
+function bitrateFor(size: VideoExportSize): number {
+  const perFrame = size.width * size.height * 0.19;
+  return Math.round(Math.min(16_000_000, Math.max(4_000_000, perFrame * CAPTURE_FPS)));
+}
+
 /** Frames a second the clip is drawn and recorded at. Thirty is what a feed
  * plays, what an encoder keeps up with, and what a phone expects. */
 const CAPTURE_FPS = 30;
@@ -142,7 +159,21 @@ type Overlay = {
  */
 function pickMimeType(): string | undefined {
   const candidates = [
-    // H.264 baseline with AAC: the combination with the fewest ways to fail.
+    // High profile first, at a level that actually covers a vertical 1080 frame.
+    //
+    // This used to ask only for avc1.42E01E, which is baseline at level 3.0 -
+    // a level that tops out around 720x576, declared on a clip four times that
+    // size, in a profile with neither CABAC nor B-frames. Baseline needs a good
+    // deal more bitrate than High for the same picture, and a customer's export
+    // came back visibly softer than the footage that went into it. Each of these
+    // is offered in turn and the browser takes the first it can honestly encode,
+    // so a browser with only baseline still gets a file.
+    "video/mp4;codecs=avc1.640028,mp4a.40.2",
+    "video/mp4;codecs=avc1.640028",
+    "video/mp4;codecs=avc1.4d0028,mp4a.40.2",
+    "video/mp4;codecs=avc1.4d0028",
+    "video/mp4;codecs=avc1.42E028,mp4a.40.2",
+    "video/mp4;codecs=avc1.42E028",
     "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
     "video/mp4;codecs=avc1.42E01E",
     "video/mp4;codecs=avc1",
@@ -768,8 +799,16 @@ export async function renderVideoPostToBlob(
         );
       }
       best = attempt.blob;
-      // Within a tenth of the time it was recorded over is a faithful clip.
-      if (clip.seconds >= (attempt.wallMs / 1000) * 0.9) {
+      // Resolution is the last thing to give up.
+      //
+      // Falling back to a smaller frame is how a clip stops matching the
+      // footage it was made from, and that is the one thing a customer notices
+      // immediately. A clip a quarter short is still the right picture, and
+      // since the recording is paced to a frame rate rather than to the
+      // display, falling behind at all is now unusual. So the full size answer
+      // is kept unless it came back badly short - and even then the smaller one
+      // is only preferred if it is actually more complete.
+      if (clip.seconds >= (attempt.wallMs / 1000) * 0.75) {
         await warnIfNotH264(attempt.blob);
         return attempt.blob;
       }
@@ -833,7 +872,10 @@ async function recordOnce(input: {
     // No audio is better than no export.
   }
 
-  const recorder = new MediaRecorder(stream, { mimeType });
+  const recorder = new MediaRecorder(stream, {
+    mimeType,
+    videoBitsPerSecond: bitrateFor(size),
+  });
   const chunks: Blob[] = [];
   recorder.ondataavailable = (e) => {
     if (e.data.size > 0) chunks.push(e.data);
