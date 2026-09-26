@@ -160,6 +160,11 @@ function PostsPage() {
                         showBrandName={post.showBrandName}
                         showContact={post.showContact ?? false}
                         adjustments={post.slides?.[0]?.adjustments ?? post.adjustments}
+                        // Marked, not played. The download reads this node, and
+                        // an unmarked design has no lines for the exporter to
+                        // bring in one at a time - which is why a clip saved and
+                        // then downloaded came back with no arrival at all.
+                        animate={(post.format ?? "post") === "video"}
                         format={post.format ?? "post"}
                         className="rounded-md"
                       />

@@ -259,7 +259,16 @@
   }
 }
 
-.krijo-intro {
+/*
+ * Marked and played are two different things.
+ *
+ * The exporter needs the lines marked so it can solve them one at a time, and
+ * it computes its own timing - it never reads this animation. A grid of saved
+ * posts therefore marks its clips without playing anything, or every card would
+ * run an intro each time it scrolled into view. Only where someone is actually
+ * watching a clip does the intro play.
+ */
+[data-krijo-play] .krijo-intro {
   animation: krijo-intro 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: var(--krijo-delay, 0ms);
 }
@@ -269,7 +278,7 @@
  * it. They still get the design.
  */
 @media (prefers-reduced-motion: reduce) {
-  .krijo-intro {
+  [data-krijo-play] .krijo-intro {
     animation: none;
   }
 }

@@ -23,8 +23,12 @@ type Props = {
   showBrandName?: boolean;
   showContact?: boolean;
   adjustments?: PostAdjustments;
-  /** Plays the design's arrival. Only a clip has time to run it. */
+  /** Marks the design's lines so they can arrive one at a time. Every clip is
+   * marked, because the exporter reads the marks; whether anything moves on
+   * screen is `playIntro`. */
   animate?: boolean;
+  /** Plays the arrival here, on screen. Only where a clip is being watched. */
+  playIntro?: boolean;
   /** Overrides the template format, used by previews that force one shape. */
   format?: ContentFormat;
   className?: string;
@@ -46,6 +50,7 @@ export const PostCanvas = forwardRef<HTMLDivElement, Props>(function PostCanvas(
     showContact,
     adjustments,
     animate,
+    playIntro,
     format,
     className,
   },
@@ -89,6 +94,7 @@ export const PostCanvas = forwardRef<HTMLDivElement, Props>(function PostCanvas(
         } as React.CSSProperties),
       }}
       data-safe={safe.top || safe.bottom ? "on" : "off"}
+      {...(playIntro ? { "data-krijo-play": "" } : {})}
     >
       {renderTemplate(template, {
         content: effectiveContent,

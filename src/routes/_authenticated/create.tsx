@@ -1197,6 +1197,7 @@ function CreatePage() {
               // Only a clip has time to run it, and only here: the thumbnails
               // elsewhere are stills of a finished post.
               animate={format === "video"}
+              playIntro={format === "video"}
               format={format}
               className="rounded-xl"
             />
