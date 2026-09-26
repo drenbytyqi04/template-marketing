@@ -308,6 +308,17 @@ function Kicker({
   );
 }
 
+/** The contact line a post prints, as one string. Written once so the room it
+ * is given and the text that goes in it are measured from the same thing. */
+function contactLine(ctx: RenderCtx): string {
+  const c = ctx.brand.contact;
+  if (!c) return "";
+  const parts = [c.phones.filter(Boolean)[0], c.website, c.address].filter(
+    (v): v is string => !!v && v.trim().length > 0,
+  );
+  return parts.join("  ·  ");
+}
+
 /**
  * How much room a part asks for, in cqw, before anything is drawn.
  *
@@ -394,7 +405,11 @@ function reserveOf(part: Part, ctx: RenderCtx): number {
       return Math.max(mark, name);
     }
     case "contact":
-      return ctx.showContact ? TYPE.label * 1.5 : 0;
+      // Measured by length, like the details are: a phone number, a website and
+      // a town run past one line in a narrow block, and reserving a single line
+      // would hand the headline room the second line is about to take back.
+      if (!ctx.showContact) return 0;
+      return Math.max(1, Math.ceil(contactLine(ctx).length / 38)) * (TYPE.body * 1.5);
     case "rule":
       return 0.4;
     default:
@@ -900,22 +915,25 @@ function Brand({ ctx, tone, page }: { ctx: RenderCtx; tone: Tone; page: number }
 
 function Contact({ ctx, tone }: { ctx: RenderCtx; tone: Tone }) {
   if (!ctx.showContact) return null;
-  const c = ctx.brand.contact;
-  if (!c) return null;
-  const parts = [c.phones.filter(Boolean)[0], c.website, c.address].filter(
-    (v): v is string => !!v && v.trim().length > 0,
-  );
-  if (!parts.length) return null;
+  const line = contactLine(ctx);
+  if (!line) return null;
   return (
     <div
       style={{
-        fontSize: px(TYPE.label),
+        // A step up the scale, and off the muted ink.
+        //
+        // This line is the only thing on a post that asks the reader to do
+        // something with it: a phone number to dial, an address to find. It was
+        // set at label size in muted ink, which is how you set a footnote, not
+        // how you set the one line the post exists to be answered on. A number
+        // nobody can read is the same as no number.
+        fontSize: px(TYPE.body),
         fontWeight: WEIGHT.medium,
-        color: ink(tone).muted,
+        color: ink(tone).body,
         fontFamily: fontSecondary(ctx),
       }}
     >
-      {parts.join("  ·  ")}
+      {line}
     </div>
   );
 }
