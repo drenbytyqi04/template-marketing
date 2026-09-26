@@ -23,6 +23,7 @@ import { TextItemsEditor } from "@/components/rafty/TextItemsEditor";
 import { AppShell } from "@/components/rafty/AppShell";
 import { PostCanvas } from "@/components/rafty/PostCanvas";
 import { AdjustControls } from "@/components/rafty/AdjustControls";
+import { DateRangeField } from "@/components/rafty/DateRangeField";
 import { LogoControls } from "@/components/rafty/LogoControls";
 import { ShareActions } from "@/components/rafty/ShareActions";
 import { FormatPicker } from "@/components/rafty/FormatPicker";
@@ -240,6 +241,7 @@ function FieldRow({
   value,
   onValue,
   onLabel,
+  trailing,
 }: {
   fieldKey: string;
   label: string;
@@ -247,6 +249,8 @@ function FieldRow({
   value: string;
   onValue: (v: string) => void;
   onLabel: (v: string) => void;
+  /** An extra control beside the box, for a field that has one. */
+  trailing?: React.ReactNode;
 }) {
   return (
     <div className="grid gap-1.5">
@@ -293,12 +297,15 @@ function FieldRow({
           </PopoverContent>
         </Popover>
       </div>
-      <Input
-        id={fieldKey}
-        value={value}
-        onChange={(e) => onValue(e.target.value)}
-        className="h-11 rounded-xl"
-      />
+      <div className="flex items-center gap-2">
+        <Input
+          id={fieldKey}
+          value={value}
+          onChange={(e) => onValue(e.target.value)}
+          className="h-11 rounded-xl"
+        />
+        {trailing}
+      </div>
     </div>
   );
 }
@@ -356,18 +363,16 @@ function CreatePage() {
   const [showBrandName, setShowBrandName] = useState<boolean>(
     existing?.showBrandName ?? draft?.showBrandName ?? brand?.showBrandName ?? false,
   );
-  // Contact details are brand data, so posts show them by default whenever the
-  // brand actually saved some. The toggle stays available per post.
-  const brandHasContact = Boolean(
-    brand &&
-    (brand.contact.phones.some((p) => p.trim()) ||
-      brand.contact.email.trim() ||
-      brand.contact.website.trim() ||
-      brand.contact.address.trim() ||
-      brand.contact.social.trim()),
-  );
+  // A post prints how to reach the business unless its author says otherwise.
+  //
+  // This used to start on only when the brand had already saved some contact
+  // details, which reads as caution and behaves as a trap: the first posts a new
+  // brand makes are the ones it makes before filling its profile in, and those
+  // went out with no phone number on them. The renderer draws nothing when there
+  // is nothing to draw, so the honest default costs an empty brand nothing and
+  // saves everyone else from finding out afterwards. The toggle stays per post.
   const [showContact, setShowContact] = useState<boolean>(
-    existing?.showContact ?? draft?.showContact ?? brandHasContact,
+    existing?.showContact ?? draft?.showContact ?? true,
   );
   const [postId, setPostId] = useState<string | null>(
     isDuplicate ? null : (existing?.id ?? draft?.postId ?? null),
@@ -562,6 +567,17 @@ function CreatePage() {
   const showsOffers = fromLibrary && designDraws(template.id, "offers");
 
   const locked = !canCreatePost && !postId;
+
+  /** The calendar offered beside the date field. Written here rather than at
+   * the two call sites so both field lists get the same control. */
+  const dateCalendar = (label: string) => (
+    <DateRangeField
+      value={content.date}
+      onChange={(v) => set({ date: v })}
+      language={brand?.language ?? "en"}
+      label={label}
+    />
+  );
 
   /** Patches only the active frame. */
   const set = (patch: Partial<PostContent>) =>
@@ -827,7 +843,7 @@ function CreatePage() {
     );
     setActiveIndex(0);
     setShowBrandName(brand!.showBrandName);
-    setShowContact(brandHasContact);
+    setShowContact(true);
     setGenerated(false);
     setShowAdjust(false);
     navigate({ to: "/create", search: {} });
@@ -927,6 +943,9 @@ function CreatePage() {
                 value={content[f.key]}
                 onValue={(v) => set({ [f.key]: v } as Partial<PostContent>)}
                 onLabel={(v) => setAll({ labels: { ...(content.labels ?? {}), [f.key]: v } })}
+                {...(f.key === "date"
+                  ? { trailing: dateCalendar(labelFor(f.key, f.labelKey)) }
+                  : {})}
               />
             ))}
           </div>
@@ -1042,6 +1061,9 @@ function CreatePage() {
                     value={content[f.key]}
                     onValue={(v) => set({ [f.key]: v } as Partial<PostContent>)}
                     onLabel={(v) => setAll({ labels: { ...(content.labels ?? {}), [f.key]: v } })}
+                    {...(f.key === "date"
+                      ? { trailing: dateCalendar(labelFor(f.key, f.labelKey)) }
+                      : {})}
                   />
                 ))}
               </div>
