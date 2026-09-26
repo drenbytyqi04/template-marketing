@@ -1194,6 +1194,9 @@ function CreatePage() {
               showBrandName={showBrandName}
               showContact={showContact}
               adjustments={active.adjustments}
+              // Only a clip has time to run it, and only here: the thumbnails
+              // elsewhere are stills of a finished post.
+              animate={format === "video"}
               format={format}
               className="rounded-xl"
             />

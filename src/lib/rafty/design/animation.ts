@@ -1,0 +1,97 @@
+/**
+ * How a design arrives on a clip.
+ *
+ * A still post is read all at once, so it has nothing to time. A clip is
+ * watched, and a design that is simply there from the first frame looks like a
+ * screenshot someone laid over a video. The parts arrive instead: each block of
+ * the frame fades up and settles, one after another, and then the design is
+ * just the design for the rest of the clip.
+ *
+ * The timing lives here rather than in the stylesheet because two very
+ * different things have to agree on it. The preview animates in CSS, where the
+ * browser does the work. The exported clip has no CSS - it is a canvas being
+ * composited frame by frame - so it has to compute the same curve itself. If
+ * the two ever disagree, what the customer approved is not what they post.
+ */
+
+/**
+ * Set on a canvas while it is being rasterised, to hold the design still.
+ *
+ * The stylesheet answers it by switching the keyframes off, and because those
+ * keyframes run from absent to the element's own resting style, switching them
+ * off leaves the finished design rather than whatever moment the capture landed
+ * on. Every rasteriser sets it; a capture that forgets produces a file with the
+ * design half arrived, and nothing about that file says so.
+ */
+export const STILL_ATTR = "data-krijo-still";
+
+/** Milliseconds one part takes to arrive. */
+const DURATION = 620;
+
+/** Milliseconds between one part starting and the next. Short enough to read as
+ * one movement rather than as a queue. */
+const STAGGER = 130;
+
+/** How far a part rises as it arrives, in cqw - the same container relative
+ * unit the designs themselves are measured in, so the movement is the same
+ * fraction of the frame on a thumbnail and on a 1080 pixel export. */
+const RISE = 3.2;
+
+export const INTRO = { duration: DURATION, stagger: STAGGER, rise: RISE } as const;
+
+/** The whole intro, for a design with this many parts. */
+export function introDurationMs(groups: number): number {
+  return Math.max(0, groups - 1) * STAGGER + DURATION;
+}
+
+/** The CSS timing function, written once so the stylesheet and the solver below
+ * cannot drift apart. */
+export const INTRO_EASING = "cubic-bezier(0.22, 1, 0.36, 1)";
+const P1X = 0.22;
+const P1Y = 1;
+const P2X = 0.36;
+const P2Y = 1;
+
+const bezier = (t: number, a: number, b: number) => {
+  const u = 1 - t;
+  return 3 * u * u * t * a + 3 * u * t * t * b + t * t * t;
+};
+
+/**
+ * The same curve the stylesheet applies, solved for a given progress.
+ *
+ * A cubic bezier timing function is written as x and y curves over a parameter,
+ * and what is wanted is y at a given x. There is no closed form, so the
+ * parameter is bisected until x is close enough - twenty steps put it within a
+ * millionth, far under a pixel of movement, and it runs once per part per
+ * frame rather than per pixel.
+ */
+export function introEase(progress: number): number {
+  const x = Math.min(1, Math.max(0, progress));
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 20; i += 1) {
+    const mid = (lo + hi) / 2;
+    if (bezier(mid, P1X, P2X) < x) lo = mid;
+    else hi = mid;
+  }
+  return bezier((lo + hi) / 2, P1Y, P2Y);
+}
+
+/**
+ * Where one part of the design is at a moment in the clip.
+ *
+ * `alpha` is how present it is, from absent to fully drawn. `rise` is how far
+ * below its resting place it still sits, in cqw. Both are settled - 1 and 0 -
+ * once the part's own window has passed, which is what lets the exporter stop
+ * compositing part by part and go back to drawing the design in one piece.
+ */
+export function introAt(index: number, elapsedMs: number): { alpha: number; rise: number } {
+  const started = elapsedMs - index * STAGGER;
+  if (started >= DURATION) return { alpha: 1, rise: 0 };
+  if (started <= 0) return { alpha: 0, rise: RISE };
+  const eased = introEase(started / DURATION);
+  return { alpha: eased, rise: RISE * (1 - eased) };
+}

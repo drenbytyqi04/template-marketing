@@ -7,6 +7,7 @@ import {
   videoExtension,
 } from "./video-export";
 import { tagSrgbDataUrl } from "./png-srgb";
+import { STILL_ATTR } from "./design/animation";
 
 /** Always embedded: every template declares these as its fallback faces. */
 const ALWAYS_EMBEDDED = ["Sora", "Plus Jakarta Sans"];
@@ -158,6 +159,12 @@ async function rasterise(node: HTMLElement, size?: ExportSize): Promise<string> 
   };
 
   try {
+    // A clip's design arrives rather than simply being there, and a capture
+    // taken while it is arriving would freeze a half faded frame into the file.
+    // The keyframes run from absent to the element's own resting style, so
+    // turning them off leaves the settled design - which is the one thing a
+    // still should ever be.
+    node.setAttribute(STILL_ATTR, "");
     node.style.position = "fixed";
     node.style.left = "-100000px";
     node.style.top = "0";
@@ -215,6 +222,7 @@ async function rasterise(node: HTMLElement, size?: ExportSize): Promise<string> 
     await toPng(node, options);
     return await toPng(node, options);
   } finally {
+    node.removeAttribute(STILL_ATTR);
     node.style.width = saved.width;
     node.style.maxWidth = saved.maxWidth;
     node.style.position = saved.position;

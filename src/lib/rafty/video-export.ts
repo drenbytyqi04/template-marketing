@@ -1,4 +1,5 @@
 import { toPng } from "html-to-image";
+import { introAt, introDurationMs, STILL_ATTR } from "./design/animation";
 
 /**
  * Renders a video post to a real clip.
@@ -28,7 +29,20 @@ type FootageRect = { x: number; y: number; width: number; height: number };
  * contributes on its own - the backdrop showing through a dimmed clip, a
  * gradient, the type.
  */
-type Overlay = { gain: HTMLCanvasElement; constant: HTMLCanvasElement; rect: FootageRect };
+/** One part of the design, solved on its own so it can arrive on its own.
+ * Everywhere the part does not draw, gain is full and constant is nothing, which
+ * is the identity of the compositing model: the footage passes through. */
+type Layer = { gain: HTMLCanvasElement; constant: HTMLCanvasElement };
+
+type Overlay = {
+  gain: HTMLCanvasElement;
+  constant: HTMLCanvasElement;
+  rect: FootageRect;
+  /** The design taken apart, in the order its parts arrive. Absent when nothing
+   * is animating, and unused once the intro has finished - the whole design in
+   * one piece is two draws a frame, and taking it apart is five times that. */
+  layers?: Layer[];
+};
 
 /**
  * The best container and codec this browser will actually encode.
@@ -278,6 +292,10 @@ async function buildOverlay(
   };
 
   try {
+    // Every pass below has to see the same, settled design. The parts arrive
+    // over the first second of a clip, and a solve taken while they are arriving
+    // would bake that moment into the layer it was meant to describe.
+    node.setAttribute(STILL_ATTR, "");
     // Lay the design out at the real export width, off-screen so the page does
     // not visibly jump. Every template is sized in cqw against this node, so
     // this makes the raster a 1:1 capture instead of an upscale.
@@ -300,37 +318,66 @@ async function buildOverlay(
       height: videoBox.height * scale,
     };
 
-    let restore = standIn(video, "#000000");
-    let black: Uint8ClampedArray;
-    try {
-      black = (await rasterise(node, size, video)).data;
-    } finally {
-      restore();
-    }
-    restore = standIn(video, "#ffffff");
-    let white: Uint8ClampedArray;
-    let ctx: CanvasRenderingContext2D;
-    try {
-      const pass = await rasterise(node, size, video);
-      white = pass.data;
-      ctx = pass.ctx;
-    } finally {
-      restore();
-    }
-
-    const gainData = ctx.createImageData(size.width, size.height);
-    const constantData = ctx.createImageData(size.width, size.height);
-    for (let i = 0; i < black.length; i += 4) {
-      for (let c = 0; c < 3; c++) {
-        gainData.data[i + c] = Math.max(0, white[i + c]! - black[i + c]!);
-        constantData.data[i + c] = black[i + c]!;
+    const solve = async (): Promise<Layer> => {
+      let restore = standIn(video, "#000000");
+      let black: Uint8ClampedArray;
+      try {
+        black = (await rasterise(node, size, video)).data;
+      } finally {
+        restore();
       }
-      gainData.data[i + 3] = 255;
-      constantData.data[i + 3] = 255;
+      restore = standIn(video, "#ffffff");
+      let white: Uint8ClampedArray;
+      let ctx: CanvasRenderingContext2D;
+      try {
+        const pass = await rasterise(node, size, video);
+        white = pass.data;
+        ctx = pass.ctx;
+      } finally {
+        restore();
+      }
+
+      const gainData = ctx.createImageData(size.width, size.height);
+      const constantData = ctx.createImageData(size.width, size.height);
+      for (let i = 0; i < black.length; i += 4) {
+        for (let c = 0; c < 3; c++) {
+          gainData.data[i + c] = Math.max(0, white[i + c]! - black[i + c]!);
+          constantData.data[i + c] = black[i + c]!;
+        }
+        gainData.data[i + 3] = 255;
+        constantData.data[i + 3] = 255;
+      }
+      return { gain: toCanvas(gainData), constant: toCanvas(constantData) };
+    };
+
+    const whole = await solve();
+
+    // Each part solved on its own, by hiding the others and solving again.
+    //
+    // A part cannot be animated out of a single flat raster: the design is one
+    // image, and fading half of it means knowing which half. Hiding the rest
+    // leaves a solve where that part is the only thing altering the footage and
+    // everywhere else is the identity, so the parts can be laid back over the
+    // clip one at a time, at whatever opacity and offset the moment calls for,
+    // and at full opacity with no offset they add back up to `whole`.
+    const groups = [...node.querySelectorAll<HTMLElement>(".krijo-intro")];
+    let layers: Layer[] | undefined;
+    if (groups.length > 1) {
+      layers = [];
+      for (const only of groups) {
+        const hidden = groups.filter((g) => g !== only);
+        for (const g of hidden) g.style.visibility = "hidden";
+        try {
+          layers.push(await solve());
+        } finally {
+          for (const g of hidden) g.style.visibility = "";
+        }
+      }
     }
 
-    return { gain: toCanvas(gainData), constant: toCanvas(constantData), rect };
+    return { ...whole, rect, ...(layers ? { layers } : {}) };
   } finally {
+    node.removeAttribute(STILL_ATTR);
     node.style.width = saved.width;
     node.style.maxWidth = saved.maxWidth;
     node.style.position = saved.position;
@@ -435,6 +482,7 @@ function composite(
   video: HTMLVideoElement,
   overlay: Overlay,
   size: VideoExportSize,
+  elapsedMs: number,
 ): void {
   // The design is rasterised once, at full size, and may be recorded onto a
   // smaller canvas, so the box the footage fills is scaled with it.
@@ -446,13 +494,54 @@ function composite(
     height: overlay.rect.height * k,
   };
   ctx.globalCompositeOperation = "source-over";
+  ctx.globalAlpha = 1;
   ctx.fillStyle = "#000000";
   ctx.fillRect(0, 0, size.width, size.height);
   drawCover(ctx, video, rect);
-  ctx.globalCompositeOperation = "multiply";
-  ctx.drawImage(overlay.gain, 0, 0, size.width, size.height);
-  ctx.globalCompositeOperation = "lighter";
-  ctx.drawImage(overlay.constant, 0, 0, size.width, size.height);
+
+  const layers = overlay.layers;
+  const arriving = layers && elapsedMs < introDurationMs(layers.length);
+  if (!arriving) {
+    // Settled, or never animating: the whole design in one pass.
+    ctx.globalCompositeOperation = "multiply";
+    ctx.drawImage(overlay.gain, 0, 0, size.width, size.height);
+    ctx.globalCompositeOperation = "lighter";
+    ctx.drawImage(overlay.constant, 0, 0, size.width, size.height);
+    ctx.globalCompositeOperation = "source-over";
+    return;
+  }
+
+  // Laid back over the clip one part at a time.
+  //
+  // `globalAlpha` on a blended draw interpolates between the backdrop and the
+  // blended result, which is exactly what a part half arrived means here: the
+  // footage shows through the rest of the way. Measured in a browser rather
+  // than assumed - at alpha 0 the footage is untouched, at 1 the part is fully
+  // drawn, and the steps between land on the arithmetic.
+  //
+  // Where this is exact, and where it is not. Parts that do not overlap add
+  // back up to the whole design pixel for pixel, and so does an opaque part
+  // over another - its gain is zero, so it wipes what is under it exactly as a
+  // single raster would. The one case that differs is a *semi-transparent* part
+  // over another: applied in sequence it lets the part beneath show through,
+  // where a single raster would simply have replaced it. In this library that
+  // is the soft edge of a pinned logo lying over a block, the designs being
+  // barred from overlapping blocks at all. It is also confined to the intro:
+  // the moment everything has arrived the whole design is drawn in one piece
+  // again, so what stays on screen for the rest of the clip is exact.
+  for (let i = 0; i < layers.length; i += 1) {
+    const { alpha, rise } = introAt(i, elapsedMs);
+    if (alpha <= 0) continue;
+    // The rise is written in cqw, the unit the designs are drawn in, so it is
+    // the same fraction of the frame whatever this recording's size is.
+    const dy = (rise / 100) * size.width;
+    ctx.globalAlpha = alpha;
+    ctx.globalCompositeOperation = "multiply";
+    ctx.drawImage(layers[i]!.gain, 0, dy, size.width, size.height);
+    ctx.globalCompositeOperation = "lighter";
+    ctx.drawImage(layers[i]!.constant, 0, dy, size.width, size.height);
+  }
+  ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = "source-over";
 }
 
@@ -503,7 +592,9 @@ export async function renderVideoPosterToDataUrl(
     ctx.fillRect(0, 0, size.width, size.height);
     drawCover(ctx, video, overlay.rect);
     assertFootagePainted(ctx, overlay.rect);
-    composite(ctx, video, overlay, size);
+    // A poster is a still of the clip, so it shows the design finished arriving
+    // rather than whichever moment of the intro it was taken at.
+    composite(ctx, video, overlay, size, Number.POSITIVE_INFINITY);
     return canvas.toDataURL("image/png");
   } finally {
     release();
@@ -597,7 +688,8 @@ async function recordOnce(input: {
   ctx.fillRect(0, 0, size.width, size.height);
   drawCover(ctx, video, rect);
   assertFootagePainted(ctx, rect);
-  composite(ctx, video, overlay, size);
+  // The first frame is the clip before the design has arrived on it.
+  composite(ctx, video, overlay, size, 0);
 
   // Frames are handed over one at a time rather than sampled at a fixed rate,
   // so every frame that was painted is offered to the recorder.
@@ -648,7 +740,7 @@ async function recordOnce(input: {
     throw new Error("The uploaded video would not play, so there was nothing to record.");
   }
   const tick = () => {
-    composite(ctx, video, overlay, size);
+    composite(ctx, video, overlay, size, performance.now() - startedAt);
     requestFrame();
     if (video.ended || performance.now() - startedAt > limitMs) return stop();
     handle = requestAnimationFrame(tick);

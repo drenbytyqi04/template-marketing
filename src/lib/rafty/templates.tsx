@@ -39,6 +39,9 @@ export type RenderCtx = {
   variant: TemplateVariant;
   showBrandName?: boolean;
   adjustments?: PostAdjustments;
+  /** Whether the design arrives rather than simply being there. Clips animate;
+   * a still has nothing to time, and a rasteriser needs the settled frame. */
+  animate?: boolean;
   /** Renders the brand contact zone when a template opts in. */
   showContact?: boolean;
   /** The canvas this design is drawn on, in pixels. A design needs the shape of

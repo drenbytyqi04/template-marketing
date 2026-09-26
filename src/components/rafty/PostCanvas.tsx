@@ -23,6 +23,8 @@ type Props = {
   showBrandName?: boolean;
   showContact?: boolean;
   adjustments?: PostAdjustments;
+  /** Plays the design's arrival. Only a clip has time to run it. */
+  animate?: boolean;
   /** Overrides the template format, used by previews that force one shape. */
   format?: ContentFormat;
   className?: string;
@@ -43,6 +45,7 @@ export const PostCanvas = forwardRef<HTMLDivElement, Props>(function PostCanvas(
     showBrandName,
     showContact,
     adjustments,
+    animate,
     format,
     className,
   },
@@ -95,6 +98,7 @@ export const PostCanvas = forwardRef<HTMLDivElement, Props>(function PostCanvas(
         showBrandName: showBrandName ?? false,
         showContact: showContact ?? false,
         ...(adjustments ? { adjustments } : {}),
+        ...(animate ? { animate: true } : {}),
         canvas: { width: size.width, height: size.height },
       })}
       <ExtraTextLayer items={content.extras} brand={brand} />

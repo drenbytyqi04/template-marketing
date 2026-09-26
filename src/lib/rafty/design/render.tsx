@@ -5,6 +5,7 @@ import type { RenderCtx } from "../templates";
 import type { LanguageCode } from "../types";
 import type { Block, DesignSpec, Part, PhotoTreatment } from "./spec";
 import { GRID } from "./spec";
+import { INTRO } from "./animation";
 
 /**
  * The one renderer every design is drawn by.
@@ -90,7 +91,7 @@ function logoAdjust(ctx: RenderCtx) {
  * a logo in a corner lines up with everything else on the page, and the nudges
  * stop at the edge rather than carrying it off the canvas.
  */
-function FloatingLogo({ ctx, page }: { ctx: RenderCtx; page: number }) {
+function FloatingLogo({ ctx, page, arrival }: { ctx: RenderCtx; page: number; arrival?: number }) {
   const logo = ctx.brand.logoDataUrl;
   const { place, scale, x, y } = logoAdjust(ctx);
   if (!logo || place === "design") return null;
@@ -113,7 +114,11 @@ function FloatingLogo({ ctx, page }: { ctx: RenderCtx; page: number }) {
 
   return (
     <div
+      {...(arrival === undefined ? {} : { className: "krijo-intro" })}
       style={{
+        ...(arrival === undefined
+          ? {}
+          : ({ "--krijo-delay": `${arrival * INTRO.stagger}ms` } as React.CSSProperties)),
         position: "absolute",
         ...(middleY
           ? { top: middle(y) }
@@ -1037,12 +1042,15 @@ function BlockNode({
   tone,
   rowHeight,
   page,
+  arrival,
 }: {
   block: Block;
   ctx: RenderCtx;
   tone: Tone;
   rowHeight: number;
   page: number;
+  /** Where this block comes in the intro, or absent when nothing is arriving. */
+  arrival?: number;
 }) {
   const [c1, c2, r1, r2] = block.area;
   const own = blockTone(block, tone);
@@ -1055,7 +1063,13 @@ function BlockNode({
   const room = (r2 - r1) * rowHeight - reserved;
   return (
     <div
+      {...(arrival === undefined ? {} : { className: "krijo-intro" })}
       style={{
+        // The stylesheet reads its delay from here, so the order the parts
+        // arrive in is decided by the design rather than by the class.
+        ...(arrival === undefined
+          ? {}
+          : ({ "--krijo-delay": `${arrival * INTRO.stagger}ms` } as React.CSSProperties)),
         gridColumn: `${c1} / ${c2}`,
         gridRow: `${r1} / ${r2}`,
         // A block is as tall as what it holds, capped at the area it was given
@@ -1140,10 +1154,17 @@ export function renderDesign(spec: DesignSpec, ctx: RenderCtx): React.ReactNode 
             tone={spec.tone}
             rowHeight={rowHeight}
             page={page}
+            {...(ctx.animate ? { arrival: i } : {})}
           />
         ))}
       </div>
-      <FloatingLogo ctx={ctx} page={page} />
+      {/* Last in, because a mark pinned over the design should settle onto a
+          design that has already arrived. */}
+      <FloatingLogo
+        ctx={ctx}
+        page={page}
+        {...(ctx.animate ? { arrival: spec.blocks.length } : {})}
+      />
     </div>
   );
 }
