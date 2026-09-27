@@ -93,17 +93,23 @@ function cropTo(
  * Bits a second for a frame of this size, at the rate it is recorded.
  *
  * Left unset, a browser picks one number for every clip - Chrome settles near
- * 2.5 Mbps whether the frame is 480p or 1080p - and a customer's vertical 1080
- * export came back at 2242 kb/s, which is heavy compression on two million
- * pixels and reads as a picture softer than the footage that went in. Asked for
- * by area instead: about a fifth of a bit per pixel per frame, which is a
- * comfortable rate for H.264 on detailed video, then held inside a range so a
- * small frame is not starved and a large one does not ask for a file nobody can
- * upload.
+ * 2.5 Mbps whether the frame is 480p or 1080p - and a vertical 1080 export came
+ * back at 2242 kb/s, heavy compression on two million pixels, softer than the
+ * footage that went in.
+ *
+ * Asking for a great deal more turned out to cost more than it bought. At
+ * roughly a fifth of a bit per pixel per frame - near 12 Mbps on a vertical
+ * 1080 frame - the encoder could not keep up with a live recording and the clip
+ * came back at 16.5 frames a second instead of 30. A stuttering clip is a worse
+ * picture than a slightly softer one, and the extra bits were being spent on
+ * something no one would see anyway: a feed re-encodes what it is given, and
+ * keeps nothing like that rate. A tenth of a bit per pixel per frame is around
+ * 6 Mbps here, comfortably past what the destination keeps and comfortably
+ * inside what a browser can encode live.
  */
 function bitrateFor(size: VideoExportSize): number {
-  const perFrame = size.width * size.height * 0.19;
-  return Math.round(Math.min(16_000_000, Math.max(4_000_000, perFrame * CAPTURE_FPS)));
+  const perFrame = size.width * size.height * 0.1;
+  return Math.round(Math.min(8_000_000, Math.max(2_500_000, perFrame * CAPTURE_FPS)));
 }
 
 /** Frames a second the clip is drawn and recorded at. Thirty is what a feed
@@ -221,53 +227,6 @@ async function warnIfNotH264(blob: Blob): Promise<void> {
     );
   } catch {
     /* a sniff that fails tells us nothing, and must not fail the export */
-  }
-}
-
-/**
- * A recording that holds one frame is a still with a video extension, and
- * handing that to someone as their clip is worse than saying it failed. The
- * check reads how much media the file actually carries, without playing it.
- */
-async function measureClip(blob: Blob): Promise<{ seconds: number; frames: number }> {
-  const url = URL.createObjectURL(blob);
-  try {
-    const probe = document.createElement("video");
-    probe.src = url;
-    probe.muted = true;
-    probe.preload = "auto";
-    const loaded = await new Promise<boolean>((resolve) => {
-      probe.onloadeddata = () => resolve(true);
-      probe.onerror = () => resolve(false);
-      setTimeout(() => resolve(false), 4000);
-    });
-    if (!loaded) throw new Error("The recorded clip could not be read back.");
-
-    // A recording made live carries no duration in its header, so the only
-    // honest measure is how much of it decodes. Played fast and muted, a whole
-    // clip runs through in a fraction of its length.
-    const withCallback = probe as HTMLVideoElement & {
-      requestVideoFrameCallback?: (cb: () => void) => number;
-    };
-    if (!withCallback.requestVideoFrameCallback) return { seconds: Infinity, frames: Infinity };
-    let frames = 0;
-    let last = 0;
-    const count = () => {
-      frames += 1;
-      last = probe.currentTime;
-      withCallback.requestVideoFrameCallback?.(count);
-    };
-    withCallback.requestVideoFrameCallback(count);
-    probe.playbackRate = 16;
-    await probe.play().catch(() => {});
-    await new Promise<void>((resolve) => {
-      probe.onended = () => resolve();
-      setTimeout(resolve, 6000);
-    });
-    probe.pause();
-    return { seconds: Math.max(last, probe.currentTime), frames };
-  } finally {
-    URL.revokeObjectURL(url);
   }
 }
 
@@ -774,44 +733,57 @@ export async function renderVideoPostToBlob(
   const { video, release } = await loadFootage(src);
 
   try {
-    // Recording at a size the machine cannot keep up with does not simply lower
-    // the frame rate: frames the capture queue cannot take are dropped, and the
-    // clip comes back shorter than the footage, a six second walkthrough
-    // arriving as two seconds of stutter. What a machine can manage is only
-    // knowable by recording, so the clip is measured against the time it took
-    // to record and, if it fell behind, made again at half the frame size. The
-    // design is rasterised once and scaled, so a second pass costs one more
-    // playthrough and nothing else.
-    const half = { width: Math.round(size.width / 4) * 2, height: Math.round(size.height / 4) * 2 };
+    // What a machine can manage is only knowable by recording, so when it
+    // cannot keep up the clip is made again - at the same frame size, asking
+    // the encoder for fewer bits.
+    //
+    // It used to make it again at half the frame size, which is the one loss a
+    // customer sees immediately, and it never diagnosed the right thing: a
+    // recording that falls behind still runs the length of its footage, so
+    // measuring the clip's duration says nothing. What it loses is frames. The
+    // honest measure is how many were handed to the encoder against how long
+    // recording took, which this counts as it goes and costs nothing.
+    //
+    // Bits are what get given up, because the encoder is what ran out of time
+    // and because a feed re-encodes the file anyway. The frame size is never
+    // touched.
     let best: Blob | null = null;
-    for (const recordSize of [size, half]) {
+    const rates = [bitrateFor(size), Math.round(bitrateFor(size) / 2)];
+    for (const bitrate of rates) {
       const attempt = await recordOnce({
         video,
         overlay,
         mimeType,
-        size: recordSize,
+        size,
+        bitrate,
         limitMs: opts.maxDurationMs ?? 60_000,
       });
-      const clip = await measureClip(attempt.blob);
-      if (clip.frames < 2) {
+      // A clip is judged by what was handed to the encoder, not by reading the
+      // file back.
+      //
+      // It used to play the recording through at sixteen times speed and count
+      // the frames the browser chose to present, which is not the same thing as
+      // the frames the file holds: a large clip presents a fraction of them, so
+      // a perfectly good recording could be declared a single frame and thrown
+      // away, and a decoder that simply took too long failed the export
+      // outright. The counter below is kept while recording, costs nothing, and
+      // cannot be fooled.
+      if (attempt.emitted < 2) {
         throw new Error(
           "The clip recorded only a single frame. Please try the download again, and keep this tab in front while it runs.",
         );
       }
       best = attempt.blob;
-      // Resolution is the last thing to give up.
-      //
-      // Falling back to a smaller frame is how a clip stops matching the
-      // footage it was made from, and that is the one thing a customer notices
-      // immediately. A clip a quarter short is still the right picture, and
-      // since the recording is paced to a frame rate rather than to the
-      // display, falling behind at all is now unusual. So the full size answer
-      // is kept unless it came back badly short - and even then the smaller one
-      // is only preferred if it is actually more complete.
-      if (clip.seconds >= (attempt.wallMs / 1000) * 0.75) {
+      const achievedFps = attempt.emitted / (attempt.wallMs / 1000);
+      // Within a sixth of the rate it was aiming for is a smooth clip. Below
+      // that it stutters, and it is worth one more pass to get it back.
+      if (achievedFps >= CAPTURE_FPS * 0.83) {
         await warnIfNotH264(attempt.blob);
         return attempt.blob;
       }
+      console.warn(
+        `[video-export] Recorded ${achievedFps.toFixed(1)} frames a second against ${CAPTURE_FPS}. Trying again with a lighter encode.`,
+      );
     }
     await warnIfNotH264(best!);
     return best!;
@@ -828,12 +800,16 @@ async function recordOnce(input: {
   mimeType: string;
   size: VideoExportSize;
   limitMs: number;
-}): Promise<{ blob: Blob; wallMs: number }> {
-  const { video, overlay, mimeType, size, limitMs } = input;
+  bitrate: number;
+}): Promise<{ blob: Blob; wallMs: number; emitted: number }> {
+  const { video, overlay, mimeType, size, limitMs, bitrate } = input;
   const canvas = document.createElement("canvas");
   canvas.width = size.width;
   canvas.height = size.height;
-  const ctx = canvas.getContext("2d");
+  // Opaque: every frame starts with a fill and ends covered, so the alpha
+  // channel is two million values a frame that nothing ever reads, and carrying
+  // it costs compositing time this recording does not have to spare.
+  const ctx = canvas.getContext("2d", { alpha: false });
   if (!ctx) throw new Error("Could not get a drawing context.");
 
   // Paint once before recording: a capture only emits on paint, so starting on
@@ -872,10 +848,7 @@ async function recordOnce(input: {
     // No audio is better than no export.
   }
 
-  const recorder = new MediaRecorder(stream, {
-    mimeType,
-    videoBitsPerSecond: bitrateFor(size),
-  });
+  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: bitrate });
   const chunks: Blob[] = [];
   recorder.ondataavailable = (e) => {
     if (e.data.size > 0) chunks.push(e.data);
@@ -919,11 +892,13 @@ async function recordOnce(input: {
   // frame, because a detached video presents no frames of its own to follow, but
   // only every thirtieth of a second is drawn and offered.
   let nextFrameAt = startedAt;
+  let emitted = 0;
   const tick = () => {
     const now = performance.now();
     if (now >= nextFrameAt) {
       composite(ctx, video, overlay, size, now - startedAt);
       requestFrame();
+      emitted += 1;
       // Anchored to the schedule, not to now: one late frame must not push the
       // whole clip later, and a very late one should not fire a burst to catch
       // up either.
@@ -936,5 +911,5 @@ async function recordOnce(input: {
   tick();
 
   const blob = await done;
-  return { blob, wallMs: performance.now() - startedAt };
+  return { blob, wallMs: performance.now() - startedAt, emitted };
 }
