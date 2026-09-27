@@ -102,6 +102,24 @@ export const Route = createFileRoute("/_authenticated/create")({
   ),
 });
 
+/**
+ * How tall the preview may get, in pixels.
+ *
+ * The preview used to be bounded by width alone - the column it sits in - and
+ * then narrowed to 320px whenever the format was video, because a clip was
+ * always 9:16 and a full height vertical frame at the column's width runs most
+ * of a screen tall. That cap was written against the format rather than against
+ * the shape, so now that a clip can be made for the feed, a 4:5 clip was being
+ * shown at two thirds the size of the 4:5 picture beside it - the same frame,
+ * the same design, one of them small for no reason a person could see.
+ *
+ * Bounding the height instead says the thing that was actually meant. Every
+ * shape gets as much of the column as it can use, and a frame only gives width
+ * back when it is tall enough to need to: a 4:5 clip is now exactly the size of
+ * a 4:5 post, and a 9:16 one is larger than the flat cap allowed.
+ */
+const PREVIEW_MAX_HEIGHT = 650;
+
 /** A fresh frame. Every slide owns its own content object, so no two slides
  * ever share mutable state. */
 function newSlide(durationMs?: number): Slide {
@@ -1182,7 +1200,8 @@ function CreatePage() {
 
         <div className="mx-auto w-full max-w-[520px]">
           <div
-            className={`card-soft mx-auto overflow-hidden p-2 ${format === "video" ? "max-w-[320px]" : ""}`}
+            className="card-soft mx-auto overflow-hidden p-2"
+            style={{ maxWidth: Math.round(PREVIEW_MAX_HEIGHT * (size.width / size.height)) }}
           >
             <PostCanvas
               ref={canvasRef}
