@@ -50,31 +50,83 @@ type Layer = {
 };
 
 /**
- * A line's box, in overlay pixels: its own rectangle and not a pixel more.
+ * A line's box, in overlay pixels: everything it paints and nothing else.
  *
- * It used to be given a margin, for a shadow or a soft edge falling outside the
- * element. That margin was wider than the gap between two lines, so neighbouring
- * boxes overlapped by about twenty pixels - and a line's answer, solved with the
- * others hidden, holds only the picture where those others would be. Drawing a
- * line therefore rubbed out a strip of the line above it, which read as a band
- * moving with the wipe and was exactly what a customer photographed twice.
+ * It used to be given a flat margin, for a shadow or a soft edge falling
+ * outside the element. That margin was wider than the gap between two lines, so
+ * neighbouring boxes overlapped by about twenty pixels - and a line's answer,
+ * solved with the others hidden, holds only the picture where those others
+ * would be. Drawing a line therefore rubbed out a strip of the line above it,
+ * which read as a band moving with the wipe and was exactly what a customer
+ * photographed twice.
  *
- * Lines are laid out as siblings with a gap, so their own rectangles never
- * overlap. Anything a line paints outside its rectangle is lost for the length
- * of the intro, and these designs paint nothing there.
+ * So the room is measured rather than guessed. A line's own rectangle is the
+ * start; anything inside it that says how far outside itself it may paint - the
+ * clip margin the auto-fit boxes carry, which is what lets a descender and an
+ * `f` finish - widens the box by that much and no more. Two lines are then
+ * pulled out of one another, neither allowed past the middle of the gap between
+ * them, so the room a line takes for its ink can never reach into the line next
+ * to it.
  */
-function boxOf(
-  el: HTMLElement,
+type Box = { x: number; y: number; width: number; height: number };
+
+/** The rectangle a line paints in, in page pixels: its own, widened by whatever
+ * ink room the boxes inside it declare. */
+function paintedRect(el: HTMLElement): {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  core: { left: number; top: number; right: number; bottom: number };
+} {
+  const r = el.getBoundingClientRect();
+  const core = { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+  const out = { ...core };
+  for (const child of el.querySelectorAll<HTMLElement>("*")) {
+    const margin = parseFloat(getComputedStyle(child).overflowClipMargin);
+    if (!Number.isFinite(margin) || margin <= 0) continue;
+    const c = child.getBoundingClientRect();
+    if (c.width <= 0 || c.height <= 0) continue;
+    out.left = Math.min(out.left, c.left - margin);
+    out.top = Math.min(out.top, c.top - margin);
+    out.right = Math.max(out.right, c.right + margin);
+    out.bottom = Math.max(out.bottom, c.bottom + margin);
+  }
+  return { ...out, core };
+}
+
+/** The boxes for a set of lines, each widened for its ink and then held back
+ * from the lines around it. */
+function boxesOf(
+  els: HTMLElement[],
   nodeBox: DOMRect,
   scale: number,
   size: VideoExportSize,
-): { x: number; y: number; width: number; height: number } {
-  const r = el.getBoundingClientRect();
-  const x = Math.max(0, Math.floor((r.left - nodeBox.left) * scale));
-  const y = Math.max(0, Math.floor((r.top - nodeBox.top) * scale));
-  const right = Math.min(size.width, Math.ceil((r.right - nodeBox.left) * scale));
-  const bottom = Math.min(size.height, Math.ceil((r.bottom - nodeBox.top) * scale));
-  return { x, y, width: Math.max(1, right - x), height: Math.max(1, bottom - y) };
+): Box[] {
+  const rects = els.map(paintedRect);
+  return rects.map((r, i) => {
+    let { left, top, right, bottom } = r;
+    for (let j = 0; j < rects.length; j += 1) {
+      if (j === i) continue;
+      const o = rects[j]!.core;
+      const mine = r.core;
+      // A line can only be run into along the axis that separates the two; one
+      // that misses this line on the other axis is not in the way at all.
+      if (o.left < mine.right && o.right > mine.left) {
+        if (o.bottom <= mine.top) top = Math.max(top, (o.bottom + mine.top) / 2);
+        if (o.top >= mine.bottom) bottom = Math.min(bottom, (o.top + mine.bottom) / 2);
+      }
+      if (o.top < mine.bottom && o.bottom > mine.top) {
+        if (o.right <= mine.left) left = Math.max(left, (o.right + mine.left) / 2);
+        if (o.left >= mine.right) right = Math.min(right, (o.left + mine.right) / 2);
+      }
+    }
+    const x = Math.max(0, Math.floor((left - nodeBox.left) * scale));
+    const y = Math.max(0, Math.floor((top - nodeBox.top) * scale));
+    const x2 = Math.min(size.width, Math.ceil((right - nodeBox.left) * scale));
+    const y2 = Math.min(size.height, Math.ceil((bottom - nodeBox.top) * scale));
+    return { x, y, width: Math.max(1, x2 - x), height: Math.max(1, y2 - y) };
+  });
 }
 
 function cropTo(
@@ -117,6 +169,11 @@ function bitrateFor(size: VideoExportSize): number {
  * plays, what an encoder keeps up with, and what a phone expects. */
 const CAPTURE_FPS = 30;
 const FRAME_MS = 1000 / CAPTURE_FPS;
+
+/** How long the picture may go without a frame before the recording is treated
+ * as having stopped being drawn. Twelve frames: long enough that a machine
+ * merely labouring is left alone, short enough that almost nothing is lost. */
+const STALL_MS = 12 * FRAME_MS;
 
 type Overlay = {
   gain: HTMLCanvasElement;
@@ -421,8 +478,11 @@ async function buildOverlay(
         for (const g of groups) g.style.visibility = "";
       }
       layers = [];
-      for (const only of groups) {
-        const box = boxOf(only, nodeBox, scale, size);
+      // Measured together, because how far one line may reach for its ink
+      // depends on where the line next to it starts.
+      const boxes = boxesOf(groups, nodeBox, scale, size);
+      for (const [index, only] of groups.entries()) {
+        const box = boxes[index]!;
         const arrival = Number(only.getAttribute(ARRIVAL_ATTR) ?? layers.length);
         const hidden = groups.filter((g) => g !== only);
         for (const g of hidden) g.style.visibility = "hidden";
@@ -843,16 +903,83 @@ async function recordOnce(input: {
   // the element being recorded is never in the document, and a detached video
   // never presents frames, so its callback would not fire.
   let handle = 0;
+  let watchdog = 0;
   const stop = () => {
     cancelAnimationFrame(handle);
+    clearInterval(watchdog);
     video.removeEventListener("ended", stop);
+    document.removeEventListener("visibilitychange", onShownOrHidden);
     if (recorder.state !== "inactive") recorder.stop();
     video.pause();
   };
 
+  /**
+   * Time the recording spent held, and the moment it was last held from.
+   *
+   * A browser stops drawing a page it is not showing - another tab in front,
+   * the window minimised, the screen locked - and animation frames stop with
+   * it. The footage does not stop. It plays on, its sound keeps being recorded,
+   * and `ended` still arrives at the end, so the recording was closed with a
+   * picture that ran out part way and sound that did not: on the clip a
+   * customer sent, 10.54 seconds of audio against 9.35 of video, the last
+   * second and a fifth of the picture simply missing, and nothing in the file
+   * or the export said so.
+   *
+   * So the recording is held instead of lost. The footage is paused and the
+   * recorder paused with it, and both are let go when the page is drawn again;
+   * a recording that spends time in the background takes longer by the clock
+   * and comes out whole. The time it spent held is taken off the clock the
+   * intro is animated against and off the rate the export is judged by, so a
+   * clip that waited is not read as a clip that stuttered.
+   */
+  let heldMs = 0;
+  let heldFrom = 0;
+  let lastFrameAt = 0;
+
+  const hold = () => {
+    if (heldFrom) return;
+    heldFrom = performance.now();
+    cancelAnimationFrame(handle);
+    if (recorder.state === "recording") recorder.pause();
+    video.pause();
+  };
+
+  const release = () => {
+    if (!heldFrom) return;
+    heldMs += performance.now() - heldFrom;
+    heldFrom = 0;
+    if (recorder.state === "paused") recorder.resume();
+    void video.play().catch(() => {});
+    // The schedule restarts from now rather than catching up on a stretch that
+    // was never recorded.
+    nextFrameAt = performance.now();
+    lastFrameAt = performance.now();
+    handle = requestAnimationFrame(tick);
+  };
+
+  function onShownOrHidden() {
+    if (document.hidden) hold();
+    else release();
+  }
+
   recorder.start(100);
   await video.play();
   const startedAt = performance.now();
+  lastFrameAt = startedAt;
+  document.addEventListener("visibilitychange", onShownOrHidden);
+  // A window can stop being drawn without the page ever calling itself hidden -
+  // fully covered by another window, on a system that does not report it. This
+  // notices the same thing from the other end, by the frames not arriving, and
+  // costs four checks a second. It is slower to react than the event above, so
+  // it is the backstop rather than the mechanism.
+  watchdog = window.setInterval(() => {
+    if (recorder.state !== "recording") return;
+    if (performance.now() - lastFrameAt < STALL_MS) return;
+    hold();
+    // Whenever the page is drawn again, this runs - which is the thing being
+    // waited for.
+    requestAnimationFrame(() => release());
+  }, 250);
   // Footage that reports itself finished before a single frame has been drawn
   // never played, so recording it would capture one still.
   if (video.ended) {
@@ -874,21 +1001,28 @@ async function recordOnce(input: {
   let emitted = 0;
   const tick = () => {
     const now = performance.now();
+    if (heldFrom) return;
     if (now >= nextFrameAt) {
-      composite(ctx, video, overlay, size, now - startedAt);
+      // Against recorded time, not wall time: the two differ by however long
+      // the page spent in the background, and the intro has to arrive over the
+      // footage it was timed against.
+      composite(ctx, video, overlay, size, now - startedAt - heldMs);
       requestFrame();
       emitted += 1;
+      lastFrameAt = now;
       // Anchored to the schedule, not to now: one late frame must not push the
       // whole clip later, and a very late one should not fire a burst to catch
       // up either.
       nextFrameAt = Math.max(now, nextFrameAt + FRAME_MS);
     }
-    if (video.ended || now - startedAt > limitMs) return stop();
+    if (video.ended || now - startedAt - heldMs > limitMs) return stop();
     handle = requestAnimationFrame(tick);
   };
   video.addEventListener("ended", stop, { once: true });
   tick();
 
   const blob = await done;
-  return { blob, wallMs: performance.now() - startedAt, emitted };
+  const wallMs =
+    performance.now() - startedAt - heldMs - (heldFrom ? performance.now() - heldFrom : 0);
+  return { blob, wallMs, emitted };
 }

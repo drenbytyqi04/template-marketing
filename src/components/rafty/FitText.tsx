@@ -22,6 +22,27 @@ type Props = {
  * clips or overlaps: the outer box hides overflow while the inner element is
  * shrunk to fit, and very long single words are allowed to break.
  */
+
+/**
+ * How far outside its box a line is allowed to paint, as a share of its type
+ * size.
+ *
+ * A box is laid out from advance widths and line heights, and a glyph's ink
+ * does not stay inside either of them. An `f` in most faces hangs its terminal
+ * past the width it advances; a `g` drops its tail below the line box, and a
+ * headline set at a line-height of 0.96 has a line box shorter than the face's
+ * own ascent and descent to begin with. The fit sizes the text so the advances
+ * fit, then a box that clips at exactly its edges shaves the ink that was never
+ * in the advances - which is what put a flat vertical slice through the `f` and
+ * a flat cut under the `g` of a customer's headline, in the preview, in every
+ * PNG and in every clip.
+ *
+ * An eighth of the type size clears a descender at the tight line-heights these
+ * templates use. It is room to paint, not room to lay out: the box keeps its
+ * size, so nothing below it moves, and text that genuinely does not fit is
+ * still cut - an eighth of a line later than before.
+ */
+const INK = 0.16;
 export function FitText({
   text,
   as = "div",
@@ -84,7 +105,20 @@ export function FitText({
   if (!text) return null;
 
   return (
-    <div ref={boxRef} style={{ overflow: "hidden", maxWidth: "100%", ...boxStyle }}>
+    <div
+      ref={boxRef}
+      style={{
+        // `clip` rather than `hidden` because only `clip` takes a margin, and
+        // because the box is not scrollable in any case. It leaves the box's
+        // own geometry alone - the width the text wraps at, the height cap the
+        // fit measures against, `clientWidth` - and moves only where the
+        // clipping happens.
+        overflow: "clip",
+        overflowClipMargin: `${(maxSize * INK).toFixed(2)}cqw`,
+        maxWidth: "100%",
+        ...boxStyle,
+      }}
+    >
       {createElement(
         as,
         {

@@ -247,13 +247,21 @@
  */
 @keyframes krijo-intro {
   from {
-    clip-path: inset(0 100% 0 0);
+    /* Open above and below from the first frame. The wipe runs sideways, so the
+       other three edges have no work to do, and a clip that sat on them would
+       cut the ink that hangs outside every line box - a descender, the tail of
+       an italic - for the whole of the intro. Nothing can appear in the room
+       this opens but the line's own glyphs: the clip only ever holds back the
+       element it is set on. */
+    clip-path: inset(-16% 100% -16% 0);
   }
   to {
     /* Past the edge rather than on it: the animation fills forwards, so this is
        the state the line keeps, and an inset of exactly zero would shave a
-       descender or a soft edge off every line for the rest of the clip. */
-    clip-path: inset(0 -8% 0 0);
+       descender or a soft edge off every line for the rest of the clip. The
+       left edge opens over the same window, so the first glyph's own overhang
+       arrives with it rather than popping in at the start. */
+    clip-path: inset(-16% -8% -16% -8%);
   }
 }
 
