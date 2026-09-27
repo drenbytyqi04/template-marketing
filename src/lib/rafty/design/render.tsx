@@ -118,7 +118,10 @@ function FloatingLogo({ ctx, page, arrival }: { ctx: RenderCtx; page: number; ar
       style={{
         ...(arrival === undefined
           ? {}
-          : ({ "--krijo-delay": `${arrival * INTRO.stagger}ms` } as React.CSSProperties)),
+          : ({
+              "--krijo-delay": `${arrival * INTRO.stagger}ms`,
+              "--krijo-duration": `${INTRO.duration}ms`,
+            } as React.CSSProperties)),
         position: "absolute",
         ...(middleY
           ? { top: middle(y) }
@@ -1050,7 +1053,12 @@ function Arriving({ at, children }: { at: number; children: React.ReactNode }) {
     <div
       className="krijo-intro"
       {...{ [ARRIVAL_ATTR]: at }}
-      style={{ "--krijo-delay": `${at * INTRO.stagger}ms` } as React.CSSProperties}
+      style={
+        {
+          "--krijo-delay": `${at * INTRO.stagger}ms`,
+          "--krijo-duration": `${INTRO.duration}ms`,
+        } as React.CSSProperties
+      }
     >
       {children}
     </div>

@@ -556,6 +556,34 @@ function toCanvas(data: ImageData): HTMLCanvasElement {
   return canvas;
 }
 
+/**
+ * A canvas kept aside to hold the frame's untreated footage.
+ *
+ * Laying a line down means putting the raw picture back inside the strip the
+ * line has uncovered, and that used to be done by drawing the footage again,
+ * clipped - once per line, every frame. A design with nine lines therefore
+ * scaled a full frame of video ten times to draw one frame of clip, and it
+ * showed: measured on a real 4:5 export, a frame cost 20.3ms while the lines
+ * were arriving against 13.4ms once they had, with spikes to 215ms, and the
+ * intro ran at nineteen frames a second where the rest of the clip ran at
+ * thirty. The animation was the one part of the clip that stuttered.
+ *
+ * The footage is scaled once now, into here, and each line copies back the
+ * piece it needs at its own size - a straight copy, no scaling, no decode.
+ * One canvas is kept between frames because allocating two million pixels
+ * thirty times a second is its own cost.
+ */
+let scratch: HTMLCanvasElement | null = null;
+
+function scratchFor(size: VideoExportSize): CanvasRenderingContext2D | null {
+  if (!scratch || scratch.width !== size.width || scratch.height !== size.height) {
+    scratch = document.createElement("canvas");
+    scratch.width = size.width;
+    scratch.height = size.height;
+  }
+  return scratch.getContext("2d", { alpha: false });
+}
+
 /** Draws a frame into the footage box using object-fit: cover, matching how the
  * preview shows it. */
 function drawCover(
@@ -694,6 +722,15 @@ function composite(
   // design is drawn in one piece again, so what stays on screen for the rest of
   // the clip is exact.
 
+  // The untreated picture, kept aside before the treatment goes over it. Every
+  // line below needs exactly this back inside the strip it has uncovered.
+  const rawCtx = scratchFor(size);
+  if (rawCtx) {
+    rawCtx.globalCompositeOperation = "source-over";
+    rawCtx.drawImage(ctx.canvas, 0, 0);
+  }
+  const raw = rawCtx ? rawCtx.canvas : null;
+
   // The picture's own treatment first, whole and at full strength. It is the
   // shadow the type is written on, not a thing that arrives with the type.
   ctx.globalCompositeOperation = "multiply";
@@ -726,7 +763,19 @@ function composite(
     ctx.rect(dx, dy, dw, dh);
     ctx.clip();
     ctx.globalCompositeOperation = "source-over";
-    drawCover(ctx, video, rect);
+    if (raw) {
+      // Only where the footage actually is. Drawing it again used to clip to
+      // the footage box as well as to this strip, so a template that insets its
+      // clip kept the treated backdrop outside it, and copying the whole strip
+      // back would paint that black instead.
+      const ix = Math.max(dx, rect.x);
+      const iy = Math.max(dy, rect.y);
+      const iw = Math.min(dx + dw, rect.x + rect.width) - ix;
+      const ih = Math.min(dy + dh, rect.y + rect.height) - iy;
+      if (iw > 0 && ih > 0) ctx.drawImage(raw, ix, iy, iw, ih, ix, iy, iw, ih);
+    } else {
+      drawCover(ctx, video, rect);
+    }
     ctx.globalCompositeOperation = "multiply";
     ctx.drawImage(l.gain, 0, 0, sw, l.gain.height, dx, dy, dw, dh);
     ctx.globalCompositeOperation = "lighter";
@@ -1065,8 +1114,14 @@ async function recordOnce(input: {
     else release();
   }
 
-  recorder.start(100);
+  // Started once the footage is running, not before it.
+  //
+  // Asking a fresh element to play takes a moment, and the recorder used to be
+  // running through it: the clip a customer sent opened on half a second of
+  // held still picture - a 514ms gap before its second frame - because the
+  // recording had begun and the footage had not.
   await video.play();
+  recorder.start(100);
   const startedAt = performance.now();
   lastFrameAt = startedAt;
   document.addEventListener("visibilitychange", onShownOrHidden);

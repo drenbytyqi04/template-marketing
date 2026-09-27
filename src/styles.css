@@ -275,7 +275,12 @@
  * watching a clip does the intro play.
  */
 [data-krijo-play] .krijo-intro {
-  animation: krijo-intro 950ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  /* Both numbers come from the line itself, which gets them from
+     design/animation.ts - the one place the exporter reads them from too. The
+     duration used to be written out here as well, and a stylesheet and an
+     exporter that each carry their own copy of a timing are two things that
+     will eventually disagree about what the customer approved. */
+  animation: krijo-intro var(--krijo-duration, 1350ms) cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: var(--krijo-delay, 0ms);
 }
 

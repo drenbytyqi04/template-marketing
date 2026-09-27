@@ -35,18 +35,23 @@ export const STILL_ATTR = "data-krijo-still";
  *
  * Long enough to watch. At 620 the writing appeared rather than arrived - the
  * customer's word for it was that it was too fast - and a wipe that quick over
- * a headline is closer to a cut than to a movement.
+ * a headline is closer to a cut than to a movement. 950 was still being read
+ * as hurried, so it is slower again: a second and a third is long enough that
+ * the eye follows the edge across the line rather than noticing the line has
+ * changed.
  */
-const DURATION = 950;
+const DURATION = 1350;
 
 /**
  * Milliseconds between one line starting and the next.
  *
  * Well under the time one line takes, so the lines overlap and the whole reads
  * as one movement rather than as a queue of separate ones. Each line is still
- * clearly after the one before it.
+ * clearly after the one before it. Kept at the same share of the duration as
+ * the line got slower, so the arrival keeps its shape and only its pace
+ * changes.
  */
-const STAGGER = 110;
+const STAGGER = 155;
 
 export const INTRO = { duration: DURATION, stagger: STAGGER } as const;
 
