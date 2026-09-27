@@ -1,7 +1,7 @@
 import { forwardRef, useMemo } from "react";
 import { renderTemplate } from "@/lib/rafty/templates";
 import { ExtraTextLayer } from "./ExtraTextLayer";
-import { SAFE_INSETS, sizeFor } from "@/lib/rafty/constants";
+import { safeInsets, sizeFor } from "@/lib/rafty/constants";
 
 import type {
   BrandProfile,
@@ -58,7 +58,7 @@ export const PostCanvas = forwardRef<HTMLDivElement, Props>(function PostCanvas(
 ) {
   const activeFormat = format ?? template.format ?? "post";
   const size = sizeFor(activeFormat, content.sizeKey);
-  const safe = SAFE_INSETS[activeFormat];
+  const safe = safeInsets(activeFormat, content.sizeKey);
 
   // The post chooses which brand contact block it prints, so every template
   // and the exporter read one already resolved contact object.

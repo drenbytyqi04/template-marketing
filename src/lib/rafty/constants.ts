@@ -693,8 +693,9 @@ export const SIZE_OPTIONS: Record<ContentFormat, SizeOption[]> = {
     { key: "16:9", label: "16:9", note: "Landscape, LinkedIn", width: 1080, height: 608 },
   ],
   video: [
-    { key: "9:16", label: "9:16", note: "Reels, TikTok, Shorts", width: 1080, height: 1920 },
-    { key: "1:1", label: "1:1", note: "Square video", width: 1080, height: 1080 },
+    { key: "9:16", label: "9:16", note: "Reels, stories, TikTok", width: 1080, height: 1920 },
+    { key: "4:5", label: "4:5", note: "Instagram feed post", width: 1080, height: 1350 },
+    { key: "1:1", label: "1:1", note: "Square feed post", width: 1080, height: 1080 },
   ],
 };
 
@@ -710,10 +711,31 @@ export function sizeFor(format: ContentFormat, key?: string | null): SizeOption 
  * these insets. Values are percentages of the canvas width, matching the
  * container relative sizing used by every template.
  */
-export const SAFE_INSETS: Record<ContentFormat, { top: number; bottom: number }> = {
-  post: { top: 0, bottom: 0 },
-  video: { top: 14, bottom: 28 },
-};
+const FULL_SCREEN_INSETS = { top: 14, bottom: 28 } as const;
+const NO_INSETS = { top: 0, bottom: 0 } as const;
+
+/**
+ * What a clip or a picture has to keep clear of, for the shape it is being made
+ * in.
+ *
+ * It is the shape that decides this, not whether the post is a clip. A clip is
+ * played full screen as a reel or a story, and there the app's own furniture -
+ * the profile row, the caption, the buttons - lies over the top and the bottom
+ * of the frame. The same clip posted to the feed at 4:5 or square is a card in
+ * a scrolling list with nothing over it at all, and holding a quarter of that
+ * frame empty for furniture that is not there is a design pushed into the
+ * middle of its own picture for no reason.
+ *
+ * Only a full height vertical frame is played that way, so only that one keeps
+ * the insets.
+ */
+export function safeInsets(
+  format: ContentFormat,
+  sizeKey?: string | null,
+): { top: number; bottom: number } {
+  if (format !== "video") return NO_INSETS;
+  return sizeFor(format, sizeKey).key === "9:16" ? FULL_SCREEN_INSETS : NO_INSETS;
+}
 
 /* ----------------------------- field wording ------------------------------- */
 
