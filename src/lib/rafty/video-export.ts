@@ -95,15 +95,28 @@ function paintedRect(el: HTMLElement): {
   return { ...out, core };
 }
 
-/** The boxes for a set of lines, each widened for its ink and then held back
- * from the lines around it. */
+/**
+ * The boxes for a set of lines, each widened for its ink and then held back
+ * from the lines around it.
+ *
+ * `painted` comes back alongside, unclamped: it is everywhere the line could
+ * put a pixel, which is what tells the caller whether anything but this line
+ * reaches into this line's box.
+ */
 function boxesOf(
   els: HTMLElement[],
   nodeBox: DOMRect,
   scale: number,
   size: VideoExportSize,
-): Box[] {
+): { box: Box; painted: Box }[] {
   const rects = els.map(paintedRect);
+  const toBox = (left: number, top: number, right: number, bottom: number): Box => {
+    const x = Math.max(0, Math.floor((left - nodeBox.left) * scale));
+    const y = Math.max(0, Math.floor((top - nodeBox.top) * scale));
+    const x2 = Math.min(size.width, Math.ceil((right - nodeBox.left) * scale));
+    const y2 = Math.min(size.height, Math.ceil((bottom - nodeBox.top) * scale));
+    return { x, y, width: Math.max(1, x2 - x), height: Math.max(1, y2 - y) };
+  };
   return rects.map((r, i) => {
     let { left, top, right, bottom } = r;
     for (let j = 0; j < rects.length; j += 1) {
@@ -121,12 +134,16 @@ function boxesOf(
         if (o.left >= mine.right) right = Math.min(right, (o.left + mine.right) / 2);
       }
     }
-    const x = Math.max(0, Math.floor((left - nodeBox.left) * scale));
-    const y = Math.max(0, Math.floor((top - nodeBox.top) * scale));
-    const x2 = Math.min(size.width, Math.ceil((right - nodeBox.left) * scale));
-    const y2 = Math.min(size.height, Math.ceil((bottom - nodeBox.top) * scale));
-    return { x, y, width: Math.max(1, x2 - x), height: Math.max(1, y2 - y) };
+    return {
+      box: toBox(left, top, right, bottom),
+      painted: toBox(r.left, r.top, r.right, r.bottom),
+    };
   });
+}
+
+/** Whether two rectangles share a pixel. */
+function overlaps(a: Box, b: Box): boolean {
+  return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 }
 
 function cropTo(
@@ -482,8 +499,35 @@ async function buildOverlay(
       // depends on where the line next to it starts.
       const boxes = boxesOf(groups, nodeBox, scale, size);
       for (const [index, only] of groups.entries()) {
-        const box = boxes[index]!;
+        const { box } = boxes[index]!;
         const arrival = Number(only.getAttribute(ARRIVAL_ATTR) ?? layers.length);
+
+        // Most lines need no solve of their own.
+        //
+        // A line is solved alone so that its answer holds the picture where the
+        // other lines would be, rather than the other lines. But a line whose
+        // box nothing else can paint into already has exactly that inside its
+        // box: hiding the others changes nothing there, so the whole design,
+        // cropped, IS the line solved alone - proved by comparing the two for
+        // every line of a real design, where the seven lines that stand clear
+        // of one another came back identical to the pixel and only the two that
+        // genuinely overlap differed.
+        //
+        // This is most of the wait before a download starts. Each solve is two
+        // full rasters of a 1080x1920 design, and a nine line design was taking
+        // eleven of them - measured at 5.2 to 7.2 seconds, against 12.7 for the
+        // recording itself. A design whose lines stand clear now takes two.
+        const clear = boxes.every((other, j) => j === index || !overlaps(box, other.painted));
+        if (clear) {
+          layers.push({
+            gain: cropTo(whole.gain, box),
+            constant: cropTo(whole.constant, box),
+            arrival,
+            ...box,
+          });
+          continue;
+        }
+
         const hidden = groups.filter((g) => g !== only);
         for (const g of hidden) g.style.visibility = "hidden";
         try {
