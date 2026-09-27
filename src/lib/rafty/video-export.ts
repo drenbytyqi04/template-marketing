@@ -1,5 +1,6 @@
 import { toPng } from "html-to-image";
-import { ARRIVAL_ATTR, introAt, introDurationMs, STILL_ATTR } from "./design/animation";
+import { ARRIVAL_ATTR, introAt, introDurationMs } from "./design/animation";
+import { withOffscreenCopy } from "./offscreen";
 
 /**
  * Renders a video post to a real clip.
@@ -344,32 +345,12 @@ async function buildOverlay(
   video: HTMLVideoElement,
   size: VideoExportSize,
 ): Promise<Overlay> {
-  const saved = {
-    width: node.style.width,
-    maxWidth: node.style.maxWidth,
-    position: node.style.position,
-    left: node.style.left,
-    top: node.style.top,
-    zIndex: node.style.zIndex,
-  };
-
-  try {
-    // Every pass below has to see the same, settled design. The parts arrive
-    // over the first second of a clip, and a solve taken while they are arriving
-    // would bake that moment into the layer it was meant to describe.
-    node.setAttribute(STILL_ATTR, "");
-    // Lay the design out at the real export width, off-screen so the page does
-    // not visibly jump. Every template is sized in cqw against this node, so
-    // this makes the raster a 1:1 capture instead of an upscale.
-    node.style.position = "fixed";
-    node.style.left = "-100000px";
-    node.style.top = "0";
-    node.style.zIndex = "-1";
-    node.style.maxWidth = "none";
-    node.style.width = `${size.width}px`;
-    node.getBoundingClientRect();
-    await new Promise((r) => requestAnimationFrame(() => r(null)));
-
+  // The node handed in is a copy, already parked off the page, already laid out
+  // at the export width and already held still - `withOffscreenCopy` does all
+  // of that, and does it once for the several passes taken here. This used to
+  // do it itself, to the design on the page, which is what took a saved post's
+  // thumbnail out of the grid for the length of an export.
+  {
     const nodeBox = node.getBoundingClientRect();
     const videoBox = video.getBoundingClientRect();
     const scale = nodeBox.width > 0 ? size.width / nodeBox.width : 1;
@@ -460,15 +441,6 @@ async function buildOverlay(
     }
 
     return { ...whole, rect, ...(base ? { base } : {}), ...(layers ? { layers } : {}) };
-  } finally {
-    node.removeAttribute(STILL_ATTR);
-    node.style.width = saved.width;
-    node.style.maxWidth = saved.maxWidth;
-    node.style.position = saved.position;
-    node.style.left = saved.left;
-    node.style.top = saved.top;
-    node.style.zIndex = saved.zIndex;
-    node.getBoundingClientRect();
   }
 }
 
@@ -692,7 +664,9 @@ export async function renderVideoPosterToDataUrl(
   const src = onScreenVideo.currentSrc || onScreenVideo.src;
   if (!src) throw new Error("This post has no video.");
 
-  const overlay = await buildOverlay(node, onScreenVideo, size);
+  const overlay = await withOffscreenCopy(node, size.width, (copy) =>
+    buildOverlay(copy, copy.querySelector("video") ?? onScreenVideo, size),
+  );
   const { video, release } = await loadFootage(src);
   try {
     // A frame from a little way in: the very first frame of a clip is often
@@ -729,7 +703,12 @@ export async function renderVideoPostToBlob(
   const src = onScreenVideo.currentSrc || onScreenVideo.src;
   if (!src) throw new Error("This post has no video to export.");
 
-  const overlay = await buildOverlay(node, onScreenVideo, size);
+  // Solved on a copy. An export of a clip runs for as long as the clip does,
+  // and borrowing the design out of the page for that long is what emptied a
+  // saved post's card in the grid while it was being downloaded.
+  const overlay = await withOffscreenCopy(node, size.width, (copy) =>
+    buildOverlay(copy, copy.querySelector("video") ?? onScreenVideo, size),
+  );
   const { video, release } = await loadFootage(src);
 
   try {

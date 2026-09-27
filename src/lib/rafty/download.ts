@@ -7,7 +7,7 @@ import {
   videoExtension,
 } from "./video-export";
 import { tagSrgbDataUrl } from "./png-srgb";
-import { STILL_ATTR } from "./design/animation";
+import { withOffscreenCopy } from "./offscreen";
 
 /** Always embedded: every template declares these as its fallback faces. */
 const ALWAYS_EMBEDDED = ["Sora", "Plus Jakarta Sans"];
@@ -82,29 +82,6 @@ async function getFontEmbedCss(url: string): Promise<string> {
   return out;
 }
 
-/** Waits for every image inside the node to finish decoding, tolerating
- * broken or slow images instead of hanging the export. */
-async function waitForImages(node: HTMLElement): Promise<void> {
-  const imgs = Array.from(node.querySelectorAll("img"));
-  await Promise.all(
-    imgs.map(async (img) => {
-      if (img.complete && img.naturalWidth > 0) return;
-      try {
-        await img.decode();
-      } catch {
-        await new Promise<void>((resolve) => {
-          img.addEventListener("load", () => resolve(), { once: true });
-          img.addEventListener("error", () => resolve(), { once: true });
-        });
-      }
-    }),
-  );
-}
-
-function nextFrame(): Promise<void> {
-  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
-}
-
 /**
  * Renders a node to a deterministic 1080x1350 PNG data url. This is the only
  * export implementation, shared by download and share so preview, save,
@@ -118,9 +95,16 @@ export async function renderNodeToDataUrl(node: HTMLElement, size?: ExportSize):
   return tagSrgbDataUrl(await rasterise(node, size));
 }
 
+/** The height this design lays out to at a given width, from the shape it has
+ * on screen. A frame is one shape whatever size it is drawn at. */
+function heightAt(node: HTMLElement, width: number): number {
+  const box = node.getBoundingClientRect();
+  if (box.width <= 0 || box.height <= 0) return EXPORT_HEIGHT;
+  return Math.round(width * (box.height / box.width));
+}
+
 async function rasterise(node: HTMLElement, size?: ExportSize): Promise<string> {
   const outWidth = size?.width ?? EXPORT_WIDTH;
-  let outHeight = size?.height ?? EXPORT_HEIGHT;
 
   // A cloned <video> paints nothing, so rasterising a video post this way would
   // return the design over an empty background. Composite a real frame instead.
@@ -128,69 +112,33 @@ async function rasterise(node: HTMLElement, size?: ExportSize): Promise<string> 
   if (posterVideo && (posterVideo.currentSrc || posterVideo.getAttribute("src"))) {
     return renderVideoPosterToDataUrl(node, posterVideo, {
       width: outWidth,
-      height: outHeight,
+      // Measured off the design, not defaulted. A caller that passes no size
+      // used to get a feed post's 1350 here whatever the design was, so a still
+      // taken from a 9:16 clip came back cropped by 570 pixels - the same cut
+      // the picture path was fixed for, still open on this one.
+      height: size?.height ?? heightAt(node, outWidth),
     });
   }
 
   const fontEmbedCSS = await getFontEmbedCss(fontCssUrlFor(node));
 
-  // Lay the node out at the real export width instead of rasterising the small
-  // on-screen preview and scaling it up.
+  // Laid out at the real export width on a copy, never on the design the
+  // customer is looking at.
   //
   // Everything in a template is sized in `cqw`, relative to this node's inline
   // size, and FitText converges its font sizes against the width it can measure.
   // Rasterising a ~340px preview at ~3.2x asks the browser to extrapolate that
   // layout, and glyph advances do not scale perfectly linearly - text that fit
   // on screen ends up a fraction too wide in the PNG and the box's
-  // overflow:hidden cuts the last character off.
-  //
-  // Widening the node first makes the browser lay the design out at 1080px for
-  // real: container queries resolve against the output width and FitText re-fits
-  // (its ResizeObserver fires), so the raster is a straight 1:1 capture of a
-  // layout that genuinely fits. The node is parked off-screen while this happens
-  // so the page does not visibly jump, and every touched style is restored.
-  const saved = {
-    width: node.style.width,
-    maxWidth: node.style.maxWidth,
-    position: node.style.position,
-    left: node.style.left,
-    top: node.style.top,
-    zIndex: node.style.zIndex,
-  };
-
-  try {
-    // A clip's design arrives rather than simply being there, and a capture
-    // taken while it is arriving would freeze a half faded frame into the file.
-    // The keyframes run from absent to the element's own resting style, so
-    // turning them off leaves the settled design - which is the one thing a
-    // still should ever be.
-    node.setAttribute(STILL_ATTR, "");
-    node.style.position = "fixed";
-    node.style.left = "-100000px";
-    node.style.top = "0";
-    node.style.zIndex = "-1";
-    node.style.maxWidth = "none";
-    node.style.width = `${outWidth}px`;
-
-    // Force layout, then let the resize-driven re-fit settle before capturing.
-    node.getBoundingClientRect();
-
+  // overflow:hidden cuts the last character off. Widening a copy makes the
+  // browser lay the design out at 1080px for real, and leaves the page alone.
+  return withOffscreenCopy(node, outWidth, async (copy) => {
     // The frame is as tall as the design actually lays out, not as tall as the
-    // caller believed it would be.
-    //
-    // The height used to be whatever was passed in, and a caller that passed
-    // nothing got 1350 - the shape of a feed post. A story is 1920 tall, so
-    // downloading one from the Posts page cut 570 pixels off the bottom and
-    // took the price, the call to action and the phone number with them. The
-    // file looked like a finished post, which is the worst way for an export to
-    // be wrong. The node has just been laid out at the export width and knows
-    // its own height; asking it cannot disagree with itself.
-    const laidOut = Math.round(node.getBoundingClientRect().height);
-    if (laidOut > 0) outHeight = laidOut;
-    await document.fonts.ready;
-    await waitForImages(node);
-    await nextFrame();
-    await nextFrame();
+    // caller believed it would be. A caller that passed nothing used to get
+    // 1350 - the shape of a feed post - so a 9:16 story lost 570 pixels off its
+    // bottom edge, taking the price and the phone number with them.
+    const laidOut = Math.round(copy.getBoundingClientRect().height);
+    const outHeight = laidOut > 0 ? laidOut : (size?.height ?? EXPORT_HEIGHT);
 
     const options = {
       width: outWidth,
@@ -219,18 +167,9 @@ async function rasterise(node: HTMLElement, size?: ExportSize): Promise<string> 
     // finish loading during the initial rasterization are missing from the
     // resulting canvas. A first, discarded render warms the browser's layout
     // and image cache so the second render is stable and deterministic.
-    await toPng(node, options);
-    return await toPng(node, options);
-  } finally {
-    node.removeAttribute(STILL_ATTR);
-    node.style.width = saved.width;
-    node.style.maxWidth = saved.maxWidth;
-    node.style.position = saved.position;
-    node.style.left = saved.left;
-    node.style.top = saved.top;
-    node.style.zIndex = saved.zIndex;
-    node.getBoundingClientRect();
-  }
+    await toPng(copy, options);
+    return await toPng(copy, options);
+  });
 }
 
 /** Renders the post to a PNG Blob. This is the single export implementation;
