@@ -100,13 +100,27 @@ export function ShareActions({
   }
 
   const [downloading, setDownloading] = useState(false);
+  /**
+   * What the export is doing, in the person's own terms.
+   *
+   * A clip is recorded live, so making one takes as long as the clip lasts -
+   * that part cannot be made shorter. What can be fixed is a button that reads
+   * the same word for a minute and a half while it happens, which is a button
+   * people decide is broken and click again.
+   */
+  const [progress, setProgress] = useState<string | null>(null);
 
   async function downloadPng() {
     const node = canvasRef.current;
     if (!node || downloading) return;
     setDownloading(true);
+    setProgress(null);
     try {
-      const kind = await downloadNode(node, slugify(filename), size);
+      const kind = await downloadNode(node, slugify(filename), size, (p) =>
+        setProgress(
+          p.phase === "preparing" ? "Preparing…" : `Recording… ${Math.round(p.ratio * 100)}%`,
+        ),
+      );
       toast.success(kind === "video" ? "Video downloaded." : "Image downloaded.");
     } catch (err) {
       // The exporter knows why it stopped, and that reason is far more use than
@@ -115,6 +129,7 @@ export function ShareActions({
       toast.error(reasonFor(err));
     } finally {
       setDownloading(false);
+      setProgress(null);
     }
   }
 
@@ -207,7 +222,7 @@ export function ShareActions({
           ) : (
             <Download className="mr-1 size-3.5" />
           )}
-          {downloading ? "Preparing…" : "Download PNG"}
+          {downloading ? (progress ?? "Preparing…") : "Download"}
         </Button>
       ) : null}
 

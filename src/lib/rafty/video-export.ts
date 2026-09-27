@@ -795,12 +795,37 @@ export async function renderVideoPosterToDataUrl(
   }
 }
 
+/**
+ * Where an export has got to.
+ *
+ * A clip is recorded live, so making one takes as long as the clip lasts and
+ * there is no making that shorter. What there is no excuse for is not saying
+ * so: a button that reads "Preparing" for a minute and a half, with nothing
+ * moving, is a button a person reasonably decides is broken, and that is what
+ * was reported - a download that was not failing but was never said to be
+ * running either.
+ */
+export type ExportProgress = { phase: "preparing" | "recording"; ratio: number };
+
 export async function renderVideoPostToBlob(
   node: HTMLElement,
   onScreenVideo: HTMLVideoElement,
   size: VideoExportSize,
-  opts: { maxDurationMs?: number } = {},
+  opts: { maxDurationMs?: number; onProgress?: (p: ExportProgress) => void } = {},
 ): Promise<Blob> {
+  // Reported on the whole percent rather than on the frame. A clip hands over
+  // thirty frames a second and the caller puts this on screen; telling it
+  // thirty times a second to draw the same number is work neither of them has
+  // to spare while a recording is running.
+  let lastReported = -1;
+  const report = (p: ExportProgress) => {
+    if (!opts.onProgress) return;
+    const step = p.phase === "recording" ? Math.round(p.ratio * 100) : -2;
+    if (step === lastReported) return;
+    lastReported = step;
+    opts.onProgress(p);
+  };
+  report({ phase: "preparing", ratio: 0 });
   const mimeType = pickMimeType();
   if (!mimeType) throw new Error("This browser cannot record video.");
 
@@ -814,8 +839,21 @@ export async function renderVideoPostToBlob(
     buildOverlay(copy, copy.querySelector("video") ?? onScreenVideo, size),
   );
   const { video, release } = await loadFootage(src);
+  report({ phase: "preparing", ratio: 1 });
 
   try {
+    /**
+     * How long one pass may run before it is cut off.
+     *
+     * It was a flat minute, which is not a limit on a runaway recording so much
+     * as a limit on the clip: anything longer simply lost its end, with nothing
+     * said about it. The footage's own length is the thing to measure against -
+     * half as long again covers a machine that falls behind, and the ceiling is
+     * there only so a broken duration cannot hold the page forever.
+     */
+    const footageMs = Number.isFinite(video.duration) ? video.duration * 1000 : 60_000;
+    const limitMs =
+      opts.maxDurationMs ?? Math.min(15 * 60_000, Math.round(footageMs * 1.5) + 5_000);
     // What a machine can manage is only knowable by recording, so when it
     // cannot keep up the clip is made again - at the same frame size, asking
     // the encoder for fewer bits.
@@ -839,7 +877,12 @@ export async function renderVideoPostToBlob(
         mimeType,
         size,
         bitrate,
-        limitMs: opts.maxDurationMs ?? 60_000,
+        limitMs,
+        onProgress: (recordedMs) =>
+          report({
+            phase: "recording",
+            ratio: footageMs > 0 ? Math.min(1, recordedMs / footageMs) : 0,
+          }),
       });
       // A clip is judged by what was handed to the encoder, not by reading the
       // file back.
@@ -858,9 +901,23 @@ export async function renderVideoPostToBlob(
       }
       best = attempt.blob;
       const achievedFps = attempt.emitted / (attempt.wallMs / 1000);
-      // Within a sixth of the rate it was aiming for is a smooth clip. Below
-      // that it stutters, and it is worth one more pass to get it back.
-      if (achievedFps >= CAPTURE_FPS * 0.83) {
+      /**
+       * Whether it is worth recording the whole clip again.
+       *
+       * A second pass costs exactly what the first one did - the clip's own
+       * length - so the bar has to be a rate a person would actually see, not
+       * a rate that missed a round number. It was set a sixth under, and a
+       * measured export at 24.6 against 30 was sent round again for it: the
+       * first file was fine, and the download took twenty-eight seconds for a
+       * ten second clip. A third under is where a clip starts to look uneven.
+       *
+       * And a long clip is never sent round again whatever it recorded at,
+       * because doubling a wait that was already a minute is the worse of the
+       * two faults by far.
+       */
+      const rough = achievedFps < CAPTURE_FPS * 0.66;
+      const wouldCostTooMuch = attempt.wallMs > 20_000;
+      if (!rough || wouldCostTooMuch) {
         await warnIfNotH264(attempt.blob);
         return attempt.blob;
       }
@@ -884,8 +941,10 @@ async function recordOnce(input: {
   size: VideoExportSize;
   limitMs: number;
   bitrate: number;
+  onProgress?: (recordedMs: number) => void;
 }): Promise<{ blob: Blob; wallMs: number; emitted: number }> {
   const { video, overlay, mimeType, size, limitMs, bitrate } = input;
+  const report = input.onProgress ?? (() => {});
   const canvas = document.createElement("canvas");
   canvas.width = size.width;
   canvas.height = size.height;
@@ -1054,6 +1113,7 @@ async function recordOnce(input: {
       requestFrame();
       emitted += 1;
       lastFrameAt = now;
+      report(now - startedAt - heldMs);
       // Anchored to the schedule, not to now: one late frame must not push the
       // whole clip later, and a very late one should not fire a burst to catch
       // up either.

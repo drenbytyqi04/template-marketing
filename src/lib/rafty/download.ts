@@ -5,6 +5,7 @@ import {
   renderVideoPosterToDataUrl,
   renderVideoPostToBlob,
   videoExtension,
+  type ExportProgress,
 } from "./video-export";
 import { tagSrgbDataUrl } from "./png-srgb";
 import { withOffscreenCopy } from "./offscreen";
@@ -198,6 +199,7 @@ export async function downloadNode(
   node: HTMLElement,
   filename: string,
   size?: ExportSize,
+  onProgress?: (p: ExportProgress) => void,
 ): Promise<"image" | "video"> {
   // A post built on uploaded footage exports as a clip, not a still. Detecting
   // the video here covers every download path - Create, Posts, share - because
@@ -206,7 +208,9 @@ export async function downloadNode(
   const isVideoPost = !!video?.currentSrc || !!video?.getAttribute("src");
   const blob =
     isVideoPost && video && canExportVideo()
-      ? await renderVideoPostToBlob(node, video, size ?? { width: 1080, height: 1920 })
+      ? await renderVideoPostToBlob(node, video, size ?? { width: 1080, height: 1920 }, {
+          ...(onProgress ? { onProgress } : {}),
+        })
       : await renderPostToBlob(node, filename, size);
   // Named from what the file is, not from what the exporter used to produce.
   // Every clip was called .webm because WebM was once the only possible output;

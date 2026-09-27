@@ -67,18 +67,29 @@ function PostsPage() {
     // give no clue which download it belongs to.
     if (!node || downloadingId) return;
     setDownloadingId(post.id);
+    // A clip is recorded live, so a long one takes as long as it lasts. The
+    // button here is an icon, with nowhere to say that, so the notice carries
+    // it: a spinner that never changes for a minute and a half is what a
+    // person reads as a download that is not happening.
+    const notice = toast.loading("Preparing…");
     try {
       // The size this post was made at, resolved the same way the canvas above
       // resolved it. A download that guesses is a download that crops.
       const content = post.slides?.[0]?.content ?? post.content;
       const size = sizeFor(post.format ?? "post", content.sizeKey);
-      const kind = await downloadNode(node, slugify(post.content.title || "krijo24-post"), {
-        width: size.width,
-        height: size.height,
-      });
-      toast.success(kind === "video" ? "Video downloaded." : "Image downloaded.");
+      const kind = await downloadNode(
+        node,
+        slugify(post.content.title || "krijo24-post"),
+        { width: size.width, height: size.height },
+        (p) =>
+          toast.loading(
+            p.phase === "preparing" ? "Preparing…" : `Recording… ${Math.round(p.ratio * 100)}%`,
+            { id: notice },
+          ),
+      );
+      toast.success(kind === "video" ? "Video downloaded." : "Image downloaded.", { id: notice });
     } catch (err) {
-      toast.error(reasonFor(err));
+      toast.error(reasonFor(err), { id: notice });
     } finally {
       setDownloadingId(null);
     }
