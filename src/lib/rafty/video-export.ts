@@ -264,20 +264,17 @@ function pickMimeType(): string | undefined {
     // came back visibly softer than the footage that went into it. Each of these
     // is offered in turn and the browser takes the first it can honestly encode,
     // so a browser with only baseline still gets a file.
-    "video/mp4;codecs=avc1.640028,mp4a.40.2",
+    //
+    // Video only, every one of them. Each used to be offered first paired with
+    // an audio codec, which described a file this no longer makes.
     "video/mp4;codecs=avc1.640028",
-    "video/mp4;codecs=avc1.4d0028,mp4a.40.2",
     "video/mp4;codecs=avc1.4d0028",
-    "video/mp4;codecs=avc1.42E028,mp4a.40.2",
     "video/mp4;codecs=avc1.42E028",
-    "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
     "video/mp4;codecs=avc1.42E01E",
     "video/mp4;codecs=avc1",
     "video/mp4;codecs=h264",
     "video/mp4",
-    "video/webm;codecs=vp8,opus",
     "video/webm;codecs=vp8",
-    "video/webm;codecs=vp9,opus",
     "video/webm;codecs=vp9",
     "video/webm",
   ];
@@ -1050,13 +1047,17 @@ async function recordOnce(input: {
   const stream = manualTrack?.requestFrame ? manual : canvas.captureStream(CAPTURE_FPS);
   const requestFrame = manualTrack?.requestFrame ? () => manualTrack.requestFrame?.() : () => {};
 
-  const source = video as HTMLVideoElement & { captureStream?: () => MediaStream };
-  try {
-    const audio = source.captureStream?.().getAudioTracks() ?? [];
-    for (const track of audio) stream.addTrack(track);
-  } catch {
-    // No audio is better than no export.
-  }
+  // No sound, whatever the footage came with.
+  //
+  // These are posts, and a feed plays them muted: the sound on the clip
+  // somebody filmed is wind, traffic and whoever was talking next to them, and
+  // it is heard only by the few people who unmute. The clip that used to come
+  // out carried it. Now the footage's audio track is simply never added to what
+  // is recorded, so there is nothing to strip afterwards and nothing to go
+  // wrong - the file has one track in it.
+  //
+  // The element is muted while it plays for the same reason it always was:
+  // nobody wants their own clip shouting at them while it exports.
 
   const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: bitrate });
   const chunks: Blob[] = [];
