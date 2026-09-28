@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Facebook, Instagram, Linkedin, LogOut, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/rafty/AppShell";
-import { SocialAccounts } from "@/components/rafty/SocialAccounts";
+import { ComingIn2Badge, NEXT_VERSION } from "@/components/rafty/ComingIn2";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -227,7 +227,22 @@ function SettingsPage() {
         ) : null}
       </section>
 
-      <SocialAccounts businessId={business.id} />
+      {/* Connecting an account is only worth anything once the thing it
+          connects for is on, so the whole section says when that is. The
+          component itself is untouched below the surface - see SocialAccounts -
+          and goes back in here when publishing turns on. */}
+      <section className="card-soft grid gap-2 p-4">
+        <div className="flex items-center gap-2">
+          <Instagram className="size-4 text-muted-foreground" aria-hidden />
+          <p className="text-sm font-bold">Instagram</p>
+          <ComingIn2Badge className="ml-auto" />
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Connecting an Instagram Professional account and publishing your designs straight to it
+          comes in version {NEXT_VERSION}. Until then, download a finished post and put it out from
+          the Instagram app - the file is exactly what would have been published.
+        </p>
+      </section>
 
       <section className="card-soft grid gap-2 p-4">
         <p className="text-sm font-bold">Support</p>

@@ -237,7 +237,12 @@ function PostsPage() {
                     variant="ghost"
                     className="hidden size-7 shrink-0 rounded-lg sm:inline-flex"
                   >
-                    <Link to="/schedule" search={{ post: post.id }} aria-label="Schedule">
+                    <Link
+                      to="/schedule"
+                      search={{ post: post.id }}
+                      aria-label="Schedule (coming in version 2.0)"
+                      title="Scheduling comes in version 2.0"
+                    >
                       <CalendarClock className="size-3.5" />
                     </Link>
                   </Button>

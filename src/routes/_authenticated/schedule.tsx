@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarClock, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/rafty/AppShell";
+import { ComingIn2Panel } from "@/components/rafty/ComingIn2";
 import { PostCanvas } from "@/components/rafty/PostCanvas";
 import { LazyMount } from "@/components/rafty/LazyMount";
 import { Button } from "@/components/ui/button";
@@ -41,10 +42,25 @@ export const Route = createFileRoute("/_authenticated/schedule")({
   }),
   component: () => (
     <AppShell>
-      <SchedulePage />
+      <div className="py-10">
+        <ComingIn2Panel
+          title="Schedule"
+          what="Picking a saved post, choosing a date and letting krijo24 send it out is finished and being tested. It goes on together with publishing, because a queue that cannot post is a calendar."
+          keeps="Nothing you have made is affected: every post stays in Posts, ready to download and put out yourself in the meantime."
+        />
+      </div>
     </AppShell>
   ),
 });
+
+/*
+ * The page itself is kept below, whole and working.
+ *
+ * It queues a saved post against a date and a platform, and it is held back
+ * only because the publishing it queues for is held back. Leaving it in the
+ * file rather than deleting it means switching it on is one line above -
+ * rendering `SchedulePage` again - instead of writing the page a second time.
+ */
 
 function localInputValue(date: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");

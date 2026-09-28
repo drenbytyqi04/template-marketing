@@ -10,7 +10,7 @@ import {
   slugify,
   type ExportSize,
 } from "@/lib/rafty/download";
-import { PublishDialog } from "./PublishDialog";
+import { ComingIn2Badge, ComingIn2Dialog } from "./ComingIn2";
 
 type Props = {
   canvasRef: React.RefObject<HTMLElement | null>;
@@ -54,39 +54,16 @@ export function ShareActions({
 }: Props) {
   const [copied, setCopied] = useState(false);
   const [sharing, setSharing] = useState(false);
-  const [publishOpen, setPublishOpen] = useState(false);
-  const [publishing, setPublishing] = useState(false);
-  const [publishPostId, setPublishPostId] = useState<string | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-
   /**
-   * Saves, renders, then opens the dialog.
+   * Publishing is held back to the next release, so the button says so rather
+   * than opening the dialog behind it.
    *
-   * Done before the dialog rather than inside it so the preview it shows and
-   * the file Instagram fetches are the same render, produced once.
+   * The dialog, the save-and-render step that fed it and the server side that
+   * did the publishing are all still here and still work; the button simply
+   * does not reach them yet. Turning the feature on means opening the dialog
+   * from here again, not building any of it a second time.
    */
-  async function openPublish() {
-    if (!publish || publishing) return;
-    setPublishing(true);
-    try {
-      const node = canvasRef.current;
-      if (node) {
-        try {
-          setPreviewUrl(await renderNodeToDataUrl(node, size));
-        } catch {
-          /* the dialog simply shows no preview */
-        }
-      }
-      const id = await publish.savePost();
-      if (!id) return;
-      setPublishPostId(id);
-      setPublishOpen(true);
-    } catch (error) {
-      toast.error(reasonFor(error));
-    } finally {
-      setPublishing(false);
-    }
-  }
+  const [notAvailableOpen, setNotAvailableOpen] = useState(false);
 
   async function copyCaption() {
     try {
@@ -198,15 +175,11 @@ export function ShareActions({
         <Button
           variant="outline"
           className="h-12 w-full rounded-xl"
-          onClick={() => void openPublish()}
-          disabled={publishing || saving}
+          onClick={() => setNotAvailableOpen(true)}
         >
-          {publishing ? (
-            <Loader2 className="mr-1.5 size-4 animate-spin" aria-hidden />
-          ) : (
-            <Instagram className="mr-1.5 size-4" aria-hidden />
-          )}
-          {publishing ? "Preparing..." : "Publish to Instagram"}
+          <Instagram className="mr-1.5 size-4" aria-hidden />
+          Publish to Instagram
+          <ComingIn2Badge className="ml-2" />
         </Button>
       ) : null}
 
@@ -227,13 +200,12 @@ export function ShareActions({
       ) : null}
 
       {publish ? (
-        <PublishDialog
-          open={publishOpen}
-          onOpenChange={setPublishOpen}
-          businessId={publish.businessId}
-          postId={publishPostId}
-          defaultCaption={caption}
-          previewUrl={previewUrl}
+        <ComingIn2Dialog
+          open={notAvailableOpen}
+          onOpenChange={setNotAvailableOpen}
+          title="Publish to Instagram"
+          what="Posting straight from krijo24 to a connected Instagram account is finished and being tested. Until it is switched on, download the design and post it from the Instagram app - the file is exactly what would have been published."
+          keeps="Your posts, captions and designs are saved as they are, and will be ready to publish the day this turns on."
         />
       ) : null}
     </div>

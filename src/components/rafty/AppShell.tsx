@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useRafty } from "@/lib/rafty/store";
 import { Logo } from "@/components/rafty/Logo";
+import { ComingIn2Badge } from "@/components/rafty/ComingIn2";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -115,6 +116,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               <CalendarClock className="size-4" />
               {t("nav.schedule")}
+              <ComingIn2Badge />
             </Link>
             <Link
               to="/settings"

@@ -22,12 +22,11 @@ import * as repo from "@/lib/rafty/repo";
 import { renderNodeToDataUrl } from "@/lib/rafty/download";
 import { sizeFor } from "@/lib/rafty/constants";
 import { scanBrandWebsite } from "@/lib/scan.functions";
-import { startMetaConnect, disconnectSocial, publishingAvailable } from "@/lib/social.functions";
+import { ComingIn2Badge, NEXT_VERSION } from "@/components/rafty/ComingIn2";
 import type {
   BrandWebsite,
   DiscoveredItem,
   ScheduledPost,
-  SocialConnection,
   SocialPlatform,
 } from "@/lib/rafty/types";
 
@@ -72,39 +71,27 @@ function WebsitePage() {
   const { business, brand, templates, plan, posts, refresh } = useRafty();
 
   const scan = useServerFn(scanBrandWebsite);
-  const connect = useServerFn(startMetaConnect);
-  const disconnect = useServerFn(disconnectSocial);
-  const checkAvailable = useServerFn(publishingAvailable);
 
   const [site, setSite] = useState<BrandWebsite | null>(null);
   const [items, setItems] = useState<DiscoveredItem[]>([]);
-  const [connections, setConnections] = useState<SocialConnection[]>([]);
   const [schedules, setSchedules] = useState<ScheduledPost[]>([]);
-  const [available, setAvailable] = useState<boolean | null>(null);
   const [scanning, setScanning] = useState(false);
-  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!business) return;
-    const [website, discovered, conns, queue] = await Promise.all([
+    const [website, discovered, queue] = await Promise.all([
       repo.getWebsite(business.id),
       repo.listDiscovered(business.id),
-      repo.listConnections(business.id),
       repo.listSchedules(business.id),
     ]);
     setSite(website);
     setItems(discovered);
-    setConnections(conns);
     setSchedules(queue);
   }, [business]);
 
   useEffect(() => {
     void load();
   }, [load]);
-
-  useEffect(() => {
-    void checkAvailable({}).then((res) => setAvailable(res.available));
-  }, [checkAvailable]);
 
   useEffect(() => {
     if (!search.connect) return;
@@ -144,21 +131,6 @@ function WebsitePage() {
     );
     void load();
   }
-
-  async function startConnect() {
-    if (!business) return;
-    setBusy(true);
-    const res = await connect({ data: { businessId: business.id } });
-    setBusy(false);
-    if (!res.ok) {
-      toast.error(res.error);
-      return;
-    }
-    window.location.href = res.url;
-  }
-
-  const connected = connections.filter((c) => c.status === "connected" || c.status === "ready");
-  const canAutoPublish = business?.status === "approved" && !!plan?.active;
 
   if (!business || !brand || !site) return null;
 
@@ -244,8 +216,8 @@ function WebsitePage() {
               <SelectContent>
                 <SelectItem value="off">Just list them for me</SelectItem>
                 <SelectItem value="draft">Create posts I can review</SelectItem>
-                <SelectItem value="publish" disabled={!canAutoPublish || connected.length === 0}>
-                  Create and publish automatically
+                <SelectItem value="publish" disabled>
+                  Create and publish automatically — version {NEXT_VERSION}
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -302,74 +274,26 @@ function WebsitePage() {
             </label>
           ))}
         </div>
-        {!canAutoPublish ? (
-          <p className="text-xs text-muted-foreground">
-            Automatic publishing unlocks once your brand is approved and your plan is active.
-          </p>
-        ) : null}
+        <p className="text-xs text-muted-foreground">
+          Automatic publishing comes in version {NEXT_VERSION}.
+        </p>
       </section>
 
-      <section className="card-soft grid gap-3 p-4">
+      {/* The connection itself, the disconnect and the auto-publishing this
+          page was built around all still work; they wait on publishing being
+          switched on. Scanning your website and turning what it finds into
+          posts is unaffected and carries on below. */}
+      <section className="card-soft grid gap-2 p-4">
         <div className="flex items-center gap-2">
           <Instagram className="size-4 text-muted-foreground" />
           <p className="text-sm font-bold">Publishing connection</p>
-          <Badge variant={connected.length ? "default" : "outline"} className="ml-auto text-[10px]">
-            {connected.length ? "Connected" : "Not connected"}
-          </Badge>
+          <ComingIn2Badge className="ml-auto" />
         </div>
-        {available === false ? (
-          <p className="text-sm text-muted-foreground">
-            Direct publishing is not switched on for this krijo24 installation yet. Write to
-            contact@webdoagency.com and we will activate it for your account.
-          </p>
-        ) : (
-          <>
-            <p className="text-xs text-muted-foreground">
-              Connect the Facebook page that owns your Instagram business account. krijo24 only
-              posts what you approve, and you can disconnect at any time.
-            </p>
-            {connected.length ? (
-              <div className="grid gap-2">
-                {connected.map((c) => (
-                  <div
-                    key={c.id}
-                    className="flex items-center gap-2 rounded-xl border border-border bg-card p-3"
-                  >
-                    <span className="text-sm font-semibold capitalize">{c.platform}</span>
-                    <span className="truncate text-xs text-muted-foreground">{c.accountLabel}</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="ml-auto rounded-lg"
-                      disabled={busy}
-                      onClick={async () => {
-                        setBusy(true);
-                        await disconnect({
-                          data: {
-                            businessId: business.id,
-                            platform: c.platform as "instagram" | "facebook",
-                          },
-                        });
-                        setBusy(false);
-                        void load();
-                      }}
-                    >
-                      Disconnect
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-            <Button
-              variant={connected.length ? "outline" : "default"}
-              className="rounded-xl"
-              disabled={busy}
-              onClick={() => void startConnect()}
-            >
-              {connected.length ? "Reconnect" : "Connect Instagram & Facebook"}
-            </Button>
-          </>
-        )}
+        <p className="text-sm text-muted-foreground">
+          Connecting Instagram and letting krijo24 post what it finds comes in version{" "}
+          {NEXT_VERSION}. Scanning your website and turning offers into finished designs works now -
+          download them here and put them out yourself in the meantime.
+        </p>
       </section>
 
       <RenderBooth
