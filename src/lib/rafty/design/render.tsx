@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import { fieldLabel, formatPrice, SCRIPT_FONT } from "../constants";
 import { alpha, INK, luminance, RADIUS, shade, SPACE, TRACK, TYPE, WEIGHT } from "../tokens";
 import { FitText } from "@/components/rafty/FitText";
@@ -1091,6 +1092,105 @@ function Arriving({ at, children }: { at: number; children: React.ReactNode }) {
   );
 }
 
+/**
+ * How far a block may be taken down before the design gives up on holding it.
+ *
+ * A block that cannot fit its area used to let the flex line squash its parts:
+ * each one kept its own text at full size inside a box that had been shrunk
+ * under it, so the writing simply carried on over whatever came next. Measured
+ * across the library, that happened in nine of a hundred and twenty renders -
+ * never in a tall frame, never with a half filled post, and every time a short
+ * frame was asked to hold everything a post can carry. On the worst of them a
+ * headline sat completely on top of the hotel and the dates.
+ *
+ * Shrinking the whole block instead keeps every field the customer typed and
+ * keeps the design's own proportions: the same layout, smaller. The floor is
+ * there because past a certain point the type stops being readable and the
+ * honest answer is that the post has more in it than that frame can take.
+ */
+const BLOCK_FLOOR = 0.55;
+
+/**
+ * A block's contents, taken down to fit the area the design gave it.
+ *
+ * The cap is read back from the element's own resolved `max-height` rather than
+ * measured off the laid out box, because the box's height is decided by what is
+ * inside it - measuring that would be comparing the content with itself.
+ */
+function FittedParts({
+  cap,
+  origin,
+  frame,
+  column,
+  ground,
+  children,
+}: {
+  cap: string;
+  origin: string;
+  frame: React.CSSProperties;
+  column: React.CSSProperties;
+  ground: boolean;
+  children: React.ReactNode;
+}) {
+  const outer = useRef<HTMLDivElement>(null);
+  const inner = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useLayoutEffect(() => {
+    const box = outer.current;
+    const content = inner.current;
+    if (!box || !content) return;
+    const fit = () => {
+      const limit = parseFloat(getComputedStyle(box).maxHeight);
+      if (!Number.isFinite(limit) || limit <= 0) return;
+      // `offsetHeight` rather than the drawn rectangle, because a transform
+      // moves pixels and not layout: this is the height the block would have
+      // at full size whatever it is currently scaled to, so the answer never
+      // depends on the last answer.
+      //
+      // Taking the transform off to measure and putting it back is what this
+      // did first, and it was quietly wrong: React owns that property, so when
+      // the new answer matched the old one it declined to re-render and the
+      // transform stayed off. The block measured as needing 79 pixels in 67,
+      // asked to be taken down to 0.85, and drew at full size anyway.
+      const needs = content.offsetHeight;
+      setScale(needs > limit + 0.5 ? Math.max(BLOCK_FLOOR, limit / needs) : 1);
+    };
+    fit();
+    let cancelled = false;
+    void document.fonts.ready.then(() => {
+      if (!cancelled) fit();
+    });
+    // The frame is responsive and the auto-fit text inside settles a moment
+    // after first paint, so the answer is taken again whenever either moves.
+    const observer = new ResizeObserver(() => fit());
+    observer.observe(box);
+    observer.observe(content);
+    return () => {
+      cancelled = true;
+      observer.disconnect();
+    };
+  });
+
+  return (
+    <div
+      ref={outer}
+      style={{ ...frame, maxHeight: cap }}
+      {...(ground ? { "data-ground": "" } : {})}
+    >
+      <div
+        ref={inner}
+        style={{
+          ...column,
+          ...(scale === 1 ? {} : { transform: `scale(${scale})`, transformOrigin: origin }),
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function BlockNode({
   block,
   ctx,
@@ -1117,10 +1217,20 @@ function BlockNode({
     block.parts.reduce((sum, part) => sum + reserveOf(part, ctx), 0) +
     gap * Math.max(0, block.parts.length - 1) +
     padding;
-  const room = (r2 - r1) * rowHeight - reserved;
+  const area = (r2 - r1) * rowHeight;
+  const room = area - reserved;
+  const ground = !!block.panel && block.panel !== "none";
+  // Where the block is pinned is where it shrinks towards, so a foot stays on
+  // the foot and a heading stays under the top margin.
+  const originY =
+    block.justify === "center" ? "center" : block.justify === "end" ? "bottom" : "top";
+  const originX = block.align === "center" ? "center" : block.align === "end" ? "right" : "left";
   return (
-    <div
-      style={{
+    <FittedParts
+      cap={px(area)}
+      origin={`${originX} ${originY}`}
+      ground={ground}
+      frame={{
         gridColumn: `${c1} / ${c2}`,
         gridRow: `${r1} / ${r2}`,
         // A block is as tall as what it holds, capped at the area it was given
@@ -1130,10 +1240,30 @@ function BlockNode({
         // whatever sat below.
         alignSelf:
           block.justify === "center" ? "center" : block.justify === "end" ? "end" : "start",
-        maxHeight: "100%",
         minHeight: 0,
+        minWidth: 0,
+        // The column lives on the frame as well as inside it, so that whatever
+        // still does not fit after being taken down overflows the way it always
+        // did - a foot block upwards, into the picture, rather than downwards
+        // off the bottom of the card.
         display: "flex",
         flexDirection: "column",
+        justifyContent:
+          block.justify === "center"
+            ? "center"
+            : block.justify === "end"
+              ? "flex-end"
+              : "flex-start",
+        ...panelStyle(block, ctx),
+      }}
+      column={{
+        display: "flex",
+        flexDirection: "column",
+        width: "100%",
+        // Never squashed by the line it sits in: the block is taken down as a
+        // whole instead, and a part shrunk under its own text is exactly what
+        // used to let the writing carry on over whatever came next.
+        flexShrink: 0,
         gap: px(gap),
         alignItems:
           block.align === "center" ? "center" : block.align === "end" ? "flex-end" : "flex-start",
@@ -1145,12 +1275,7 @@ function BlockNode({
               : "flex-start",
         textAlign: block.align === "center" ? "center" : block.align === "end" ? "right" : "left",
         minWidth: 0,
-        ...panelStyle(block, ctx),
       }}
-      // A block that painted its own ground does not want the lift meant for
-      // type lying straight on the photograph; a shadow there reads as a
-      // printing fault rather than as depth.
-      {...(block.panel && block.panel !== "none" ? { "data-ground": "" } : {})}
     >
       {block.parts.map((part, i) =>
         arrivalBase === undefined ? (
@@ -1161,7 +1286,7 @@ function BlockNode({
           </Arriving>
         ),
       )}
-    </div>
+    </FittedParts>
   );
 }
 

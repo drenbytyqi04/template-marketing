@@ -217,7 +217,7 @@ export async function createMyBusiness(input: {
 }
 
 export async function updateBusiness(businessId: string, patch: Partial<Business>) {
-  const row: Record<string, any> = {};
+  const row: Record<string, unknown> = {};
   if (patch.name !== undefined) row["name"] = patch.name;
   if (patch.type !== undefined) row["type"] = patch.type;
   if (patch.customType !== undefined) row["custom_type"] = patch.customType;
@@ -289,7 +289,7 @@ export async function saveBrand(
   businessId: string,
   patch: Partial<BrandProfile>,
 ): Promise<{ ok: boolean; error?: string }> {
-  const row: Record<string, any> = {};
+  const row: Record<string, unknown> = {};
   if (patch.primary !== undefined) row["primary_color"] = patch.primary;
   if (patch.secondary !== undefined) row["secondary_color"] = patch.secondary;
   if (patch.accent !== undefined) row["accent_color"] = patch.accent;
@@ -691,7 +691,7 @@ export async function updateRequest(
   requestId: string,
   patch: { status?: CustomTemplateRequest["status"]; templateId?: string | null },
 ) {
-  const row: Record<string, any> = {};
+  const row: Record<string, unknown> = {};
   if (patch.status !== undefined) row["status"] = patch.status;
   if (patch.templateId !== undefined) row["template_id"] = patch.templateId;
   if (Object.keys(row).length === 0) return;
@@ -1297,7 +1297,7 @@ export async function saveWebsite(
   businessId: string,
   patch: Partial<BrandWebsite>,
 ): Promise<{ error?: string }> {
-  const row: Record<string, any> = { business_id: businessId };
+  const row: Record<string, unknown> = { business_id: businessId };
   if (patch.url !== undefined) row["url"] = patch.url.trim().slice(0, 500);
   if (patch.scanFrequency !== undefined) row["scan_frequency"] = patch.scanFrequency;
   if (patch.autoMode !== undefined) row["auto_mode"] = patch.autoMode;

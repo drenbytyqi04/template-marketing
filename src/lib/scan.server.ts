@@ -140,7 +140,11 @@ function jsonLdNodes(html: string): JsonLdNode[] {
 
 function typeOf(node: JsonLdNode): string {
   const raw = node["@type"];
-  if (Array.isArray(raw)) return raw.map((t) => String(t)).join(" ").toLowerCase();
+  if (Array.isArray(raw))
+    return raw
+      .map((t) => String(t))
+      .join(" ")
+      .toLowerCase();
   return String(raw ?? "").toLowerCase();
 }
 
@@ -177,9 +181,8 @@ export function extractItems(html: string, pageUrl: string): ScannedItem[] {
 
   for (const node of jsonLdNodes(html)) {
     const type = typeOf(node);
-    const isItem = /product|offer|tour|trip|apartment|house|vehicle|car|event|service|room|menuitem/.test(
-      type,
-    );
+    const isItem =
+      /product|offer|tour|trip|apartment|house|vehicle|car|event|service|room|menuitem/.test(type);
     if (!isItem) continue;
     const title = clean(node["name"], 120);
     if (!title) continue;
@@ -225,7 +228,8 @@ export function extractItems(html: string, pageUrl: string): ScannedItem[] {
   return items;
 }
 
-const LIKELY = /(product|products|offer|offers|listing|listings|property|properties|tour|tours|package|packages|vehicle|car|cars|menu|shop|item|apartment|house|deal|deals)/i;
+const LIKELY =
+  /(product|products|offer|offers|listing|listings|property|properties|tour|tours|package|packages|vehicle|car|cars|menu|shop|item|apartment|house|deal|deals)/i;
 
 function sameOriginLinks(html: string, pageUrl: string): string[] {
   const origin = new URL(pageUrl).origin;

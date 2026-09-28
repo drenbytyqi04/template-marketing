@@ -2,6 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
+
 /**
  * Website scanning RPCs.
  * Ownership is always re-checked server side against the caller's memberships:
@@ -14,11 +17,12 @@ const scanInput = businessInput.extend({
   url: z.string().trim().min(4).max(500),
 });
 
-async function assertMember(
-  supabase: { from: (t: "business_members") => any },
-  businessId: string,
-  userId: string,
-) {
+/** The caller's own Supabase client, as the auth middleware hands it over: it
+ * carries their token, so every read below is subject to the same row level
+ * security a browser would face. */
+type CallerClient = SupabaseClient<Database>;
+
+async function assertMember(supabase: CallerClient, businessId: string, userId: string) {
   const { data } = await supabase
     .from("business_members")
     .select("business_id")

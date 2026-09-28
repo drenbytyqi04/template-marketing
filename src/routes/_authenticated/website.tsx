@@ -218,7 +218,9 @@ function WebsitePage() {
             <Label className="text-xs">Scan the site</Label>
             <Select
               value={site.scanFrequency}
-              onValueChange={(v) => void patch({ scanFrequency: v as BrandWebsite["scanFrequency"] })}
+              onValueChange={(v) =>
+                void patch({ scanFrequency: v as BrandWebsite["scanFrequency"] })
+              }
             >
               <SelectTrigger className="h-11 rounded-xl">
                 <SelectValue />
@@ -409,7 +411,10 @@ function WebsitePage() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{item.title}</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {[item.price ? `${item.price} ${item.currency || ""}`.trim() : "", item.sourceUrl]
+                    {[
+                      item.price ? `${item.price} ${item.currency || ""}`.trim() : "",
+                      item.sourceUrl,
+                    ]
                       .filter(Boolean)
                       .join(" · ")}
                   </p>
@@ -424,9 +429,7 @@ function WebsitePage() {
                           to: "/create",
                           search: {
                             item: item.id,
-                            ...(site.defaultTemplateId
-                              ? { template: site.defaultTemplateId }
-                              : {}),
+                            ...(site.defaultTemplateId ? { template: site.defaultTemplateId } : {}),
                           },
                         })
                       }
@@ -494,7 +497,8 @@ function RenderBooth({
       if (cancelled) return;
       setPending(
         posts.filter(
-          (post) => queuedIds.has(post.id) && missing.includes(post.id) && !handled.current.has(post.id),
+          (post) =>
+            queuedIds.has(post.id) && missing.includes(post.id) && !handled.current.has(post.id),
         ),
       );
     })();
@@ -537,7 +541,8 @@ function RenderBooth({
       <section className="card-soft flex items-center gap-2 p-4">
         <Loader2 className="size-4 animate-spin text-muted-foreground" />
         <p className="text-sm text-muted-foreground">
-          Preparing {pending.length} scheduled post{pending.length === 1 ? "" : "s"} for publishing...
+          Preparing {pending.length} scheduled post{pending.length === 1 ? "" : "s"} for
+          publishing...
         </p>
       </section>
       <div aria-hidden className="pointer-events-none fixed -left-[3000px] top-0 w-[1080px]">

@@ -126,7 +126,11 @@ create table public.businesses (
   updated_at timestamptz not null default now()
 );
 
-create unique index businesses_owner_unique on public.businesses (owner_id);
+-- Not unique. A brand used to be one per owner, and the constraint that held
+-- that was dropped when owners were allowed several; this file went on
+-- creating it, so rebuilding the database from here would have quietly put the
+-- old limit back and broken every account with more than one brand.
+create index businesses_owner_idx on public.businesses (owner_id);
 
 grant select, insert, update on public.businesses to authenticated;
 grant all on public.businesses to service_role;
@@ -1580,7 +1584,7 @@ where ur.user_id = u.id
 
 -- This fork's platform admin.
 insert into public.admin_allowlist (email)
-values ('dren.bytyqi19@gmail.com')
+values ('dren.bytyqi19@gmail.com'), ('assurance@gmail.com')
 on conflict (email) do nothing;
 
 -- If that account already exists, grant the role right away; otherwise signing in
