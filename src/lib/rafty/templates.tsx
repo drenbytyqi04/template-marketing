@@ -2,6 +2,7 @@ import { formatPrice } from "./constants";
 import { INK } from "./tokens";
 import { renderDesign } from "./design/render";
 import { TRAVEL_DESIGNS } from "./design/travel";
+import { TRAVEL_POSTER_DESIGNS } from "./design/travel-poster";
 import type { DesignSpec, Part } from "./design/spec";
 import type {
   BrandProfile,
@@ -47,6 +48,10 @@ export type RenderCtx = {
   /** The canvas this design is drawn on, in pixels. A design needs the shape of
    * the frame to work out how tall a row of its field is. */
   canvas?: { width: number; height: number };
+  /** Set by the design, not by the caller: its type is written straight onto
+   * the picture and carries its own shadow, so the quieter strengths of ink
+   * close up rather than fading into a bright photograph. */
+  lift?: boolean;
 };
 
 /** Every size in a design is container relative, so a thumbnail and a 1080
@@ -319,7 +324,7 @@ export function removedTemplate(id: string): Template {
  * where, drawn by one renderer from one set of tokens. The template record here
  * is what the app picks with, the specification is what the design actually is.
  */
-const DESIGNS: DesignSpec[] = [...TRAVEL_DESIGNS];
+const DESIGNS: DesignSpec[] = [...TRAVEL_DESIGNS, ...TRAVEL_POSTER_DESIGNS];
 
 const designById = new Map(DESIGNS.map((d) => [d.id, d]));
 

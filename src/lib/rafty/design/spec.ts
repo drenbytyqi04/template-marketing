@@ -77,6 +77,22 @@ export type DesignSpec = {
   /** Which ink the design writes in over the picture. */
   tone: "light" | "dark";
   photo: { treatment: PhotoTreatment; strength?: number };
+  /**
+   * Whether the type carries its own shadow, so it can be written straight onto
+   * the picture.
+   *
+   * A scrim is one way to make light type readable: darken the photograph under
+   * it. It is also the thing a customer notices first when it is not wanted -
+   * the picture they chose, dimmed, with a grey wash across the half of it the
+   * writing sits on. A travel poster does the other thing instead: it leaves
+   * the photograph alone and gives the letters an edge of their own, so they
+   * stand off a bright sky without anything being darkened.
+   *
+   * Set on designs that treat the picture as the point. It applies to type
+   * lying directly on the photograph and not to type on a ground the design
+   * itself painted, where a shadow would only look like a printing fault.
+   */
+  lift?: boolean;
   /** This design's page margin, in cqw. Designs share one by default, which is
    * most of what makes a set look like a set; a design states its own only when
    * the wider frame is the point of it. */
@@ -183,9 +199,10 @@ export function checkSpec(spec: DesignSpec): Finding[] {
   }
 
   // A design that writes light ink straight onto an untreated photograph is a
-  // caption waiting to disappear into a bright sky.
-  if (spec.tone === "light" && spec.photo.treatment === "plain") {
-    say("readable ink", "light type needs a scrim or a wash under it");
+  // caption waiting to disappear into a bright sky - unless the letters carry
+  // their own edge, which is how a poster does it without touching the picture.
+  if (spec.tone === "light" && spec.photo.treatment === "plain" && !spec.lift) {
+    say("readable ink", "light type on an untreated picture needs a scrim, a wash, or lift");
   }
 
   return found;

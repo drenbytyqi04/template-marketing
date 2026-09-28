@@ -38,11 +38,16 @@ type Props = {
  * PNG and in every clip.
  *
  * An eighth of the type size clears a descender at the tight line-heights these
- * templates use. It is room to paint, not room to lay out: the box keeps its
- * size, so nothing below it moves, and text that genuinely does not fit is
- * still cut - an eighth of a line later than before.
+ * templates use. A design that writes onto an untreated photograph also gives
+ * its letters a shadow to stand off the picture, and that shadow reaches
+ * further than any glyph does - about three tenths of the type size at its
+ * softest edge - so the room allowed is that, not the descender.
+ *
+ * It is room to paint, not room to lay out: the box keeps its size, so nothing
+ * below it moves, and text that genuinely does not fit is still cut, a third of
+ * a line later than before.
  */
-const INK = 0.16;
+const INK = 0.32;
 export function FitText({
   text,
   as = "div",

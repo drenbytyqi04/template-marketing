@@ -307,3 +307,30 @@
 .krijo-intro:empty {
   display: none;
 }
+
+/*
+ * Type written straight onto a photograph.
+ *
+ * A scrim is the other way to keep light type readable, and it is the way a
+ * customer notices: the picture they chose, dimmed, with a wash across the half
+ * the writing sits on. A poster leaves the photograph alone and gives the
+ * letters an edge instead. Three shadows rather than one: a tight dark core
+ * that separates the stroke from whatever is immediately behind it, a middle
+ * one that gives it weight, and a wide soft one that carries white type off a
+ * bright sky - which is the case that decides whether this works at all, and
+ * the one a single tight shadow loses. All three in `em`, so a headline and a
+ * phone number each get the shadow their own size asks for.
+ */
+.krijo-lift {
+  text-shadow:
+    0 0.015em 0.04em rgba(6, 10, 16, 0.78),
+    0 0.045em 0.13em rgba(6, 10, 16, 0.58),
+    0 0.09em 0.38em rgba(6, 10, 16, 0.5);
+}
+
+/* Anywhere the design painted its own ground, the type is already clear of the
+   picture and the shadow would only read as a printing fault. */
+.krijo-lift [data-ground],
+.krijo-lift [data-ground] * {
+  text-shadow: none;
+}

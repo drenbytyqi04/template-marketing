@@ -174,13 +174,33 @@ const accent = (ctx: RenderCtx) =>
 
 type Tone = "light" | "dark";
 
-/** The ink a tone writes in, at the three strengths a design needs. */
-const ink = (tone: Tone) => ({
-  strong: tone === "light" ? INK.onDark : INK.strong,
-  body: tone === "light" ? INK.onDarkBody : INK.body,
-  muted: tone === "light" ? INK.onDarkMuted : INK.muted,
-  faint: tone === "light" ? INK.onDarkFaint : INK.faint,
-});
+/**
+ * The ink a tone writes in, at the three strengths a design needs.
+ *
+ * A design that darkens the picture under its type can afford to write the
+ * quieter lines at half strength: they are read against a wash it controls. A
+ * design that writes onto an untreated photograph cannot. White at sixty per
+ * cent over a snowfield or a bright sky is not quiet, it is gone - the terms,
+ * the dates and the phone number all were - so where the type is lifted rather
+ * than backed, the strengths close right up and the shadow carries the
+ * difference in weight instead of the opacity.
+ */
+const ink = (tone: Tone, lift?: boolean) => {
+  if (tone === "light" && lift) {
+    return {
+      strong: INK.onDark,
+      body: "rgba(255,255,255,0.97)",
+      muted: "rgba(255,255,255,0.9)",
+      faint: "rgba(255,255,255,0.62)",
+    };
+  }
+  return {
+    strong: tone === "light" ? INK.onDark : INK.strong,
+    body: tone === "light" ? INK.onDarkBody : INK.body,
+    muted: tone === "light" ? INK.onDarkMuted : INK.muted,
+    faint: tone === "light" ? INK.onDarkFaint : INK.faint,
+  };
+};
 
 /* ---------------------------------- photo ---------------------------------- */
 
@@ -476,7 +496,7 @@ function Headline({
         fontWeight: WEIGHT.heavy,
         letterSpacing: TRACK.tight,
         fontFamily: font(ctx),
-        color: ink(tone).strong,
+        color: ink(tone, ctx.lift).strong,
       }}
     />
   );
@@ -512,7 +532,7 @@ function Price({ ctx, tone, as }: { ctx: RenderCtx; tone: Tone; as: "plain" | "b
   // reads as something to press, the square corners read as a price sticker
   // stuck on the poster. Which one a design wants is a question of voice.
   const onBadge = as === "badge" || as === "block";
-  const c = ink(tone);
+  const c = ink(tone, ctx.lift);
   const quiet = onBadge ? INK.onDarkBody : c.muted;
 
   // "from", the old price and the unit are all small type around one big
@@ -563,6 +583,7 @@ function Price({ ctx, tone, as }: { ctx: RenderCtx; tone: Tone; as: "plain" | "b
           borderRadius: as === "block" ? px(RADIUS.xs) : px(RADIUS.pill),
           background: accent(ctx),
         }}
+        data-ground
       >
         {body}
       </span>
@@ -598,7 +619,11 @@ function Stamp({ ctx, tone, as }: { ctx: RenderCtx; tone: Tone; as: "ribbon" | "
     alignSelf: "inherit",
   };
   if (as === "ribbon") {
-    return <span style={{ ...shared, background: accent(ctx), color: INK.onDark }}>{label}</span>;
+    return (
+      <span data-ground style={{ ...shared, background: accent(ctx), color: INK.onDark }}>
+        {label}
+      </span>
+    );
   }
   return (
     <span
@@ -606,7 +631,7 @@ function Stamp({ ctx, tone, as }: { ctx: RenderCtx; tone: Tone; as: "ribbon" | "
         ...shared,
         background: "transparent",
         border: `${px(0.25)} solid ${accent(ctx)}`,
-        color: ink(tone).strong,
+        color: ink(tone, ctx.lift).strong,
       }}
     >
       {label}
@@ -625,7 +650,7 @@ function Stamp({ ctx, tone, as }: { ctx: RenderCtx; tone: Tone; as: "ribbon" | "
 function Offers({ ctx, tone, limit = 4 }: { ctx: RenderCtx; tone: Tone; limit?: number }) {
   const rows = offerRows(ctx, limit);
   if (!rows.length) return null;
-  const c = ink(tone);
+  const c = ink(tone, ctx.lift);
   return (
     <div style={{ display: "grid", gap: px(SPACE.sm), width: "100%" }}>
       {rows.map((row, i) => (
@@ -706,7 +731,7 @@ const FACTS_LIMIT = 4;
 function Facts({ ctx, tone, limit = FACTS_LIMIT }: { ctx: RenderCtx; tone: Tone; limit?: number }) {
   const rows = facts(ctx, limit);
   if (!rows.length) return null;
-  const c = ink(tone);
+  const c = ink(tone, ctx.lift);
   return (
     <div
       style={{
@@ -770,7 +795,7 @@ function Included({
 }) {
   const items = includedItems(ctx, limit);
   if (!items.length) return null;
-  const c = ink(tone);
+  const c = ink(tone, ctx.lift);
   if (as === "line") {
     return (
       <div
@@ -872,6 +897,7 @@ function Cta({ ctx, tone, as }: { ctx: RenderCtx; tone: Tone; as: "bar" | "tag" 
           background: accent(ctx),
           color: INK.onDark,
         }}
+        data-ground
       >
         {label}
       </div>
@@ -882,9 +908,9 @@ function Cta({ ctx, tone, as }: { ctx: RenderCtx; tone: Tone; as: "bar" | "tag" 
       style={{
         ...shared,
         padding: `${px(SPACE.xs)} ${px(SPACE.md)}`,
-        border: `1px solid ${ink(tone).muted}`,
+        border: `1px solid ${ink(tone, ctx.lift).muted}`,
         borderRadius: px(RADIUS.pill),
-        color: ink(tone).strong,
+        color: ink(tone, ctx.lift).strong,
       }}
     >
       {label}
@@ -910,7 +936,7 @@ function Brand({ ctx, tone, page }: { ctx: RenderCtx; tone: Tone; page: number }
           style={{
             fontSize: px(TYPE.body),
             fontWeight: WEIGHT.bold,
-            color: ink(tone).strong,
+            color: ink(tone, ctx.lift).strong,
             fontFamily: fontSecondary(ctx),
           }}
         >
@@ -937,7 +963,7 @@ function Contact({ ctx, tone }: { ctx: RenderCtx; tone: Tone }) {
         // nobody can read is the same as no number.
         fontSize: px(TYPE.body),
         fontWeight: WEIGHT.medium,
-        color: ink(tone).body,
+        color: ink(tone, ctx.lift).body,
         fontFamily: fontSecondary(ctx),
       }}
     >
@@ -1121,6 +1147,10 @@ function BlockNode({
         minWidth: 0,
         ...panelStyle(block, ctx),
       }}
+      // A block that painted its own ground does not want the lift meant for
+      // type lying straight on the photograph; a shadow there reads as a
+      // printing fault rather than as depth.
+      {...(block.panel && block.panel !== "none" ? { "data-ground": "" } : {})}
     >
       {block.parts.map((part, i) =>
         arrivalBase === undefined ? (
@@ -1135,6 +1165,23 @@ function BlockNode({
   );
 }
 
+/**
+ * How far outside its own box a lifted line paints, in cqw.
+ *
+ * The shadow that lets type stand off a photograph reaches past the box the
+ * text was laid out in, and the exporter has to know by how much: on a clip it
+ * cuts each line out of the frame separately so the lines can arrive one at a
+ * time, and a line cut at its own edge loses the soft outside of its shadow -
+ * which does not read as a softer shadow, it reads as a faint rectangle around
+ * the words, moving with the wipe.
+ *
+ * Big text needs more of this than small text, and the auto-fit boxes already
+ * declare their own room, which the exporter reads. This covers the rest: the
+ * plain lines - the terms, the dates, the phone number - which have no such box
+ * and whose shadow reaches about half their own height.
+ */
+const LIFT_BLEED = 1.2;
+
 /* ---------------------------------- design --------------------------------- */
 
 /** Where a block's first line falls in the arrival order: everything the blocks
@@ -1146,7 +1193,10 @@ function arrivalOf(spec: DesignSpec, blockIndex: number): number {
 
 /** Draws one design. The page margin and the field are the same for every
  * design, which is most of what makes a set look like a set. */
-export function renderDesign(spec: DesignSpec, ctx: RenderCtx): React.ReactNode {
+export function renderDesign(spec: DesignSpec, outer: RenderCtx): React.ReactNode {
+  // Whether the type is lifted is the design's decision, not the caller's, so
+  // it is put on the context here rather than asked of every part separately.
+  const ctx: RenderCtx = spec.lift ? { ...outer, lift: true } : outer;
   // One row of the field, in the same container relative unit everything else
   // is measured in. The canvas is 100 units wide whatever its pixel size, so
   // its height follows from its shape.
@@ -1159,12 +1209,16 @@ export function renderDesign(spec: DesignSpec, ctx: RenderCtx): React.ReactNode 
   const scale = clamp(adjust?.scale ?? 1, 0.8, 1.25);
   return (
     <div
+      // Set once, at the root, so every line of type the design writes onto the
+      // photograph carries the same edge. The stylesheet takes it off again
+      // wherever the design painted a ground of its own.
+      {...(spec.lift ? { className: "krijo-lift", "data-krijo-bleed": String(LIFT_BLEED) } : {})}
       style={{
         position: "absolute",
         inset: 0,
         overflow: "hidden",
         fontFamily: font(ctx),
-        color: ink(spec.tone).strong,
+        color: ink(spec.tone, spec.lift).strong,
       }}
     >
       <Photo

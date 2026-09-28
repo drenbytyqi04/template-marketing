@@ -71,8 +71,12 @@ type Layer = {
 type Box = { x: number; y: number; width: number; height: number };
 
 /** The rectangle a line paints in, in page pixels: its own, widened by whatever
- * ink room the boxes inside it declare. */
-function paintedRect(el: HTMLElement): {
+ * ink room the boxes inside it declare, plus whatever the design says its type
+ * paints outside itself. */
+function paintedRect(
+  el: HTMLElement,
+  bleed: number,
+): {
   left: number;
   top: number;
   right: number;
@@ -81,7 +85,12 @@ function paintedRect(el: HTMLElement): {
 } {
   const r = el.getBoundingClientRect();
   const core = { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
-  const out = { ...core };
+  const out = {
+    left: core.left - bleed,
+    top: core.top - bleed,
+    right: core.right + bleed,
+    bottom: core.bottom + bleed,
+  };
   for (const child of el.querySelectorAll<HTMLElement>("*")) {
     const margin = parseFloat(getComputedStyle(child).overflowClipMargin);
     if (!Number.isFinite(margin) || margin <= 0) continue;
@@ -109,7 +118,13 @@ function boxesOf(
   scale: number,
   size: VideoExportSize,
 ): { box: Box; painted: Box }[] {
-  const rects = els.map(paintedRect);
+  // What the design says its type paints outside its own boxes, in cqw of the
+  // frame, turned into the page's own pixels.
+  const declared = Number(
+    (els[0]?.closest("[data-krijo-bleed]") as HTMLElement | null)?.dataset["krijoBleed"] ?? 0,
+  );
+  const bleed = Number.isFinite(declared) ? (declared / 100) * nodeBox.width : 0;
+  const rects = els.map((el) => paintedRect(el, bleed));
   const toBox = (left: number, top: number, right: number, bottom: number): Box => {
     const x = Math.max(0, Math.floor((left - nodeBox.left) * scale));
     const y = Math.max(0, Math.floor((top - nodeBox.top) * scale));
