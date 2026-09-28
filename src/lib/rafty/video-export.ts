@@ -654,9 +654,6 @@ async function loadFootage(src: string): Promise<{ video: HTMLVideoElement; rele
 /** Seeks and waits for the frame at that time to be decoded, so the first thing
  * drawn is a real picture rather than an empty element. */
 async function seekTo(video: HTMLVideoElement, time: number): Promise<void> {
-  const withCallback = video as HTMLVideoElement & {
-    requestVideoFrameCallback?: (cb: () => void) => number;
-  };
   await new Promise<void>((resolve) => {
     let settled = false;
     const done = () => {
@@ -664,10 +661,17 @@ async function seekTo(video: HTMLVideoElement, time: number): Promise<void> {
       settled = true;
       resolve();
     };
-    video.onseeked = () => {
-      if (withCallback.requestVideoFrameCallback) withCallback.requestVideoFrameCallback(done);
-      else done();
-    };
+    // `seeked` fires once the frame at that time is decoded and current, which
+    // is the whole of what this function is waiting for.
+    //
+    // It used to wait for one more presented frame after that, through
+    // requestVideoFrameCallback - and this element is deliberately never in the
+    // document, so it presents nothing and that callback never fires. Every
+    // seek therefore sat out the two second backstop below in full: two
+    // seconds added to every recording pass, and to every retry, for a wait on
+    // something that could not arrive. Measured on a ten second clip, twelve
+    // point two seconds of recording against ten point one of footage.
+    video.onseeked = done;
     setTimeout(done, 2000);
     video.currentTime = time;
   });
