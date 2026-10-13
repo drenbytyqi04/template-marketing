@@ -42,6 +42,22 @@ export const TYPE = {
    * from across a room. Measured off a printed travel offer, where the place
    * name ran to a little over a ninth of the frame's height. */
   display: 13.5,
+  /**
+   * A ceiling rather than a size.
+   *
+   * On a poster whose destination is set to the measure, the name is as large
+   * as the column allows and no larger - so a six letter place reaches one
+   * size, a four letter one reaches further, and a long name settles back. The
+   * fit already searches downward from its maximum under a width bound, so a
+   * headline given this as its maximum lands on whatever fills the column.
+   *
+   * The number is therefore not on the scale's ratio and is not meant to be
+   * reached often: it is the point past which a very short word would stop
+   * being a headline and start being a texture. Measured on this library's
+   * heavy face, six capitals fill the column at about 19, four at about 28, so
+   * this stops the short ones a little under their width.
+   */
+  banner: 26,
 } as const;
 
 /** Corner radii. Four steps and a pill, nothing between them. */

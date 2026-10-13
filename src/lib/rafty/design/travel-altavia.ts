@@ -43,9 +43,15 @@ export const TRAVEL_ALTAVIA_DESIGNS: DesignSpec[] = [
         gap: "sm",
         parts: [
           { t: "kicker", as: "caps" },
-          { t: "headline", size: "display", caps: true },
-          { t: "facts", limit: 2 },
-          { t: "included", as: "line" },
+          // Set to the column, not to a step on the scale. The destination is
+          // the poster, and a destination that stops two thirds of the way
+          // across the measure is a headline on a layout rather than a poster.
+          { t: "headline", size: "banner", caps: true },
+          // The two lines under the name, stacked and large, the way the
+          // printed offer has them: how long, and what is in it. They are the
+          // same size as each other on purpose - one group, read in one go.
+          { t: "facts", as: "stack", limit: 2 },
+          { t: "included", as: "terms", limit: 2 },
         ],
       },
       {

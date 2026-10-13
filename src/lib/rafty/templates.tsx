@@ -53,6 +53,10 @@ export type RenderCtx = {
    * the picture and carries its own shadow, so the quieter strengths of ink
    * close up rather than fading into a bright photograph. */
   lift?: boolean;
+  /** The room at the top and bottom of the frame that the app playing the clip
+   * covers with its own furniture, in cqw. A design divides what is left, not
+   * the whole frame, or it lays out against height it does not have. */
+  safe?: { top: number; bottom: number };
 };
 
 /** Every size in a design is container relative, so a thumbnail and a 1080

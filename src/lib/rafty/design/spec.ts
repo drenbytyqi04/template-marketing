@@ -34,8 +34,13 @@ export type Part =
    * shouts its destination does it whatever case the name was typed in, the
    * same way a design decides that its kicker is set in a hand. Left off, the
    * headline is printed exactly as it was written.
+   *
+   * The sizes are ceilings, not targets - the headline is fitted to the room it
+   * has - and `banner` is the one written as a ceiling on purpose: it asks for
+   * the destination to be set to the column, as large as the measure allows,
+   * which is a different instruction from the fixed steps below it.
    */
-  | { t: "headline"; size: "display" | "hero" | "large" | "medium"; caps?: boolean }
+  | { t: "headline"; size: "banner" | "display" | "hero" | "large" | "medium"; caps?: boolean }
   /**
    * The number. Plain reads as editorial, badge reads as an offer.
    *
@@ -55,11 +60,22 @@ export type Part =
   /** Several destinations and their prices, for a post that sells a season
    * rather than one trip. */
   | { t: "offers"; limit?: number }
-  /** Where, how long, when: whatever the post actually filled in. */
-  | { t: "facts"; limit?: number }
-  /** What the offer includes: one quiet line, a ticked list, or the same tags
-   * the post was built with. */
-  | { t: "included"; as: "line" | "ticks" | "chips"; limit?: number }
+  /**
+   * Where, how long, when: whatever the post actually filled in.
+   *
+   * A row sets them along one line, each named by its field, which is how a
+   * reader tells a hotel from a departure city. `stack` is the poster's
+   * instead: the terms set one to a line under the destination, large, and
+   * unnamed - because on a poster they name themselves. "3 nights" and "hotel
+   * + flight" are already sentences, and printing "Nights: 3 nights" over them
+   * is the layout reading the form back to the customer.
+   */
+  | { t: "facts"; as?: "row" | "stack"; limit?: number }
+  /** What the offer includes: one quiet line, a ticked list, the same tags the
+   * post was built with, or - on a poster - a term set to match the stacked
+   * facts above it, so the two read as one group rather than as a heading and
+   * a caption. */
+  | { t: "included"; as: "line" | "ticks" | "chips" | "terms"; limit?: number }
   | { t: "cta"; as: "bar" | "tag" }
   /** Logo and business name, drawn only when the brand has them. */
   | { t: "brand" }

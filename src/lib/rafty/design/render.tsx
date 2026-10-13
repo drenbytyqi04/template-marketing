@@ -281,6 +281,7 @@ function Photo({
 /* ---------------------------------- parts ---------------------------------- */
 
 const HEADLINE_SIZE = {
+  banner: TYPE.banner,
   display: TYPE.display,
   hero: TYPE.hero,
   large: TYPE.h1,
@@ -359,7 +360,7 @@ function contactLine(ctx: RenderCtx): string {
  * at its minimum on every design. A part with nothing to draw asks for nothing,
  * so an empty field hands its room back to the headline.
  */
-function reserveOf(part: Part, ctx: RenderCtx): number {
+function reserveOf(part: Part, ctx: RenderCtx, term: number = TYPE.h2): number {
   const { content } = ctx;
   const has = (value: string | undefined) => !!value && value.trim().length > 0;
   switch (part.t) {
@@ -375,7 +376,9 @@ function reserveOf(part: Part, ctx: RenderCtx): number {
           ? TYPE.h3 * 1.2 + SPACE.sm * 2
           : part.as === "block"
             ? TYPE.h2 * 1.2 + SPACE.md * 2
-            : TYPE.h2 * 1.2;
+            : part.as === "outline"
+              ? TYPE.hero * 1.2 + SPACE.md * 2 + SPACE.sm
+              : TYPE.h2 * 1.2;
       // "from", a struck old price and a unit wrap onto a second line in a
       // narrow block, so they are worth a line of small type between them.
       const extras =
@@ -399,12 +402,25 @@ function reserveOf(part: Part, ctx: RenderCtx): number {
       // second line of facts is about to take back.
       const rows = facts(ctx, part.limit ?? FACTS_LIMIT);
       if (!rows.length) return 0;
+      // Stacked terms take a line each, at the terms size, plus the hairline
+      // between them. They are the one shape here that is counted rather than
+      // measured by length, because each one is on its own line by
+      // construction; a term long enough to wrap is the exception, and the
+      // allowance below covers one of them.
+      if (part.as === "stack") {
+        const lines = rows.reduce((n, f) => n + termRows(f.value, term), 0);
+        return lines * (term * TERM_LEADING) + (rows.length - 1) * TERM_GAP;
+      }
       const chars = rows.reduce((n, f) => n + f.label.length + f.value.length + 5, 0);
       return Math.max(1, Math.ceil(chars / 40)) * (TYPE.body * 1.5);
     }
     case "included": {
       const n = includedItems(ctx, part.limit).length;
       if (!n) return 0;
+      if (part.as === "terms") {
+        const lines = includedItems(ctx, part.limit).reduce((t, s) => t + termRows(s, term), 0);
+        return lines * (term * TERM_LEADING) + (n - 1) * TERM_GAP;
+      }
       if (part.as === "ticks") {
         const rows = Math.ceil(n / (n > 4 ? 2 : 1));
         return rows * (TYPE.body * 1.5 + SPACE.xs);
@@ -446,6 +462,37 @@ function reserveOf(part: Part, ctx: RenderCtx): number {
   }
 }
 
+/**
+ * How close two lines of a headline may be set, decided by the headline.
+ *
+ * A line of type is allowed to be tighter than its own line box, and a headline
+ * that has to shrink is tightened to buy a line back. Capitals have no
+ * descender, so tightening a capitalised headline looks free - and is not. What
+ * decides the floor is how high the face paints above the baseline, and a
+ * capital carrying a mark paints much higher than a bare one. Measured on this
+ * library's heavy face: a plain E reaches 0.73 of the type size above the
+ * baseline, an E with a diaeresis reaches 0.97.
+ *
+ * At 0.96 the baselines sit closer together than that, so the dots of NETË,
+ * GREQISË, PRANVERË - which is most of a sentence in Albanian - were painted
+ * through the letters of the line above. 1.02 stops them touching and still
+ * reads as a near miss, because the marks end a hair under the line above
+ * rather than clear of it.
+ *
+ * So the leading is read off the text. A headline with a marked capital in it
+ * is set with the room that mark needs; every other headline keeps the tight
+ * setting the library was drawn around, and no existing design moves. The test
+ * decomposes first, so a precomposed Ë and an E followed by a combining
+ * diaeresis are the same letter, which they are.
+ */
+const MARKED_CAPITAL = /\p{Lu}\p{M}/u;
+
+function leadingFor(drawn: string): { normal: number; tight: number } {
+  return MARKED_CAPITAL.test(drawn.normalize("NFD"))
+    ? { normal: 1.2, tight: 1.16 }
+    : { normal: 1.02, tight: 0.96 };
+}
+
 function Headline({
   ctx,
   tone,
@@ -461,24 +508,33 @@ function Headline({
 }) {
   const max = HEADLINE_SIZE[size];
   const lines = 3;
+  const text = ctx.content.title || "Your headline here";
+  const leading = leadingFor(caps ? text.toUpperCase() : text);
   // The floor gives way before the box does. A block whose other parts have
   // taken nearly everything leaves room for a line or two, and a headline held
   // to its usual minimum there is not shrunk, it is cut off by the box that
   // clips it. Better small and whole than large and halved.
   const floor = Math.max(TYPE.h4, max * 0.42);
+  // Divided by the leading this headline is actually set with, not by a number
+  // written when every headline was set with the same one. The floor is the
+  // size at which the longest allowed headline still fits the room it was
+  // given, and the fit will not go below it - so a floor worked out at a
+  // tighter leading than the one in use is a floor the text overflows from. An
+  // Albanian headline is set looser, to clear the marks on its capitals, and at
+  // the old number its third line was drawn over the line beneath the block.
   const min =
     room !== undefined && room > 0
-      ? Math.max(TYPE.label, Math.min(floor, room / (lines * 1.02)))
+      ? Math.max(TYPE.label, Math.min(floor, room / (lines * leading.tight)))
       : floor;
   return (
     <FitText
       as="h2"
-      text={ctx.content.title || "Your headline here"}
+      text={text}
       maxSize={max}
       minSize={min}
       maxLines={lines}
-      lineHeight={1.02}
-      tightLineHeight={0.96}
+      lineHeight={leading.normal}
+      tightLineHeight={leading.tight}
       // The headline takes whatever the block has left after the other parts,
       // and is fitted to that. Without the cap a long title runs out of its
       // block and over whatever sits below it.
@@ -557,6 +613,13 @@ function Price({
    */
   if (as === "outline") {
     const edge = accent(ctx);
+    // The three rows are set with room for what they paint rather than on the
+    // tightest leading that looked right in English. A word here is uppercase,
+    // so "PËR PERSON" paints a quarter of its own size higher than "PER
+    // PERSON" does, and at a leading of 1 that marked capital reached out of
+    // its row and into the figure above it. The figure's row had the same fault
+    // from the other side: set at 0.95, the digits painted past the bottom of
+    // their own line and into the words beneath.
     const word: React.CSSProperties = {
       fontSize: px(TYPE.lead),
       fontWeight: WEIGHT.heavy,
@@ -564,7 +627,7 @@ function Price({
       textTransform: "uppercase",
       color: edge,
       fontFamily: fontSecondary(ctx),
-      lineHeight: 1,
+      lineHeight: 1.2,
       whiteSpace: "nowrap",
     };
     return (
@@ -573,7 +636,10 @@ function Price({
           display: "inline-flex",
           flexDirection: "column",
           alignItems: "flex-start",
-          gap: px(SPACE.xs),
+          // A beat between the three rows rather than a hairline. The words
+          // above and below are set in capitals, so a mark on one of them
+          // reaches towards the figure, and at the old gap it arrived.
+          gap: px(SPACE.sm),
           padding: `${px(SPACE.md)} ${px(SPACE.lg)}`,
           border: `${px(0.45)} solid ${edge}`,
           alignSelf: "inherit",
@@ -590,7 +656,7 @@ function Price({
             fontSize: px(TYPE.hero),
             fontWeight: WEIGHT.heavy,
             letterSpacing: TRACK.tight,
-            lineHeight: 0.95,
+            lineHeight: 1.2,
             color: ink(tone, ctx.lift).strong,
             fontFamily: font(ctx),
             whiteSpace: "nowrap",
@@ -815,10 +881,118 @@ function facts(ctx: RenderCtx, limit: number) {
  * design that wants a shorter row asks for one. */
 const FACTS_LIMIT = 4;
 
-function Facts({ ctx, tone, limit = FACTS_LIMIT }: { ctx: RenderCtx; tone: Tone; limit?: number }) {
+/**
+ * The terms under a poster's destination, set once for every part that joins
+ * them.
+ *
+ * Measured off the printed offer this reads from: the lines under the place
+ * name stand at a little over a third of its cap height. At the size a banner
+ * headline settles to in a square frame that lands on h2 - large enough to be
+ * read as part of the statement rather than as a caption under it, and still
+ * clearly subordinate to the name above.
+ *
+ * They wrap rather than shrink. A term is two or three words on a poster, and
+ * a customer who writes a sentence into the slot gets a second line, which is
+ * what a poster would do with it too.
+ */
+function termStyle(ctx: RenderCtx, size: number): React.CSSProperties {
+  return {
+    fontSize: px(size),
+    fontWeight: WEIGHT.bold,
+    // Enough to hold an accented capital, which paints 0.97 of its own size
+    // above the baseline. Tighter and the mark on a NETË or a PËRFSHIRË is
+    // drawn outside its own line and into whatever sits above it.
+    lineHeight: TERM_LEADING,
+    letterSpacing: TRACK.snug,
+    fontFamily: fontSecondary(ctx),
+  };
+}
+
+const TERM_LEADING = 1.26;
+
+/**
+ * The air between one term and the next.
+ *
+ * A hairline was enough while the terms were set at the poster's own size and
+ * there were two of them. At four, set a step smaller in a tall clip, the
+ * leading alone stopped clearing: a term ending in a lowercase tail and the one
+ * under it starting on an accented capital met by a few pixels - not enough to
+ * read as broken, and enough to be a line touching another line.
+ */
+const TERM_GAP = SPACE.xs;
+
+/**
+ * How large the terms in a block are set, read from how many of them there are.
+ *
+ * The poster this comes from carries two: how long, and what is in it. At two
+ * they are set large, a third of the destination's own size, and read as part
+ * of the statement rather than as a caption under it.
+ *
+ * A post that fills every slot asks for six, and six lines at that size do not
+ * leave a poster - they leave a list, with the destination squeezed to less
+ * than the terms beneath it, which inverts the one thing the design is for. So
+ * the size steps down as the count goes up. The alternative was to print the
+ * first two and drop the rest, and a design that silently loses what a customer
+ * typed is the thing this library was rebuilt to stop doing.
+ */
+function termSizeFor(lines: number): number {
+  return lines <= 2 ? TYPE.h2 : lines <= 4 ? TYPE.h3 : TYPE.lead;
+}
+
+/** The lines a block's terms come to, across every part that sets them, since
+ * the size is a property of the group rather than of either part alone. */
+function termLines(parts: Part[], ctx: RenderCtx): number {
+  let n = 0;
+  for (const part of parts) {
+    if (part.t === "facts" && part.as === "stack") {
+      n += facts(ctx, part.limit ?? FACTS_LIMIT).length;
+    }
+    if (part.t === "included" && part.as === "terms") {
+      n += includedItems(ctx, part.limit).length;
+    }
+  }
+  return n;
+}
+
+/** How many lines a term of this length wraps to at this size, in a column the
+ * width of a block. Used by the reserve, so the headline is not handed room a
+ * second line is about to take back. */
+function termRows(text: string, size: number): number {
+  // Roughly how many characters of this face fit a full width block.
+  const perLine = Math.max(8, Math.floor(86 / (size * 0.52)));
+  return Math.max(1, Math.ceil(text.length / perLine));
+}
+
+function Facts({
+  ctx,
+  tone,
+  as = "row",
+  limit = FACTS_LIMIT,
+  term = TYPE.h2,
+}: {
+  ctx: RenderCtx;
+  tone: Tone;
+  as?: "row" | "stack";
+  limit?: number;
+  term?: number;
+}) {
   const rows = facts(ctx, limit);
   if (!rows.length) return null;
   const c = ink(tone, ctx.lift);
+  if (as === "stack") {
+    // The terms under a poster's destination. One to a line, set at the size
+    // the stacked terms share, and without the field's name in front of them:
+    // see the note on the part for why a poster drops it where a row keeps it.
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: px(TERM_GAP), width: "100%" }}>
+        {rows.map((fact) => (
+          <span key={fact.key} style={{ ...termStyle(ctx, term), color: c.strong }}>
+            {fact.value}
+          </span>
+        ))}
+      </div>
+    );
+  }
   return (
     <div
       style={{
@@ -874,15 +1048,28 @@ function Included({
   tone,
   as,
   limit,
+  term = TYPE.h2,
 }: {
   ctx: RenderCtx;
   tone: Tone;
-  as: "line" | "ticks" | "chips";
+  as: "line" | "ticks" | "chips" | "terms";
   limit?: number;
+  term?: number;
 }) {
   const items = includedItems(ctx, limit);
   if (!items.length) return null;
   const c = ink(tone, ctx.lift);
+  if (as === "terms") {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: px(TERM_GAP), width: "100%" }}>
+        {items.map((item) => (
+          <span key={item} style={{ ...termStyle(ctx, term), color: c.strong }}>
+            {item}
+          </span>
+        ))}
+      </div>
+    );
+  }
   if (as === "line") {
     return (
       <div
@@ -1070,6 +1257,7 @@ function renderPart(
   key: number,
   page: number,
   room?: number,
+  term: number = TYPE.h2,
 ): React.ReactNode {
   switch (part.t) {
     case "kicker":
@@ -1095,7 +1283,14 @@ function renderPart(
       );
     case "facts":
       return (
-        <Facts key={key} ctx={ctx} tone={tone} {...(part.limit ? { limit: part.limit } : {})} />
+        <Facts
+          key={key}
+          ctx={ctx}
+          tone={tone}
+          term={term}
+          {...(part.as ? { as: part.as } : {})}
+          {...(part.limit ? { limit: part.limit } : {})}
+        />
       );
     case "included":
       return (
@@ -1104,6 +1299,7 @@ function renderPart(
           ctx={ctx}
           tone={tone}
           as={part.as}
+          term={term}
           {...(part.limit ? { limit: part.limit } : {})}
         />
       );
@@ -1300,8 +1496,12 @@ function BlockNode({
   const own = blockTone(block, tone);
   const gap = GAP[block.gap ?? "md"];
   const padding = block.panel && block.panel !== "none" ? SPACE.lg * 2 : 0;
+  // The terms are sized before anything is reserved, because how large they
+  // are set decides how much room they take and therefore what is left for the
+  // headline.
+  const term = termSizeFor(termLines(block.parts, ctx));
   const reserved =
-    block.parts.reduce((sum, part) => sum + reserveOf(part, ctx), 0) +
+    block.parts.reduce((sum, part) => sum + reserveOf(part, ctx, term), 0) +
     gap * Math.max(0, block.parts.length - 1) +
     padding;
   const area = (r2 - r1) * rowHeight;
@@ -1386,10 +1586,10 @@ function BlockNode({
     >
       {block.parts.map((part, i) =>
         arrivalBase === undefined ? (
-          renderPart(part, ctx, own, i, page, room)
+          renderPart(part, ctx, own, i, page, room, term)
         ) : (
           <Arriving key={i} at={arrivalBase + i}>
-            {renderPart(part, ctx, own, i, page, room)}
+            {renderPart(part, ctx, own, i, page, room, term)}
           </Arriving>
         ),
       )}
@@ -1434,7 +1634,19 @@ export function renderDesign(spec: DesignSpec, outer: RenderCtx): React.ReactNod
   // its height follows from its shape.
   const shape = ctx.canvas ? ctx.canvas.height / ctx.canvas.width : 1.25;
   const page = spec.page ?? SPACE.page;
-  const rowHeight = (100 * shape - page * 2) / GRID;
+  // The interface safe area comes off the field before it is divided.
+  //
+  // A full height clip keeps 14 units clear at the top and 28 at the bottom,
+  // for the profile row and the caption Instagram draws over them, and the
+  // stylesheet takes that room out of the grid. The row height did not know
+  // that: it divided the whole frame by twelve, so on a 9:16 clip every block
+  // was told its area was about a third taller than the row it was actually
+  // given. A block reserves room for its parts against that area and is capped
+  // at it, so the ones that filled their area did not shrink - they ran out of
+  // their own row and over the block beneath, which on a full post put the
+  // terms straight through the price.
+  const safe = ctx.safe ?? { top: 0, bottom: 0 };
+  const rowHeight = (100 * shape - safe.top - safe.bottom - page * 2) / GRID;
   const adjust = ctx.adjustments?.text;
   const x = clamp(adjust?.x ?? 0, -12, 12);
   const y = clamp(adjust?.y ?? 0, -12, 12);
