@@ -1,0 +1,74 @@
+# Keeps the Supabase project from being paused for inactivity.
+#
+# A project on the free plan is switched off after about seven days with no
+# requests, and it has happened twice: the database went down on its own, the
+# app stopped for everyone, and it took a manual restore to bring it back. This
+# makes one small request every three days so the clock never reaches seven.
+#
+# Three days rather than the five that were asked for, because the margin is
+# what matters. GitHub says plainly that scheduled workflows are not guaranteed
+# to run on time and can be delayed when the shared runners are busy; at five
+# days a single delayed run leaves under two days of room, and at three there is
+# always a second chance before the deadline. It costs one request.
+#
+# The request reads one row from a table through the public API. Row level
+# security answers it with an empty list, which is the point - nothing is read,
+# nothing is written, and the only thing that happens is that Postgres is asked
+# a question and Supabase sees a request.
+#
+# The url and the key below are the ones already committed in
+# src/integrations/supabase/config.ts. They are public by design: the
+# publishable key ships inside the browser bundle and every table it can reach
+# is behind row level security. Nothing here is a secret, so this needs no
+# setup - which is deliberate, because a keep-alive that waits on somebody
+# adding a token is a keep-alive that does not run.
+#
+# This is a patch over a limit, not a fix for it. It does nothing about the two
+# project cap on the free plan, nothing about the 1GB of storage, and nothing
+# about the absence of backups. For a product with paying customers the real
+# answer is the Pro plan; this only stops the lights going out in the meantime.
+
+name: Keep Supabase awake
+
+on:
+  schedule:
+    # Every third day. Seventeen minutes past the hour rather than on it:
+    # GitHub queues the most jobs at :00 and delays them the most there.
+    - cron: "17 7 */3 * *"
+  workflow_dispatch:
+
+concurrency:
+  group: supabase-keepalive
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ask the database a question
+        env:
+          SUPABASE_URL: https://evspytufythlndhxudez.supabase.co
+          SUPABASE_PUBLISHABLE_KEY: sb_publishable_hVismTTL0U6-0B6y5v17Qw_w-dK6gei
+        run: |
+          set -euo pipefail
+
+          code=$(curl --silent --show-error --location \
+            --max-time 30 --retry 3 --retry-delay 10 --retry-all-errors \
+            --output /tmp/reply.txt --write-out '%{http_code}' \
+            --header "apikey: ${SUPABASE_PUBLISHABLE_KEY}" \
+            --header "Authorization: Bearer ${SUPABASE_PUBLISHABLE_KEY}" \
+            "${SUPABASE_URL}/rest/v1/posts?select=id&limit=1")
+
+          echo "HTTP ${code}"
+          echo "reply: $(head -c 200 /tmp/reply.txt)"
+
+          # A 2xx means the request reached Postgres and came back, which is the
+          # whole job. Anything else is worth failing on and looking at: a paused
+          # project answers differently, and a silent green tick on a workflow
+          # whose only purpose is to keep something alive would be worse than no
+          # workflow at all.
+          case "${code}" in
+            2*) echo "The project is awake." ;;
+            *)  echo "::error::The project did not answer normally (HTTP ${code}). It may be paused."; exit 1 ;;
+          esac
