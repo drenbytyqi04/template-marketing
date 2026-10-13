@@ -451,11 +451,13 @@ function Headline({
   tone,
   size,
   room,
+  caps,
 }: {
   ctx: RenderCtx;
   tone: Tone;
   size: keyof typeof HEADLINE_SIZE;
   room?: number;
+  caps?: boolean;
 }) {
   const max = HEADLINE_SIZE[size];
   const lines = 3;
@@ -498,6 +500,11 @@ function Headline({
         letterSpacing: TRACK.tight,
         fontFamily: font(ctx),
         color: ink(tone, ctx.lift).strong,
+        // Set by the design, not by the customer: a poster that shouts its
+        // destination shouts it whatever case the name was typed in. The text
+        // itself is untouched, so what was saved is still what was written -
+        // only the drawing is loud.
+        ...(caps ? { textTransform: "uppercase" as const } : {}),
       }}
     />
   );
@@ -526,9 +533,88 @@ function priceParts(ctx: RenderCtx) {
   };
 }
 
-function Price({ ctx, tone, as }: { ctx: RenderCtx; tone: Tone; as: "plain" | "badge" | "block" }) {
+function Price({
+  ctx,
+  tone,
+  as,
+}: {
+  ctx: RenderCtx;
+  tone: Tone;
+  as: "plain" | "badge" | "block" | "outline";
+}) {
   const { now, was, unit, from } = priceParts(ctx);
   if (!now) return null;
+
+  /*
+   * The outline box.
+   *
+   * Nothing is filled in: a hairline in the accent colour, the photograph
+   * showing through it, the figure set large on the picture itself and the
+   * words around it small and in that same accent. It stacks rather than runs
+   * along a line, because the sentence is spoken in that order - from, the
+   * number, what the number buys - and a poster that prints it across one line
+   * makes the reader assemble it.
+   */
+  if (as === "outline") {
+    const edge = accent(ctx);
+    const word: React.CSSProperties = {
+      fontSize: px(TYPE.lead),
+      fontWeight: WEIGHT.heavy,
+      letterSpacing: TRACK.wide,
+      textTransform: "uppercase",
+      color: edge,
+      fontFamily: fontSecondary(ctx),
+      lineHeight: 1,
+      whiteSpace: "nowrap",
+    };
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          flexDirection: "column",
+          alignItems: "flex-start",
+          gap: px(SPACE.xs),
+          padding: `${px(SPACE.md)} ${px(SPACE.lg)}`,
+          border: `${px(0.45)} solid ${edge}`,
+          alignSelf: "inherit",
+        }}
+      >
+        {from ? (
+          <span style={{ ...word, color: ink(tone, ctx.lift).strong }}>{words(ctx).from}</span>
+        ) : null}
+        <span
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: px(SPACE.sm),
+            fontSize: px(TYPE.hero),
+            fontWeight: WEIGHT.heavy,
+            letterSpacing: TRACK.tight,
+            lineHeight: 0.95,
+            color: ink(tone, ctx.lift).strong,
+            fontFamily: font(ctx),
+            whiteSpace: "nowrap",
+          }}
+        >
+          {now}
+          {was ? (
+            <span
+              style={{
+                fontSize: px(TYPE.lead),
+                fontWeight: WEIGHT.bold,
+                textDecoration: "line-through",
+                letterSpacing: TRACK.normal,
+                color: ink(tone, ctx.lift).muted,
+              }}
+            >
+              {was}
+            </span>
+          ) : null}
+        </span>
+        {unit ? <span style={word}>{unit}</span> : null}
+      </span>
+    );
+  }
   // Badge and block are both the accent colour carrying white type; the pill
   // reads as something to press, the square corners read as a price sticker
   // stuck on the poster. Which one a design wants is a question of voice.
@@ -995,6 +1081,7 @@ function renderPart(
           ctx={ctx}
           tone={tone}
           size={part.size}
+          {...(part.caps ? { caps: true } : {})}
           {...(room !== undefined ? { room } : {})}
         />
       );
@@ -1258,17 +1345,37 @@ function BlockNode({
       }}
       column={{
         display: "flex",
-        flexDirection: "column",
+        // A row reads across rather than down: a mark with a rule either side
+        // of it, the way a printed poster signs itself off at the foot.
+        flexDirection: block.row ? "row" : "column",
+        ...(block.row ? { flexWrap: "wrap" as const } : {}),
         width: "100%",
         // Never squashed by the line it sits in: the block is taken down as a
         // whole instead, and a part shrunk under its own text is exactly what
         // used to let the writing carry on over whatever came next.
         flexShrink: 0,
         gap: px(gap),
-        alignItems:
-          block.align === "center" ? "center" : block.align === "end" ? "flex-end" : "flex-start",
-        justifyContent:
-          block.justify === "center"
+        // `align` is always across the block and `justify` always down it, so a
+        // design says where its parts sit without having to know which way they
+        // happen to run. In a row those are the flex axes the other way round.
+        alignItems: block.row
+          ? block.justify === "center"
+            ? "center"
+            : block.justify === "end"
+              ? "flex-end"
+              : "flex-start"
+          : block.align === "center"
+            ? "center"
+            : block.align === "end"
+              ? "flex-end"
+              : "flex-start",
+        justifyContent: block.row
+          ? block.align === "center"
+            ? "center"
+            : block.align === "end"
+              ? "flex-end"
+              : "flex-start"
+          : block.justify === "center"
             ? "center"
             : block.justify === "end"
               ? "flex-end"

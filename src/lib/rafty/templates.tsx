@@ -3,6 +3,7 @@ import { INK } from "./tokens";
 import { renderDesign } from "./design/render";
 import { TRAVEL_DESIGNS } from "./design/travel";
 import { TRAVEL_POSTER_DESIGNS } from "./design/travel-poster";
+import { TRAVEL_ALTAVIA_DESIGNS } from "./design/travel-altavia";
 import type { DesignSpec, Part } from "./design/spec";
 import type {
   BrandProfile,
@@ -324,7 +325,11 @@ export function removedTemplate(id: string): Template {
  * where, drawn by one renderer from one set of tokens. The template record here
  * is what the app picks with, the specification is what the design actually is.
  */
-const DESIGNS: DesignSpec[] = [...TRAVEL_DESIGNS, ...TRAVEL_POSTER_DESIGNS];
+const DESIGNS: DesignSpec[] = [
+  ...TRAVEL_DESIGNS,
+  ...TRAVEL_POSTER_DESIGNS,
+  ...TRAVEL_ALTAVIA_DESIGNS,
+];
 
 const designById = new Map(DESIGNS.map((d) => [d.id, d]));
 

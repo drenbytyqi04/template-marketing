@@ -27,12 +27,28 @@ export type Part =
   /** The small line over a headline: what the post is about. Caps read as a
    * label, a hand reads as a travel poster naming the hotel. */
   | { t: "kicker"; as?: "caps" | "script" }
-  /** The headline. A design has exactly one, and it leads the frame. */
-  | { t: "headline"; size: "display" | "hero" | "large" | "medium" }
-  /** The number. Plain reads as editorial, badge reads as an offer.
+  /**
+   * The headline. A design has exactly one, and it leads the frame.
+   *
+   * `caps` is the design's own voice rather than the customer's: a poster that
+   * shouts its destination does it whatever case the name was typed in, the
+   * same way a design decides that its kicker is set in a hand. Left off, the
+   * headline is printed exactly as it was written.
+   */
+  | { t: "headline"; size: "display" | "hero" | "large" | "medium"; caps?: boolean }
+  /**
+   * The number. Plain reads as editorial, badge reads as an offer.
+   *
+   * `outline` is the travel poster's own: a hairline box in the accent colour
+   * with nothing inside it, the figure set large on the photograph itself and
+   * the words around it small and in the same accent. It stacks rather than
+   * runs along a line, so the eye reads "from", then the number, then what the
+   * number buys - which is the order the sentence is actually spoken in.
+   *
    * Whatever the post filled in rides along: a starting-from price, what it
-   * buys, and the figure it was reduced from. */
-  | { t: "price"; as: "plain" | "badge" | "block" }
+   * buys, and the figure it was reduced from.
+   */
+  | { t: "price"; as: "plain" | "badge" | "block" | "outline" }
   /** The short urgent line over an offer: last minute, five places left.
    * A ribbon shouts, a tag is quiet enough to sit beside a headline. */
   | { t: "stamp"; as: "ribbon" | "tag" }
@@ -54,6 +70,16 @@ export type Part =
 /** A block of parts placed on the field. */
 export type Block = {
   area: Area;
+  /**
+   * Lays the parts along a line instead of down the page.
+   *
+   * A block stacks by default, which is what nearly every arrangement wants. A
+   * row is for the few that read across: a mark with a rule either side of it,
+   * the way a printed poster signs itself off at the foot. `align` and
+   * `justify` keep meaning what they say - where the parts sit across the block
+   * and down it - so a design does not have to think about which axis is which.
+   */
+  row?: boolean;
   /** Horizontal placement of the parts inside the block. */
   align?: "start" | "center" | "end";
   /** Vertical placement of the parts inside the block. */
