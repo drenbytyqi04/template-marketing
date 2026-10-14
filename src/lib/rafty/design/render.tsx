@@ -1246,8 +1246,35 @@ function Contact({ ctx, tone }: { ctx: RenderCtx; tone: Tone }) {
   );
 }
 
+/**
+ * A short accent rule.
+ *
+ * Block, stated rather than inherited. A rule is a span with a width and a
+ * height and no content, and a span is inline unless something makes it
+ * otherwise. As a direct child of a block's flex line it was made one, so the
+ * width and the height applied and the rule was drawn - but on a clip every
+ * part is wrapped so it can arrive on its own, and inside that wrapper the span
+ * went back to being inline, where a width and a height mean nothing. The rule
+ * collapsed to a box of nothing and simply vanished: the sign-off at the foot
+ * of a poster had its two marks either side of the brand on the picture and
+ * neither of them on the clip of the same post.
+ *
+ * It does not shrink either. It is a fixed mark, not a piece of the line's
+ * spare room, and two marks flanking a brand have to be the same length or they
+ * read as a mistake rather than as a pair.
+ */
 function Rule({ ctx }: { ctx: RenderCtx }) {
-  return <span style={{ width: px(10), height: px(0.4), background: accent(ctx) }} />;
+  return (
+    <span
+      style={{
+        display: "block",
+        flexShrink: 0,
+        width: px(10),
+        height: px(0.4),
+        background: accent(ctx),
+      }}
+    />
+  );
 }
 
 function renderPart(
