@@ -46,7 +46,14 @@ export function BrandIntro() {
       {visible ? (
         <motion.div
           key="krijo24-intro"
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-foreground"
+          // The page's own ground rather than its ink.
+          //
+          // This held bg-foreground, which is near black in the light theme,
+          // and the mark is a dark tile with light lettering cut out of it. On
+          // that ground the tile disappeared and left the lettering floating,
+          // which is not the mark. The splash exists to show the mark, so it
+          // is the splash that gives way.
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-background"
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.28, ease: "easeInOut" }}
@@ -56,7 +63,7 @@ export function BrandIntro() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
           >
-            <Logo height={64} tone="light" />
+            <Logo height={64} />
           </motion.div>
         </motion.div>
       ) : null}

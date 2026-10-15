@@ -1,91 +1,37 @@
 import { cn } from "@/lib/utils";
 
 /**
- * krijo24 mark, drawn inline as SVG.
+ * The krijo24 mark.
  *
- * The upstream Lovable project stored the artwork as `.asset.json` pointers into
- * its own CDN (`/__l5e/assets-v1/...`), which 404s on any other host. Drawing the
- * wordmark here keeps it self-contained: no network request, no broken image, and
- * it stays crisp at every size.
+ * One drawing, used in every place the product signs its own name: the app
+ * header, the marketing header and footer, the sign-in page, onboarding, the
+ * admin screen and the opening splash. It is the same file the browser puts in
+ * the tab, referenced rather than copied, so the tab and the page can never
+ * drift apart into two marks that are nearly but not quite the same thing -
+ * which is what they were.
  *
- * `tone` picks the black or white artwork, `showWordmark` switches between the
- * full logo and the k24 icon.
+ * The square alone, with no wordmark beside it. The name is carried by the
+ * `alt` text, which matters more than it used to: with the lettering gone,
+ * that string is the only place a screen reader finds what this is.
+ *
+ * It is a 64 pixel raster, so it is sharp up to about that size on an ordinary
+ * screen and about half that on a dense one. Nothing here asks for more than
+ * 64; a larger drawing, or the same mark as SVG, would be the thing to swap in
+ * if it ever does.
  */
-export function Logo({
-  className,
-  showWordmark = true,
-  height = 28,
-  tone = "dark",
-}: {
-  className?: string;
-  showWordmark?: boolean;
-  height?: number;
-  /** "dark" = black artwork for light surfaces, "light" = white artwork for dark surfaces. */
-  tone?: "dark" | "light";
-}) {
-  const ink = tone === "light" ? "#ffffff" : "#0f1020";
-  const accent = "#7c5cff";
-
-  // The icon is a rounded tile with "k24" reversed out of it.
-  if (!showWordmark) {
-    return (
-      <svg
-        viewBox="0 0 64 64"
-        role="img"
-        aria-label="krijo24"
-        style={{ height, width: height }}
-        className={cn("select-none", className)}
-      >
-        <rect width="64" height="64" rx="16" fill={accent} />
-        <text
-          x="32"
-          y="41"
-          textAnchor="middle"
-          fill="#ffffff"
-          fontFamily='"Sora", ui-sans-serif, system-ui, sans-serif'
-          fontSize="24"
-          fontWeight="800"
-          letterSpacing="-1"
-        >
-          k24
-        </text>
-      </svg>
-    );
-  }
-
+export function Logo({ className, height = 28 }: { className?: string; height?: number }) {
   return (
-    <svg
-      viewBox="0 0 200 56"
-      role="img"
-      aria-label="krijo24"
-      style={{ height, width: "auto" }}
+    <img
+      src="/favicon.png"
+      alt="krijo24"
+      width={height}
+      height={height}
+      // The mark is square. Stating both ends of it means the space is already
+      // the right shape before the file has loaded, so nothing beside it jumps
+      // when it arrives.
+      style={{ height, width: height }}
       className={cn("select-none", className)}
-    >
-      <rect y="4" width="48" height="48" rx="13" fill={accent} />
-      <text
-        x="24"
-        y="37"
-        textAnchor="middle"
-        fill="#ffffff"
-        fontFamily='"Sora", ui-sans-serif, system-ui, sans-serif'
-        fontSize="19"
-        fontWeight="800"
-        letterSpacing="-0.8"
-      >
-        k24
-      </text>
-      <text
-        x="60"
-        y="37"
-        fill={ink}
-        fontFamily='"Sora", ui-sans-serif, system-ui, sans-serif'
-        fontSize="27"
-        fontWeight="700"
-        letterSpacing="-1.1"
-      >
-        krijo
-        <tspan fill={accent}>24</tspan>
-      </text>
-    </svg>
+      draggable={false}
+    />
   );
 }
