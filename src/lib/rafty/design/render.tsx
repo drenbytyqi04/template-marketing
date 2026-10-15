@@ -314,11 +314,14 @@ const WORDS: Record<LanguageCode, { from: string }> = {
 const words = (ctx: RenderCtx) => WORDS[ctx.brand.language] ?? WORDS.en;
 
 const accent = (ctx: RenderCtx) =>
-  ctx.variant.accent === "secondary"
+  // A design that owns its accent has already decided; the brand's colours and
+  // the variant's choice between them are a question it is not asking.
+  ctx.designAccent ??
+  (ctx.variant.accent === "secondary"
     ? ctx.brand.secondary
     : ctx.variant.accent === "accent"
       ? ctx.brand.accent
-      : ctx.brand.primary;
+      : ctx.brand.primary);
 
 type Tone = "light" | "dark";
 
@@ -442,10 +445,33 @@ function Kicker({
 }: {
   ctx: RenderCtx;
   tone: Tone;
-  as?: "caps" | "script";
+  as?: "caps" | "script" | "lead";
 }) {
   const value = (ctx.content.subject || ctx.content.location).trim();
   if (!value) return null;
+  if (as === "lead") {
+    // The line under a destination set to the measure, rather than the label
+    // over a headline. It is read as the second half of the statement, so it
+    // takes the design's own ink and a size that holds its own under a banner -
+    // about a third of what the name above it settles to - while staying a
+    // clear step below it. Tracked a little wide, because a short line of
+    // capitals set solid reads as a word rather than as a phrase.
+    return (
+      <span
+        style={{
+          fontSize: px(TYPE.h3),
+          fontWeight: WEIGHT.bold,
+          lineHeight: 1.2,
+          letterSpacing: TRACK.wide,
+          textTransform: "uppercase",
+          color: ink(tone, ctx.lift).strong,
+          fontFamily: fontSecondary(ctx),
+        }}
+      >
+        {value}
+      </span>
+    );
+  }
   // The brand colour is only legible where the design put a ground under it.
   // Over a photograph the kicker keeps the design's own ink, and the accent is
   // spent on the price and the call to action instead.
@@ -603,7 +629,7 @@ function reserveOf(part: Part, ctx: RenderCtx, term: number = TYPE.h2): number {
       if (!ctx.showContact) return 0;
       return Math.max(1, Math.ceil(contactLine(ctx).length / 38)) * (TYPE.body * 1.5);
     case "rule":
-      return 0.4;
+      return part.as === "fill" ? 0.2 : 0.4;
     default:
       return 0;
   }
@@ -1339,7 +1365,17 @@ function Cta({ ctx, tone, as }: { ctx: RenderCtx; tone: Tone; as: "bar" | "tag" 
   );
 }
 
-function Brand({ ctx, tone, page }: { ctx: RenderCtx; tone: Tone; page: number }) {
+function Brand({
+  ctx,
+  tone,
+  page,
+  as = "lockup",
+}: {
+  ctx: RenderCtx;
+  tone: Tone;
+  page: number;
+  as?: "lockup" | "sign";
+}) {
   const showName = !!ctx.showBrandName && !!ctx.businessName;
   const { place, scale } = logoAdjust(ctx);
   // A mark the customer has pinned to a corner is drawn there, by FloatingLogo,
@@ -1349,9 +1385,25 @@ function Brand({ ctx, tone, page }: { ctx: RenderCtx; tone: Tone; page: number }
   // Always a box, even when empty: a block that spreads its parts between the
   // top and the foot of the frame loses that arrangement when a part vanishes.
   if (!showName && !logo) return <span aria-hidden style={{ display: "block" }} />;
+  // The hairline only belongs between two things. With a mark and no name, or a
+  // name and no mark, it would be a rule hanging off the end of the sign.
+  const divider = as === "sign" && !!logo && showName;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: px(SPACE.md) }}>
       {logo ? <LogoMark src={logo} scale={scale} page={page} /> : null}
+      {divider ? (
+        <span
+          aria-hidden
+          style={{
+            display: "block",
+            flexShrink: 0,
+            width: px(0.2),
+            alignSelf: "stretch",
+            minHeight: px(TYPE.body * 1.6),
+            background: ink(tone, ctx.lift).strong,
+          }}
+        />
+      ) : null}
       {showName ? (
         <span
           style={{
@@ -1410,14 +1462,20 @@ function Contact({ ctx, tone }: { ctx: RenderCtx; tone: Tone }) {
  * spare room, and two marks flanking a brand have to be the same length or they
  * read as a mistake rather than as a pair.
  */
-function Rule({ ctx }: { ctx: RenderCtx }) {
+function Rule({ ctx, as = "short" }: { ctx: RenderCtx; as?: "short" | "fill" }) {
+  const fill = as === "fill";
   return (
     <span
       style={{
         display: "block",
-        flexShrink: 0,
-        width: px(10),
-        height: px(0.4),
+        // A short rule is a mark with a length. A filling one is the opposite:
+        // it has no length of its own and takes what the line has left, which
+        // is what makes a pair either side of a mark run out to both edges and
+        // come back equal without either of them being measured.
+        ...(fill
+          ? { flex: "1 1 0", minWidth: 0, width: "auto" }
+          : { flexShrink: 0, width: px(10) }),
+        height: px(fill ? 0.2 : 0.4),
         background: accent(ctx),
       }}
     />
@@ -1480,11 +1538,13 @@ function renderPart(
     case "cta":
       return <Cta key={key} ctx={ctx} tone={tone} as={part.as} />;
     case "brand":
-      return <Brand key={key} ctx={ctx} tone={tone} page={page} />;
+      return (
+        <Brand key={key} ctx={ctx} tone={tone} page={page} {...(part.as ? { as: part.as } : {})} />
+      );
     case "contact":
       return <Contact key={key} ctx={ctx} tone={tone} />;
     case "rule":
-      return <Rule key={key} ctx={ctx} />;
+      return <Rule key={key} ctx={ctx} {...(part.as ? { as: part.as } : {})} />;
     default:
       return null;
   }
@@ -1712,6 +1772,11 @@ function BlockNode({
       frame={{
         gridColumn: `${c1} / ${c2}`,
         gridRow: `${r1} / ${r2}`,
+        // A block let out to the canvas edges. The grid sits inside the page
+        // margin, so reaching past it means giving the margin back on both
+        // sides - which is the only way a rule can run off the frame while
+        // everything else on the page stays lined up.
+        ...(block.bleed ? { marginLeft: px(-page), marginRight: px(-page) } : {}),
         // A block is as tall as what it holds, capped at the area it was given
         // and pinned to that area's edge. Stretching instead left a panel
         // standing half empty whenever a post filled in less than the design
@@ -1879,7 +1944,11 @@ function PlacedParts({
 export function renderDesign(spec: DesignSpec, outer: RenderCtx): React.ReactNode {
   // Whether the type is lifted is the design's decision, not the caller's, so
   // it is put on the context here rather than asked of every part separately.
-  const ctx: RenderCtx = spec.lift ? { ...outer, lift: true } : outer;
+  const ctx: RenderCtx = {
+    ...outer,
+    ...(spec.lift ? { lift: true } : {}),
+    ...(spec.accent ? { designAccent: spec.accent } : {}),
+  };
   // One row of the field, in the same container relative unit everything else
   // is measured in. The canvas is 100 units wide whatever its pixel size, so
   // its height follows from its shape.

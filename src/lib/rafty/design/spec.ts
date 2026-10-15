@@ -26,7 +26,7 @@ export const GRID = 12;
 export type Part =
   /** The small line over a headline: what the post is about. Caps read as a
    * label, a hand reads as a travel poster naming the hotel. */
-  | { t: "kicker"; as?: "caps" | "script" }
+  | { t: "kicker"; as?: "caps" | "script" | "lead" }
   /**
    * The headline. A design has exactly one, and it leads the frame.
    *
@@ -77,11 +77,26 @@ export type Part =
    * a caption. */
   | { t: "included"; as: "line" | "ticks" | "chips" | "terms"; limit?: number }
   | { t: "cta"; as: "bar" | "tag" }
-  /** Logo and business name, drawn only when the brand has them. */
-  | { t: "brand" }
+  /**
+   * Logo and business name, drawn only when the brand has them.
+   *
+   * A lockup sets them side by side with a gap. A sign puts a hairline between
+   * them, the way a printed poster signs itself off - the mark, a rule, the
+   * name - which only reads as deliberate when something else on the frame is
+   * already drawing hairlines.
+   */
+  | { t: "brand"; as?: "lockup" | "sign" }
   | { t: "contact" }
-  /** A short accent rule, for designs that need a beat between two parts. */
-  | { t: "rule" };
+  /**
+   * An accent rule.
+   *
+   * Short is a beat between two parts: a fixed mark, the same length wherever
+   * it is drawn. Fill is a different thing with the same name - a line that
+   * takes whatever room is left on its line, so a pair either side of a mark
+   * runs out to both edges and meets it in the middle. Two fills on one line
+   * are equal because they are sharing, not because they were measured.
+   */
+  | { t: "rule"; as?: "short" | "fill" };
 
 /** A block of parts placed on the field. */
 export type Block = {
@@ -102,6 +117,15 @@ export type Block = {
   justify?: "start" | "center" | "end";
   /** A ground drawn behind the block: none lets the picture through. */
   panel?: "none" | "brand" | "paper" | "veil";
+  /**
+   * Lets the block out past the page margin, to the edges of the canvas.
+   *
+   * The margin is most of what makes a set look like a set, so this is for the
+   * one thing a margin cannot hold: a rule that is meant to run off the frame.
+   * It widens the block only; what sits inside it still lines up with the rest
+   * of the page unless it, too, is a line told to fill.
+   */
+  bleed?: boolean;
   /** How the picture is treated under this design. */
   gap?: "sm" | "md" | "lg";
   parts: Part[];
@@ -118,6 +142,18 @@ export type DesignSpec = {
   for?: BusinessType[];
   /** Which ink the design writes in over the picture. */
   tone: "light" | "dark";
+  /**
+   * A colour this design owns, instead of the brand's.
+   *
+   * Designs take their accent from the brand, which is the whole point of a
+   * brand: one agency's posts are purple and another's are green without either
+   * of them choosing a template for it. This is the exception, and it is a real
+   * one - a design can be built around a particular colour, where the colour is
+   * not decoration on the layout but part of what the layout is. Set it only
+   * when changing it would make the design a different design, because every
+   * post made from it ignores the brand's own colour.
+   */
+  accent?: string;
   photo: { treatment: PhotoTreatment; strength?: number };
   /**
    * Whether the type carries its own shadow, so it can be written straight onto

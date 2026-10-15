@@ -3,7 +3,7 @@ import { INK } from "./tokens";
 import { renderDesign } from "./design/render";
 import { TRAVEL_DESIGNS } from "./design/travel";
 import { TRAVEL_POSTER_DESIGNS } from "./design/travel-poster";
-import { TRAVEL_ALTAVIA_DESIGNS } from "./design/travel-altavia";
+import { TRAVEL_ALTAVIA_DESIGNS, TRAVEL_ALTAVIA_V2_DESIGNS } from "./design/travel-altavia";
 import type { DesignSpec, Part } from "./design/spec";
 import type {
   BrandProfile,
@@ -57,6 +57,10 @@ export type RenderCtx = {
    * covers with its own furniture, in cqw. A design divides what is left, not
    * the whole frame, or it lays out against height it does not have. */
   safe?: { top: number; bottom: number };
+  /** Set by the design, not by the caller: a colour the design owns outright,
+   * used in place of the brand's accent. See the note on the spec for when a
+   * design is allowed to take that away from a brand. */
+  designAccent?: string;
 };
 
 /** Every size in a design is container relative, so a thumbnail and a 1080
@@ -333,6 +337,7 @@ const DESIGNS: DesignSpec[] = [
   ...TRAVEL_DESIGNS,
   ...TRAVEL_POSTER_DESIGNS,
   ...TRAVEL_ALTAVIA_DESIGNS,
+  ...TRAVEL_ALTAVIA_V2_DESIGNS,
 ];
 
 const designById = new Map(DESIGNS.map((d) => [d.id, d]));
