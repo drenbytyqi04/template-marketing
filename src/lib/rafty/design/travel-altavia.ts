@@ -70,10 +70,16 @@ export const TRAVEL_ALTAVIA_DESIGNS: DesignSpec[] = [
       },
       {
         // The sign-off: a rule, the mark, a rule, centred on the foot.
-        area: [1, 13, 11, 13],
+        //
+        // Centred down the block as well as across it. In a row it is `justify`
+        // that sets where the parts sit against each other, and at the foot the
+        // two rules were drawn under the lockup rather than through it - a pair
+        // of marks on the floor beside the name instead of a line the name is
+        // set into.
+        area: [1, 13, 12, 13],
         row: true,
         align: "center",
-        justify: "end",
+        justify: "center",
         gap: "md",
         parts: [{ t: "rule" }, { t: "brand" }, { t: "rule" }],
       },
@@ -87,7 +93,7 @@ export const TRAVEL_ALTAVIA_DESIGNS: DesignSpec[] = [
  * The same poster thinking as the first, re-cut to a brief: the destination
  * across the top left, a subtitle under it rather than a label over it, the
  * price alone in a hairline box held just above the middle of the frame, and a
- * sign-off at the foot between two rules that run clean off both edges.
+ * sign-off at the foot between two rules that meet it in the middle.
  *
  * Two things make it a different design rather than a variant of the first.
  * The colour is the design's own - a golden yellow, the same one on the box,
@@ -150,12 +156,23 @@ export const TRAVEL_ALTAVIA_V2_DESIGNS: DesignSpec[] = [
         parts: [{ t: "price", as: "outline" }, { t: "cta", as: "tag" }, { t: "contact" }],
       },
       {
-        // The sign-off: a rule out to each edge and the mark between them.
-        area: [1, 13, 11, 13],
+        // The sign-off: a rule either side of the mark, meeting it in the
+        // middle.
+        //
+        // Centred rather than pinned to the foot of the block, because in a row
+        // it is `justify` that decides where the rules sit against the mark,
+        // and at the foot they were drawn under the lockup instead of through
+        // it. One row down keeps the band at the same height on the frame as it
+        // was when it was pinned to the bottom of two.
+        //
+        // And they stop at the page margin rather than running off the frame: a
+        // rule that reaches the edge reads as a band laid across the bottom of
+        // the picture, where one that stops where every other line on the page
+        // stops reads as part of the sign-off.
+        area: [1, 13, 12, 13],
         row: true,
-        bleed: true,
         align: "center",
-        justify: "end",
+        justify: "center",
         gap: "md",
         parts: [
           { t: "rule", as: "fill" },

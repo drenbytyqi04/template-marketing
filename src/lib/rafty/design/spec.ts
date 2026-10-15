@@ -117,15 +117,6 @@ export type Block = {
   justify?: "start" | "center" | "end";
   /** A ground drawn behind the block: none lets the picture through. */
   panel?: "none" | "brand" | "paper" | "veil";
-  /**
-   * Lets the block out past the page margin, to the edges of the canvas.
-   *
-   * The margin is most of what makes a set look like a set, so this is for the
-   * one thing a margin cannot hold: a rule that is meant to run off the frame.
-   * It widens the block only; what sits inside it still lines up with the rest
-   * of the page unless it, too, is a line told to fill.
-   */
-  bleed?: boolean;
   /** How the picture is treated under this design. */
   gap?: "sm" | "md" | "lg";
   parts: Part[];

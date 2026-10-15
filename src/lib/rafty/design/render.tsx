@@ -1772,11 +1772,6 @@ function BlockNode({
       frame={{
         gridColumn: `${c1} / ${c2}`,
         gridRow: `${r1} / ${r2}`,
-        // A block let out to the canvas edges. The grid sits inside the page
-        // margin, so reaching past it means giving the margin back on both
-        // sides - which is the only way a rule can run off the frame while
-        // everything else on the page stays lined up.
-        ...(block.bleed ? { marginLeft: px(-page), marginRight: px(-page) } : {}),
         // A block is as tall as what it holds, capped at the area it was given
         // and pinned to that area's edge. Stretching instead left a panel
         // standing half empty whenever a post filled in less than the design
