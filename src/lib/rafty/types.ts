@@ -474,10 +474,66 @@ export type LogoAdjust = {
   y: number;
 };
 
+/**
+ * One element of the design, taken out of the layout and placed by hand.
+ *
+ * The same answer the logo gives, asked of everything else a post prints. A
+ * design decides where its headline, its price and its terms go, and that is
+ * the right default - but a customer looking at their own photograph can see
+ * that the price would be better in the top corner, away from the horizon, and
+ * until now the only thing on the post they could say that about was the mark.
+ *
+ * "design" means the element stays where the template put it, which is what
+ * every element does until somebody moves it. Anything else lifts it out of its
+ * block and pins it to the frame, with the same nudges and the same size
+ * multiplier the mark has.
+ */
+export type ElementAdjust = {
+  place: LogoPlace;
+  /** Multiplier on the size the design gives the element, not an absolute size,
+   * so a post keeps its proportions when it is exported at another shape. */
+  scale: number;
+  /** Nudges from the chosen edge, in the same units as every other nudge. */
+  x: number;
+  y: number;
+};
+
+/**
+ * The elements a customer can place themselves.
+ *
+ * Everything a post can print, less the short accent rule, which is a beat
+ * between two parts rather than a thing anybody means to move. The mark keeps
+ * its own control: that one lifts the logo out of the lockup and leaves the
+ * business name behind, which is a different question from moving the lockup.
+ *
+ * These are part names from the design spec. The spec cannot be imported here -
+ * it imports this file - so the renderer, which sees both, is where the two
+ * lists are checked against each other.
+ */
+export const MOVABLE_ELEMENTS = [
+  "headline",
+  "kicker",
+  "price",
+  "facts",
+  "included",
+  "stamp",
+  "cta",
+  "offers",
+  "brand",
+  "contact",
+] as const;
+
+export type MovableElement = (typeof MOVABLE_ELEMENTS)[number];
+
+export const defaultElementAdjust: ElementAdjust = { place: "design", scale: 1, x: 0, y: 0 };
+
 export type PostAdjustments = {
   text?: LayerAdjust;
   image?: { x: number; y: number; scale: number };
   logo?: LogoAdjust;
+  /** Only the elements somebody has actually moved. An element with no entry
+   * here is where its design put it, which is almost always all of them. */
+  elements?: Partial<Record<MovableElement, ElementAdjust>>;
 };
 
 export type ShareStatus = {

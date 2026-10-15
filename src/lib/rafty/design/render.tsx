@@ -3,7 +3,8 @@ import { fieldLabel, formatPrice, SCRIPT_FONT } from "../constants";
 import { alpha, INK, luminance, RADIUS, shade, SPACE, TRACK, TYPE, WEIGHT } from "../tokens";
 import { FitText } from "@/components/rafty/FitText";
 import type { RenderCtx } from "../templates";
-import type { LanguageCode } from "../types";
+import type { ElementAdjust, LanguageCode, MovableElement } from "../types";
+import { MOVABLE_ELEMENTS } from "../types";
 import type { Block, DesignSpec, Part, PhotoTreatment } from "./spec";
 import { GRID } from "./spec";
 import { ARRIVAL_ATTR, INTRO } from "./animation";
@@ -92,7 +93,17 @@ function logoAdjust(ctx: RenderCtx) {
  * a logo in a corner lines up with everything else on the page, and the nudges
  * stop at the edge rather than carrying it off the canvas.
  */
-function FloatingLogo({ ctx, page, arrival }: { ctx: RenderCtx; page: number; arrival?: number }) {
+function FloatingLogo({
+  ctx,
+  page,
+  band,
+  arrival,
+}: {
+  ctx: RenderCtx;
+  page: number;
+  band: Band;
+  arrival?: number;
+}) {
   const logo = ctx.brand.logoDataUrl;
   const { place, scale, x, y } = logoAdjust(ctx);
   if (!logo || place === "design") return null;
@@ -108,7 +119,6 @@ function FloatingLogo({ ctx, page, arrival }: { ctx: RenderCtx; page: number; ar
 
   // The nudges stop at the edge rather than carrying the mark off the canvas.
   const inset = (base: number) => px(Math.max(0, base));
-  const middle = (offset: number) => `calc(50% + ${offset}cqw)`;
   const pullBack = [middleX ? "translateX(-50%)" : "", middleY ? "translateY(-50%)" : ""]
     .filter(Boolean)
     .join(" ");
@@ -125,12 +135,12 @@ function FloatingLogo({ ctx, page, arrival }: { ctx: RenderCtx; page: number; ar
             } as React.CSSProperties)),
         position: "absolute",
         ...(middleY
-          ? { top: middle(y) }
+          ? { top: px(band.midY + y) }
           : top
-            ? { top: inset(page + y) }
-            : { bottom: inset(page - y) }),
+            ? { top: inset(band.top + page + y) }
+            : { bottom: inset(band.bottom + page - y) }),
         ...(middleX
-          ? { left: middle(x) }
+          ? { left: `calc(50% + ${x}cqw)` }
           : left
             ? { left: inset(page + x) }
             : { right: inset(page - x) }),
@@ -139,6 +149,143 @@ function FloatingLogo({ ctx, page, arrival }: { ctx: RenderCtx; page: number; ar
       }}
     >
       <LogoMark src={logo} scale={scale} page={page} />
+    </div>
+  );
+}
+
+/* ------------------------------ moved elements ----------------------------- */
+
+/**
+ * The movable names, checked against the parts a design is actually built
+ * from.
+ *
+ * The list lives in the types file, which the spec cannot be imported into
+ * without a cycle, so nothing there can say that "headline" is a real part. It
+ * is said here instead, where both are in scope: the annotation fails to
+ * compile the day a part is renamed in one file and not the other, which is
+ * the only moment it could ever go wrong.
+ */
+const MOVABLE: ReadonlySet<Part["t"]> = new Set<Part["t"]>(MOVABLE_ELEMENTS);
+
+/** How far a placed element may be nudged from its edge. The mark's limit, for
+ * the same reason: past this it is not a nudge, it is a different corner. */
+const ELEMENT_NUDGE = 12;
+
+/**
+ * The part of the frame something may be pinned to.
+ *
+ * Not the frame. A full height clip keeps room at the top and the bottom for
+ * the profile row and the caption the app draws over them, and a mark pinned
+ * to "top left" means the top left of the picture somebody can see, not the
+ * top left of a rectangle a third of which is under a username. The grid
+ * already works inside this band; anything pinned over the grid has to as
+ * well, or the two disagree about where the top of the post is.
+ *
+ * `top` and `bottom` are the room taken off each end, and `midY` is the middle
+ * of what is left - all in the same container relative unit as everything
+ * else, measured down from the top of the frame.
+ */
+type Band = { top: number; bottom: number; midY: number };
+
+function bandOf(ctx: RenderCtx): Band {
+  const shape = ctx.canvas ? ctx.canvas.height / ctx.canvas.width : 1.25;
+  const safe = ctx.safe ?? { top: 0, bottom: 0 };
+  return { ...safe, midY: safe.top + (100 * shape - safe.top - safe.bottom) / 2 };
+}
+
+/**
+ * Where this element has been placed, or nothing if it is where its design put
+ * it - which is the answer for almost every element of almost every post.
+ *
+ * Read through the same clamps the controls use, because the controls are not
+ * the only way a value gets here: a post saved by an older build, or a row
+ * edited by hand, arrives through the same door.
+ */
+function elementAdjust(ctx: RenderCtx, kind: Part["t"]): ElementAdjust | null {
+  if (!MOVABLE.has(kind)) return null;
+  const set = ctx.adjustments?.elements?.[kind as MovableElement];
+  if (!set || set.place === "design") return null;
+  return {
+    place: set.place,
+    scale: clamp(set.scale ?? 1, 0.5, 3),
+    x: clamp(set.x ?? 0, -ELEMENT_NUDGE, ELEMENT_NUDGE),
+    y: clamp(set.y ?? 0, -ELEMENT_NUDGE, ELEMENT_NUDGE),
+  };
+}
+
+/**
+ * Pins one element to the frame, the way the mark is pinned.
+ *
+ * The geometry is the mark's, down to the insets starting at the page margin
+ * so a placed element lines up with everything still in the layout. Type needs
+ * two things a mark does not. It needs a measure: an element with no width to
+ * wrap in would set a headline as one endless line, so the box spans the page
+ * and the words wrap inside it. And it needs to know which way it reads: an
+ * element pinned to the right of the frame sets its lines ragged left, because
+ * a line that hangs off the edge it was pinned to is not pinned to it.
+ *
+ * The size multiplier is drawn rather than typeset - the element is scaled as a
+ * whole, around the corner it was pinned to, so it grows into the frame instead
+ * of off it. Everything inside keeps the proportions the design gave it.
+ */
+function PlacedPart({
+  children,
+  adjust,
+  page,
+  band,
+  arrival,
+}: {
+  children: React.ReactNode;
+  adjust: ElementAdjust;
+  page: number;
+  band: Band;
+  arrival?: number;
+}) {
+  const { place, scale, x, y } = adjust;
+  const middleX = place === "topCenter" || place === "center" || place === "bottomCenter";
+  const middleY = place === "center";
+  const top = place === "topLeft" || place === "topCenter" || place === "topRight";
+  const left = place === "topLeft" || place === "bottomLeft";
+
+  const inset = (base: number) => px(Math.max(0, base));
+  const middleOf = (base: number, offset: number) => px(base + offset);
+  const pullBack = [middleX ? "translateX(-50%)" : "", middleY ? "translateY(-50%)" : ""]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <div
+      {...(arrival === undefined ? {} : { className: "krijo-intro", [ARRIVAL_ATTR]: arrival })}
+      style={{
+        ...(arrival === undefined
+          ? {}
+          : ({
+              "--krijo-delay": `${arrival * INTRO.stagger}ms`,
+              "--krijo-duration": `${INTRO.duration}ms`,
+            } as React.CSSProperties)),
+        position: "absolute",
+        ...(middleY
+          ? { top: middleOf(band.midY, y) }
+          : top
+            ? { top: inset(band.top + page + y) }
+            : { bottom: inset(band.bottom + page - y) }),
+        ...(middleX
+          ? { left: `calc(50% + ${x}cqw)` }
+          : left
+            ? { left: inset(page + x) }
+            : { right: inset(page - x) }),
+        width: px(100 - page * 2),
+        transform: [pullBack, scale === 1 ? "" : `scale(${scale})`].filter(Boolean).join(" "),
+        transformOrigin: `${middleY ? "center" : top ? "top" : "bottom"} ${
+          middleX ? "center" : left ? "left" : "right"
+        }`,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: middleX ? "center" : left ? "flex-start" : "flex-end",
+        textAlign: middleX ? "center" : left ? "left" : "right",
+      }}
+    >
+      {children}
     </div>
   );
 }
@@ -1523,13 +1670,31 @@ function BlockNode({
   const own = blockTone(block, tone);
   const gap = GAP[block.gap ?? "md"];
   const padding = block.panel && block.panel !== "none" ? SPACE.lg * 2 : 0;
+  // Only the parts still in the block.
+  //
+  // An element the customer has placed on the frame is drawn over the design
+  // from somewhere else, so this block neither draws it nor keeps room for it.
+  // Leaving it in the reserve would hold a gap open where it used to be and
+  // hand the headline less room than it now has, which is the opposite of what
+  // moving something out of a block should do. The index each part came in at
+  // is carried along, because that number is its place in the arrival order and
+  // closing the gaps would renumber everything behind it.
+  const staying = block.parts
+    .map((part, index) => ({ part, index }))
+    .filter(({ part }) => !elementAdjust(ctx, part.t));
+  if (!staying.length) return null;
   // The terms are sized before anything is reserved, because how large they
   // are set decides how much room they take and therefore what is left for the
   // headline.
-  const term = termSizeFor(termLines(block.parts, ctx));
+  const term = termSizeFor(
+    termLines(
+      staying.map((p) => p.part),
+      ctx,
+    ),
+  );
   const reserved =
-    block.parts.reduce((sum, part) => sum + reserveOf(part, ctx, term), 0) +
-    gap * Math.max(0, block.parts.length - 1) +
+    staying.reduce((sum, { part }) => sum + reserveOf(part, ctx, term), 0) +
+    gap * Math.max(0, staying.length - 1) +
     padding;
   const area = (r2 - r1) * rowHeight;
   const room = area - reserved;
@@ -1611,12 +1776,12 @@ function BlockNode({
         minWidth: 0,
       }}
     >
-      {block.parts.map((part, i) =>
+      {staying.map(({ part, index }) =>
         arrivalBase === undefined ? (
-          renderPart(part, ctx, own, i, page, room, term)
+          renderPart(part, ctx, own, index, page, room, term)
         ) : (
-          <Arriving key={i} at={arrivalBase + i}>
-            {renderPart(part, ctx, own, i, page, room, term)}
+          <Arriving key={index} at={arrivalBase + index}>
+            {renderPart(part, ctx, own, index, page, room, term)}
           </Arriving>
         ),
       )}
@@ -1650,6 +1815,65 @@ function arrivalOf(spec: DesignSpec, blockIndex: number): number {
   return spec.blocks.slice(0, blockIndex).reduce((n, b) => n + b.parts.length, 0);
 }
 
+/**
+ * Every element the customer has taken out of the layout, drawn where they put
+ * it.
+ *
+ * Over the design rather than inside it, for the same reason the mark is:
+ * somebody who has deliberately placed something somewhere should not then find
+ * a headline on top of it. Each one keeps the arrival number it had in its
+ * block, so a clip still introduces the post in the order the design reads
+ * rather than in the order things were moved.
+ *
+ * The tone is the design's own, not the block's. A part that sat on a painted
+ * panel is now on the photograph; the panel stays where it was, so the ink has
+ * to be the ink that works over a picture.
+ */
+function PlacedParts({
+  spec,
+  ctx,
+  page,
+  band,
+}: {
+  spec: DesignSpec;
+  ctx: RenderCtx;
+  page: number;
+  band: Band;
+}): React.ReactNode {
+  const moved: { part: Part; adjust: ElementAdjust; at: number }[] = [];
+  spec.blocks.forEach((block, bi) => {
+    block.parts.forEach((part, pi) => {
+      const adjust = elementAdjust(ctx, part.t);
+      if (adjust) moved.push({ part, adjust, at: arrivalOf(spec, bi) + pi });
+    });
+  });
+  if (!moved.length) return null;
+
+  return (
+    <>
+      {moved.map(({ part, adjust, at }) => (
+        <PlacedPart
+          key={part.t}
+          adjust={adjust}
+          page={page}
+          band={band}
+          {...(ctx.animate ? { arrival: at } : {})}
+        >
+          {renderPart(
+            part,
+            ctx,
+            spec.tone,
+            at,
+            page,
+            undefined,
+            termSizeFor(termLines([part], ctx)),
+          )}
+        </PlacedPart>
+      ))}
+    </>
+  );
+}
+
 /** Draws one design. The page margin and the field are the same for every
  * design, which is most of what makes a set look like a set. */
 export function renderDesign(spec: DesignSpec, outer: RenderCtx): React.ReactNode {
@@ -1674,6 +1898,8 @@ export function renderDesign(spec: DesignSpec, outer: RenderCtx): React.ReactNod
   // terms straight through the price.
   const safe = ctx.safe ?? { top: 0, bottom: 0 };
   const rowHeight = (100 * shape - safe.top - safe.bottom - page * 2) / GRID;
+  // The same band the grid lives in, for everything pinned over the grid.
+  const band = bandOf(ctx);
   const adjust = ctx.adjustments?.text;
   const x = clamp(adjust?.x ?? 0, -12, 12);
   const y = clamp(adjust?.y ?? 0, -12, 12);
@@ -1723,11 +1949,13 @@ export function renderDesign(spec: DesignSpec, outer: RenderCtx): React.ReactNod
           />
         ))}
       </div>
+      <PlacedParts spec={spec} ctx={ctx} page={page} band={band} />
       {/* Last in, because a mark pinned over the design should settle onto a
           design that has already arrived. */}
       <FloatingLogo
         ctx={ctx}
         page={page}
+        band={band}
         {...(ctx.animate ? { arrival: arrivalOf(spec, spec.blocks.length) } : {})}
       />
     </div>
