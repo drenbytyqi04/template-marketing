@@ -34,29 +34,32 @@ export const Route = createFileRoute("/api/public/hooks/new-user")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        // The project's own key, or the shared secret an external caller would
-        // use. It identifies the caller as the project rather than authorising
-        // anything - what keeps this endpoint harmless is that it can only act
-        // on a row the database itself wrote, and only once.
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+        // A secret the database made and the site reads back, rather than a key
+        // somebody had to put in the right place twice.
         //
-        // Either spelling of the key is accepted, because a project has two and
-        // they are not interchangeable: the legacy anon JWT and the newer
-        // publishable key. Both are set here, the database trigger sends the
-        // publishable one, and taking only the first that happened to be
-        // defined is what made the first real signup come back 401 - measured,
-        // not supposed: the row was written, the request was posted, and the
-        // endpoint turned it away.
-        const accepted = [
-          process.env["SUPABASE_ANON_KEY"],
-          process.env["SUPABASE_PUBLISHABLE_KEY"],
-        ].filter((key): key is string => !!key);
-        const secret = process.env["CRON_SECRET"];
-        const presentedKey = request.headers.get("apikey");
-        const presentedSecret = request.headers.get("x-cron-secret");
-        const authorized =
-          (!!presentedKey && accepted.includes(presentedKey)) ||
-          (!!secret && presentedSecret === secret);
-        if (!authorized) return new Response("Unauthorized", { status: 401 });
+        // This was the project's own api key first, and it failed in the
+        // dullest possible way: a project has two keys that both identify it,
+        // this deployment holds both, and the one a database trigger can safely
+        // carry is not the one that happened to be compared against. The first
+        // real registration came back 401 - the row was written, the request
+        // was posted, and the endpoint turned it away. Guessing which variable
+        // holds which key is not authentication.
+        //
+        // Both ends now read the same row of app_secrets, which only the
+        // service role can see. Nothing to configure, nothing to paste, and
+        // nothing in the repository.
+        const { data: secretRow } = await supabaseAdmin
+          .from("app_secrets")
+          .select("value")
+          .eq("name", "signup_hook")
+          .maybeSingle();
+        const expected = (secretRow as { value: string } | null)?.value;
+        const presented = request.headers.get("x-signup-secret");
+        if (!expected || !presented || presented !== expected) {
+          return new Response("Unauthorized", { status: 401 });
+        }
 
         let userId = "";
         try {
@@ -66,8 +69,6 @@ export const Route = createFileRoute("/api/public/hooks/new-user")({
           return new Response("Bad request", { status: 400 });
         }
         if (!userId) return new Response("Bad request", { status: 400 });
-
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
         // Read, do not trust. The row has to exist, which means the database
         // wrote it when the account was made, and it has to be unsent.

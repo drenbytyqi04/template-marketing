@@ -114,3 +114,70 @@ drop trigger if exists on_auth_user_created_notify on auth.users;
 create trigger on_auth_user_created_notify
   after insert on auth.users
   for each row execute function public.notify_new_signup();
+
+-- A secret the database and the site share, that nobody had to be told.
+--
+-- The hook above was first authenticated with the project's own api key, which
+-- failed in the dullest possible way: a project has two keys that both identify
+-- it, the deployment holds both, and the one a trigger can safely carry is not
+-- the one the site happened to compare against. Guessing which environment
+-- variable holds which key is not authentication - it is a coin toss that
+-- returned 401 on the first real registration.
+--
+-- So the secret is made here, read from here by the trigger, and read from here
+-- by the site with the service role. Neither end needs it configured, nobody
+-- has to paste it anywhere, and it never appears in a repository.
+create table if not exists public.app_secrets (
+  name text primary key,
+  value text not null,
+  created_at timestamptz not null default now()
+);
+
+-- No policies. The service role, which never leaves the server, and the
+-- SECURITY DEFINER function below are the only things that read this.
+alter table public.app_secrets enable row level security;
+
+insert into public.app_secrets (name, value)
+values ('signup_hook', encode(gen_random_bytes(32), 'hex'))
+on conflict (name) do nothing;
+
+create or replace function public.notify_new_signup()
+returns trigger
+language plpgsql
+security definer
+set search_path to 'public', 'extensions', 'net'
+as $$
+declare
+  queued integer;
+  hook_secret text;
+begin
+  insert into public.signup_notifications (user_id, email, display_name)
+  values (
+    new.id,
+    new.email,
+    nullif(coalesce(new.raw_user_meta_data ->> 'display_name', ''), '')
+  )
+  on conflict (user_id) do nothing;
+
+  get diagnostics queued = row_count;
+  if queued = 0 then
+    return new;
+  end if;
+
+  select value into hook_secret from public.app_secrets where name = 'signup_hook';
+
+  perform net.http_post(
+    url := 'https://krijo24.com/api/public/hooks/new-user',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'x-signup-secret', coalesce(hook_secret, '')
+    ),
+    body := jsonb_build_object('user_id', new.id)
+  );
+
+  return new;
+exception
+  when others then
+    return new;
+end;
+$$;
