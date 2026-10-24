@@ -34,6 +34,28 @@ export const Route = createFileRoute("/api/public/hooks/new-user")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        try {
+          return await handle(request);
+        } catch (err) {
+          // Said out loud rather than swallowed into a blank 500.
+          //
+          // Only a caller holding the shared secret ever gets this far, and the
+          // only thing on the other end is the database, so the text is of use
+          // to whoever is fixing it and to nobody else. A hook that fails
+          // silently is a hook that is diagnosed by guesswork, which is what
+          // two wrong fixes before this one were.
+          console.error("Signup notification handler threw:", err);
+          return Response.json({ sent: false, error: String(err).slice(0, 300) }, { status: 500 });
+        }
+      },
+    },
+  },
+});
+
+async function handle(request: Request): Promise<Response> {
+  {
+    {
+      {
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
         // A secret the database made and the site reads back, rather than a key
@@ -158,7 +180,7 @@ export const Route = createFileRoute("/api/public/hooks/new-user")({
           .update({ notified_at: new Date().toISOString(), error: null })
           .eq("user_id", userId);
         return Response.json({ sent: true });
-      },
-    },
-  },
-});
+      }
+    }
+  }
+}
