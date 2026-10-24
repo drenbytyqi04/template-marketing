@@ -26,6 +26,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedTemplatesRouteImport } from './routes/_authenticated/templates'
 import { Route as AuthenticatedWebsiteRouteImport } from './routes/_authenticated/website'
 import { Route as ApiPublicCronAutomationRouteImport } from './routes/api/public/cron/automation'
+import { Route as ApiPublicHooksNewUserRouteImport } from './routes/api/public/hooks/new-user'
 import { Route as ApiPublicOauthMetaRouteImport } from './routes/api/public/oauth/meta'
 
 const IndexRoute = IndexRouteImport.update({
@@ -112,6 +113,11 @@ const ApiPublicCronAutomationRoute = ApiPublicCronAutomationRouteImport.update({
   path: '/api/public/cron/automation',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksNewUserRoute = ApiPublicHooksNewUserRouteImport.update({
+  id: '/api/public/hooks/new-user',
+  path: '/api/public/hooks/new-user',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicOauthMetaRoute = ApiPublicOauthMetaRouteImport.update({
   id: '/api/public/oauth/meta',
   path: '/api/public/oauth/meta',
@@ -135,6 +141,7 @@ export interface FileRoutesByFullPath {
   '/templates': typeof AuthenticatedTemplatesRoute
   '/website': typeof AuthenticatedWebsiteRoute
   '/api/public/cron/automation': typeof ApiPublicCronAutomationRoute
+  '/api/public/hooks/new-user': typeof ApiPublicHooksNewUserRoute
   '/api/public/oauth/meta': typeof ApiPublicOauthMetaRoute
 }
 export interface FileRoutesByTo {
@@ -154,6 +161,7 @@ export interface FileRoutesByTo {
   '/templates': typeof AuthenticatedTemplatesRoute
   '/website': typeof AuthenticatedWebsiteRoute
   '/api/public/cron/automation': typeof ApiPublicCronAutomationRoute
+  '/api/public/hooks/new-user': typeof ApiPublicHooksNewUserRoute
   '/api/public/oauth/meta': typeof ApiPublicOauthMetaRoute
 }
 export interface FileRoutesById {
@@ -175,6 +183,7 @@ export interface FileRoutesById {
   '/_authenticated/templates': typeof AuthenticatedTemplatesRoute
   '/_authenticated/website': typeof AuthenticatedWebsiteRoute
   '/api/public/cron/automation': typeof ApiPublicCronAutomationRoute
+  '/api/public/hooks/new-user': typeof ApiPublicHooksNewUserRoute
   '/api/public/oauth/meta': typeof ApiPublicOauthMetaRoute
 }
 export interface FileRouteTypes {
@@ -196,6 +205,7 @@ export interface FileRouteTypes {
     | '/templates'
     | '/website'
     | '/api/public/cron/automation'
+    | '/api/public/hooks/new-user'
     | '/api/public/oauth/meta'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -215,6 +225,7 @@ export interface FileRouteTypes {
     | '/templates'
     | '/website'
     | '/api/public/cron/automation'
+    | '/api/public/hooks/new-user'
     | '/api/public/oauth/meta'
   id:
     | '__root__'
@@ -235,6 +246,7 @@ export interface FileRouteTypes {
     | '/_authenticated/templates'
     | '/_authenticated/website'
     | '/api/public/cron/automation'
+    | '/api/public/hooks/new-user'
     | '/api/public/oauth/meta'
   fileRoutesById: FileRoutesById
 }
@@ -247,6 +259,7 @@ export interface RootRouteChildren {
   HowItWorksRoute: typeof HowItWorksRoute
   PricingRoute: typeof PricingRoute
   ApiPublicCronAutomationRoute: typeof ApiPublicCronAutomationRoute
+  ApiPublicHooksNewUserRoute: typeof ApiPublicHooksNewUserRoute
   ApiPublicOauthMetaRoute: typeof ApiPublicOauthMetaRoute
 }
 
@@ -371,6 +384,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronAutomationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/new-user': {
+      id: '/api/public/hooks/new-user'
+      path: '/api/public/hooks/new-user'
+      fullPath: '/api/public/hooks/new-user'
+      preLoaderRoute: typeof ApiPublicHooksNewUserRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/oauth/meta': {
       id: '/api/public/oauth/meta'
       path: '/api/public/oauth/meta'
@@ -417,6 +437,7 @@ const rootRouteChildren: RootRouteChildren = {
   HowItWorksRoute: HowItWorksRoute,
   PricingRoute: PricingRoute,
   ApiPublicCronAutomationRoute: ApiPublicCronAutomationRoute,
+  ApiPublicHooksNewUserRoute: ApiPublicHooksNewUserRoute,
   ApiPublicOauthMetaRoute: ApiPublicOauthMetaRoute,
 }
 export const routeTree = rootRouteImport

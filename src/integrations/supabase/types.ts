@@ -673,6 +673,33 @@ export type Database = {
           },
         ]
       }
+      signup_notifications: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string | null
+          error: string | null
+          notified_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          error?: string | null
+          notified_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          error?: string | null
+          notified_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       social_oauth_accounts: {
         Row: {
           access_token: string
