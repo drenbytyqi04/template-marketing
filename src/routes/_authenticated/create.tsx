@@ -22,6 +22,7 @@ import { TextItemsEditor } from "@/components/rafty/TextItemsEditor";
 
 import { AppShell } from "@/components/rafty/AppShell";
 import { PostCanvas } from "@/components/rafty/PostCanvas";
+import { PreviewDock } from "@/components/rafty/PreviewDock";
 import { AdjustControls } from "@/components/rafty/AdjustControls";
 import { DateRangeField } from "@/components/rafty/DateRangeField";
 import { LogoControls } from "@/components/rafty/LogoControls";
@@ -102,24 +103,6 @@ export const Route = createFileRoute("/_authenticated/create")({
     </AppShell>
   ),
 });
-
-/**
- * How tall the preview may get, in pixels.
- *
- * The preview used to be bounded by width alone - the column it sits in - and
- * then narrowed to 320px whenever the format was video, because a clip was
- * always 9:16 and a full height vertical frame at the column's width runs most
- * of a screen tall. That cap was written against the format rather than against
- * the shape, so now that a clip can be made for the feed, a 4:5 clip was being
- * shown at two thirds the size of the 4:5 picture beside it - the same frame,
- * the same design, one of them small for no reason a person could see.
- *
- * Bounding the height instead says the thing that was actually meant. Every
- * shape gets as much of the column as it can use, and a frame only gives width
- * back when it is tall enough to need to: a 4:5 clip is now exactly the size of
- * a 4:5 post, and a 9:16 one is larger than the flat cap allowed.
- */
-const PREVIEW_MAX_HEIGHT = 650;
 
 /** A fresh frame. Every slide owns its own content object, so no two slides
  * ever share mutable state. */
@@ -869,8 +852,32 @@ function CreatePage() {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
-      <section className={`flex flex-col gap-4 ${generated ? "order-2 lg:order-1" : ""}`}>
+    // The right-hand gutter the floating preview reserves for itself. It comes
+    // through a css custom property the dock sets, so nothing between here and
+    // it has to carry a prop, and on a phone - where the preview is a strip at
+    // the top instead - the property is unset and this is simply zero.
+    <div style={{ paddingRight: "var(--krijo-dock, 0px)" }}>
+      <PreviewDock aspect={size.width / size.height} label={t("create.livePreview")}>
+        <PostCanvas
+          ref={canvasRef}
+          template={template}
+          content={content}
+          brand={brand}
+          businessName={business.name}
+          businessType={business.type}
+          showBrandName={showBrandName}
+          showContact={showContact}
+          adjustments={active.adjustments}
+          // Only a clip has time to run it, and only here: the thumbnails
+          // elsewhere are stills of a finished post.
+          animate={format === "video"}
+          playIntro={format === "video"}
+          format={format}
+          className="rounded-xl"
+        />
+      </PreviewDock>
+
+      <section className="mx-auto flex max-w-[620px] flex-col gap-4">
         <FormatPicker value={format} onChange={changeFormat} allowed={formats} />
 
         {sizes.length > 1 ? (
@@ -903,6 +910,25 @@ function CreatePage() {
             </span>
           </div>
         ) : null}
+
+        {/* The first decision, so it is the first thing on the page. It used to
+            be at the top of the preview column, which on a phone put it below
+            every field in the form - the design was chosen last, after
+            everything had been written for the previous one. */}
+        <div>
+          <Label className="mb-1.5 block text-xs uppercase tracking-wide text-muted-foreground">
+            {t("create.template")}
+          </Label>
+          <TemplatePicker
+            templates={formatTemplates}
+            value={template.id}
+            onSelect={setTemplateId}
+            brand={brand}
+            businessType={business.type}
+            businessName={business.name}
+            format={format}
+          />
+        </div>
 
         {locked ? (
           <div className="card-soft p-4 text-sm">
@@ -1187,84 +1213,29 @@ function CreatePage() {
         {generated && showAdjust ? (
           <AdjustControls adjustments={active.adjustments} onChange={setAdjustments} />
         ) : null}
-      </section>
 
-      {/* The preview follows the form down the page on a wide screen. Editing a
-          field you cannot see the result of is guessing, and this form is long
-          enough that everything below the price scrolled the design off the top.
-          `self-start` is what makes it stick at all - a grid item stretches to
-          the row's height by default, and an element as tall as its container
-          has nowhere to stick to. The height cap keeps the Generate button
-          reachable on a short screen instead of stranding it below the fold.
-          Wide screens only: on a phone the columns stack, the preview is already
-          above the form, and pinning it there would eat half the screen. */}
-      <section
-        className={`flex flex-col gap-4 lg:sticky lg:top-20 lg:max-h-[calc(100dvh-5.5rem)] lg:self-start lg:overflow-y-auto ${generated ? "order-1 lg:order-2" : ""}`}
-      >
-        <div className="mx-auto w-full max-w-[520px]">
-          <Label className="mb-1.5 block text-xs uppercase tracking-wide text-muted-foreground">
-            {t("create.template")}
-          </Label>
-          <TemplatePicker
-            templates={formatTemplates}
-            value={template.id}
-            onSelect={setTemplateId}
-            brand={brand}
-            businessType={business.type}
-            businessName={business.name}
-            format={format}
+        {generated ? (
+          <ShareActions
+            canvasRef={canvasRef}
+            filename={slides[0]!.content.title || business.name}
+            caption={slides[0]!.content.caption}
+            onSave={persist}
+            saving={saving}
+            size={{ width: size.width, height: size.height }}
+            exportable={spec.exportable}
+            // Only stills. Publishing hands Instagram a url to the saved
+            // render, and a video post has no render: savePostRender runs for
+            // the post format alone, and the Graph call sends image_url, which
+            // is not how a Reel is published. Offering the button here would
+            // be offering an action that cannot succeed.
+            {...(format === "post" ? { publish: { businessId: business.id, savePost } } : {})}
           />
-        </div>
-
-        <div className="mx-auto w-full max-w-[520px]">
-          <div
-            className="card-soft mx-auto overflow-hidden p-2"
-            style={{ maxWidth: Math.round(PREVIEW_MAX_HEIGHT * (size.width / size.height)) }}
-          >
-            <PostCanvas
-              ref={canvasRef}
-              template={template}
-              content={content}
-              brand={brand}
-              businessName={business.name}
-              businessType={business.type}
-              showBrandName={showBrandName}
-              showContact={showContact}
-              adjustments={active.adjustments}
-              // Only a clip has time to run it, and only here: the thumbnails
-              // elsewhere are stills of a finished post.
-              animate={format === "video"}
-              playIntro={format === "video"}
-              format={format}
-              className="rounded-xl"
-            />
-          </div>
-        </div>
-
-        <div className="mx-auto w-full max-w-[520px]">
-          {generated ? (
-            <ShareActions
-              canvasRef={canvasRef}
-              filename={slides[0]!.content.title || business.name}
-              caption={slides[0]!.content.caption}
-              onSave={persist}
-              saving={saving}
-              size={{ width: size.width, height: size.height }}
-              exportable={spec.exportable}
-              // Only stills. Publishing hands Instagram a url to the saved
-              // render, and a video post has no render: savePostRender runs for
-              // the post format alone, and the Graph call sends image_url, which
-              // is not how a Reel is published. Offering the button here would
-              // be offering an action that cannot succeed.
-              {...(format === "post" ? { publish: { businessId: business.id, savePost } } : {})}
-            />
-          ) : (
-            <Button className="h-12 w-full rounded-xl" onClick={generate} disabled={locked}>
-              <Sparkles className="mr-1 size-4" />
-              {t("create.generate")}
-            </Button>
-          )}
-        </div>
+        ) : (
+          <Button className="h-12 w-full rounded-xl" onClick={generate} disabled={locked}>
+            <Sparkles className="mr-1 size-4" />
+            {t("create.generate")}
+          </Button>
+        )}
 
         {generated ? (
           <button
