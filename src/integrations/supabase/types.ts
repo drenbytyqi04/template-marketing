@@ -847,6 +847,91 @@ export type Database = {
           },
         ]
       }
+      support_conversations: {
+        Row: {
+          admin_read_at: string | null
+          business_id: string
+          client_read_at: string
+          created_at: string
+          created_by: string | null
+          id: string
+          last_message_at: string
+          status: Database["public"]["Enums"]["conversation_status"]
+          subject: string
+          topic: string
+          updated_at: string
+        }
+        Insert: {
+          admin_read_at?: string | null
+          business_id: string
+          client_read_at?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_message_at?: string
+          status?: Database["public"]["Enums"]["conversation_status"]
+          subject: string
+          topic?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_read_at?: string | null
+          business_id?: string
+          client_read_at?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_message_at?: string
+          status?: Database["public"]["Enums"]["conversation_status"]
+          subject?: string
+          topic?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_conversations_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_messages: {
+        Row: {
+          author_id: string | null
+          body: string
+          conversation_id: string
+          created_at: string
+          from_admin: boolean
+          id: string
+        }
+        Insert: {
+          author_id?: string | null
+          body: string
+          conversation_id: string
+          created_at?: string
+          from_admin?: boolean
+          id?: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string
+          conversation_id?: string
+          created_at?: string
+          from_admin?: boolean
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "support_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       template_favorites: {
         Row: {
           business_id: string
@@ -993,6 +1078,7 @@ export type Database = {
     Enums: {
       app_role: "super_admin" | "business_user"
       business_status: "pending" | "approved" | "rejected" | "suspended"
+      conversation_status: "active" | "in_progress" | "resolved"
       business_type:
         | "travel_agency"
         | "real_estate"
@@ -1155,6 +1241,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["super_admin", "business_user"],
+      conversation_status: ["active", "in_progress", "resolved"],
       business_status: ["pending", "approved", "rejected", "suspended"],
       business_type: [
         "travel_agency",

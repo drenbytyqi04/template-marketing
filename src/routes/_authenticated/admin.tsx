@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { LogOut } from "lucide-react";
 import { Logo } from "@/components/rafty/Logo";
+import { ConversationPanel, unread, when } from "@/components/rafty/ConversationPanel";
 import { useRafty } from "@/lib/rafty/store";
 import * as repo from "@/lib/rafty/repo";
 import {
@@ -38,8 +39,10 @@ import type {
   BusinessStatus,
   CustomTemplateRequest,
   Post,
+  SupportConversation,
   TrialUsage,
 } from "@/lib/rafty/types";
+import { CONVERSATION_STATUS_LABELS, topicLabel } from "@/lib/rafty/types";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
@@ -86,6 +89,7 @@ function AdminPage() {
   const [customTemplates, setCustomTemplates] = useState<
     { id: string; businessId: string; name: string; archived: boolean }[]
   >([]);
+  const [conversations, setConversations] = useState<SupportConversation[]>([]);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<BusinessStatus | "all">("all");
   const [loading, setLoading] = useState(false);
@@ -96,7 +100,7 @@ function AdminPage() {
   // server side by RLS and is_super_admin(), this page never assumes a role.
   const load = useCallback(async () => {
     setLoading(true);
-    const [b, tr, rq, ps, pl, pr, ct] = await Promise.all([
+    const [b, tr, rq, ps, pl, pr, ct, cv] = await Promise.all([
       repo.adminListBusinesses(),
       repo.adminListTrials(),
       repo.listRequests(),
@@ -104,6 +108,7 @@ function AdminPage() {
       repo.adminListPlans(),
       repo.adminListProfiles(),
       repo.adminListCustomTemplates(),
+      repo.adminListConversations(),
     ]);
     setBusinesses(b);
     setTrials(tr);
@@ -112,6 +117,7 @@ function AdminPage() {
     setPlans(pl);
     setProfiles(pr);
     setCustomTemplates(ct);
+    setConversations(cv);
     setLoading(false);
   }, []);
 
@@ -206,6 +212,12 @@ function AdminPage() {
 
   const openBusiness = businesses.find((b) => b.id === openBusinessId) ?? null;
 
+  // Threads with something on them nobody here has read yet. Resolved ones are
+  // left out: a customer saying thank you on a closed request is not a queue.
+  const waitingOnUs = conversations.filter(
+    (c) => c.status !== "resolved" && unread(c, "admin"),
+  ).length;
+
   return (
     <div className="page-bg min-h-screen">
       <header className="glass-panel sticky top-0 z-40 border-x-0 border-t-0">
@@ -238,6 +250,14 @@ function AdminPage() {
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="accounts">Accounts</TabsTrigger>
             <TabsTrigger value="templates">Custom templates</TabsTrigger>
+            <TabsTrigger value="messages">
+              Messages
+              {waitingOnUs > 0 ? (
+                <span className="ml-1.5 rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
+                  {waitingOnUs}
+                </span>
+              ) : null}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview">
@@ -465,6 +485,55 @@ function AdminPage() {
               ) : null}
             </div>
           </TabsContent>
+
+          {/* An index, not a second inbox. Each row opens the account the
+              thread belongs to, where the conversation itself lives next to
+              that customer's plan and brand - which is the context an answer
+              about a plan or a template actually needs. */}
+          <TabsContent value="messages">
+            {conversations.length === 0 ? (
+              <p className="card-soft p-6 text-center text-sm text-muted-foreground">
+                No customer has written in yet.
+              </p>
+            ) : (
+              <ul className="grid gap-2">
+                {conversations.map((c) => {
+                  const business = businesses.find((b) => b.id === c.businessId);
+                  return (
+                    <li key={c.id}>
+                      <button
+                        type="button"
+                        className="flex w-full items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left transition-colors hover:border-primary/50"
+                        onClick={() => setOpenBusinessId(c.businessId)}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="flex items-center gap-2 truncate text-sm font-bold">
+                            {unread(c, "admin") ? (
+                              <span
+                                aria-label="Unread"
+                                className="size-2 shrink-0 rounded-full bg-primary"
+                              />
+                            ) : null}
+                            <span className="truncate">{c.subject}</span>
+                          </p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {business?.name ?? "unknown brand"} · {topicLabel(c.topic)} ·{" "}
+                            {when(c.lastMessageAt)}
+                          </p>
+                        </div>
+                        <Badge
+                          variant={c.status === "in_progress" ? "default" : "outline"}
+                          className="shrink-0"
+                        >
+                          {CONVERSATION_STATUS_LABELS[c.status]}
+                        </Badge>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </TabsContent>
         </Tabs>
       </main>
 
@@ -480,6 +549,9 @@ function AdminPage() {
         onClose={() => setOpenBusinessId(null)}
         onStatus={setStatus}
         onPlan={setPlan}
+        onConversationsChanged={() => {
+          void repo.adminListConversations().then(setConversations);
+        }}
       />
 
       <AttachTemplateDialog
@@ -510,6 +582,7 @@ function AccountDialog({
   onClose,
   onStatus,
   onPlan,
+  onConversationsChanged,
 }: {
   business: Business | null;
   plan: AccountPlan | null;
@@ -520,6 +593,7 @@ function AccountDialog({
   onClose: () => void;
   onStatus: (business: Business, status: BusinessStatus) => Promise<void>;
   onPlan: (ownerUserId: string, monthlyPrice: number, active: boolean) => Promise<void>;
+  onConversationsChanged: () => void;
 }) {
   if (!business) return null;
   const price = plan?.monthlyPrice ?? 100;
@@ -617,6 +691,17 @@ function AccountDialog({
                 </Button>
               ))}
             </div>
+          </div>
+
+          {/* The customer's own threads, under the customer. An answer about a
+              plan belongs beside the plan it is about. */}
+          <div className="grid gap-2 border-t border-border pt-4">
+            <p className="text-sm font-bold">Conversations</p>
+            <ConversationPanel
+              businessId={business.id}
+              role="admin"
+              onChanged={onConversationsChanged}
+            />
           </div>
         </div>
       </DialogContent>

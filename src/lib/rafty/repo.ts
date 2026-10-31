@@ -5,6 +5,11 @@ import {
   emptyContent,
   emptyContact,
   emptyInstructions,
+  CONVERSATION_TOPICS,
+  type ConversationStatus,
+  type ConversationTopic,
+  type SupportConversation,
+  type SupportMessage,
   type AccountPlan,
   type BrandProfile,
   type BrandWebsite,
@@ -1399,6 +1404,146 @@ export async function listPostsMissingRender(businessId: string): Promise<string
     .eq("business_id", businessId)
     .is("render_path", null);
   return (data ?? []).map((row) => (row as { id: string }).id);
+}
+
+/* ----------------------------- conversations ------------------------------ */
+/**
+ * Threads between a brand and krijo24.
+ *
+ * Every read here is scoped by RLS to the brands the caller belongs to, and
+ * widened to everything for a platform admin - the same rule posts and
+ * schedules use. Nothing in this file decides who may see a thread; it decides
+ * what shape the answer comes back in.
+ */
+
+type ConversationRow = {
+  id: string;
+  business_id: string;
+  topic: string;
+  subject: string;
+  status: ConversationStatus;
+  created_at: string;
+  last_message_at: string;
+  client_read_at: string;
+  admin_read_at: string | null;
+};
+
+function toConversation(row: ConversationRow): SupportConversation {
+  return {
+    id: row.id,
+    businessId: row.business_id,
+    topic: (CONVERSATION_TOPICS.find((t) => t.id === row.topic)?.id ??
+      "other") as ConversationTopic,
+    subject: row.subject,
+    status: row.status,
+    createdAt: row.created_at,
+    lastMessageAt: row.last_message_at,
+    clientReadAt: row.client_read_at,
+    adminReadAt: row.admin_read_at,
+  };
+}
+
+export async function listConversations(businessId: string): Promise<SupportConversation[]> {
+  const { data } = await supabase
+    .from("support_conversations")
+    .select("*")
+    .eq("business_id", businessId)
+    .order("last_message_at", { ascending: false });
+  return (data ?? []).map((row) => toConversation(row as ConversationRow));
+}
+
+/** Every thread on the platform, newest activity first. Admins only - RLS
+ * returns nothing to anybody else. */
+export async function adminListConversations(): Promise<SupportConversation[]> {
+  const { data } = await supabase
+    .from("support_conversations")
+    .select("*")
+    .order("last_message_at", { ascending: false })
+    .limit(300);
+  return (data ?? []).map((row) => toConversation(row as ConversationRow));
+}
+
+export async function listConversationMessages(conversationId: string): Promise<SupportMessage[]> {
+  const { data } = await supabase
+    .from("support_messages")
+    .select("*")
+    .eq("conversation_id", conversationId)
+    .order("created_at", { ascending: true });
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    conversationId: row.conversation_id,
+    fromAdmin: row.from_admin,
+    body: row.body,
+    createdAt: row.created_at,
+  }));
+}
+
+/**
+ * Opens a thread and writes its first message.
+ *
+ * The two are separate rows, and the second can fail on its own - a thread with
+ * a title and nothing in it is worse than no thread, so a failed message takes
+ * the conversation down with it rather than leaving the customer looking at an
+ * empty request they think they sent.
+ */
+export async function startConversation(input: {
+  businessId: string;
+  topic: ConversationTopic;
+  subject: string;
+  body: string;
+}): Promise<{ id?: string; error?: string }> {
+  const { data, error } = await supabase
+    .from("support_conversations")
+    .insert({
+      business_id: input.businessId,
+      topic: input.topic,
+      subject: input.subject.trim(),
+    })
+    .select("id")
+    .single();
+  if (error || !data) return { error: error?.message ?? "Could not open the request." };
+
+  const sent = await sendConversationMessage(data.id, input.body);
+  if (sent.error) {
+    await supabase.from("support_conversations").delete().eq("id", data.id);
+    return { error: sent.error };
+  }
+  return { id: data.id };
+}
+
+export async function sendConversationMessage(
+  conversationId: string,
+  body: string,
+): Promise<{ error?: string }> {
+  const { error } = await supabase
+    .from("support_messages")
+    .insert({ conversation_id: conversationId, body: body.trim() });
+  return error ? { error: error.message } : {};
+}
+
+/** Admins only: the database refuses a status change from anybody else. */
+export async function setConversationStatus(
+  conversationId: string,
+  status: ConversationStatus,
+): Promise<{ error?: string }> {
+  const { error } = await supabase
+    .from("support_conversations")
+    .update({ status })
+    .eq("id", conversationId);
+  return error ? { error: error.message } : {};
+}
+
+/** Marks a thread read for whichever side is looking at it. The database keeps
+ * each side from clearing the other's mark. */
+export async function markConversationRead(
+  conversationId: string,
+  side: "client" | "admin",
+): Promise<void> {
+  const now = new Date().toISOString();
+  await supabase
+    .from("support_conversations")
+    .update(side === "admin" ? { admin_read_at: now } : { client_read_at: now })
+    .eq("id", conversationId);
 }
 
 export const DEFAULTS = DEFAULT_BRAND;

@@ -15,6 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ConversationPanel } from "@/components/rafty/ConversationPanel";
 import { useRafty } from "@/lib/rafty/store";
 import * as repo from "@/lib/rafty/repo";
 import { CURRENCIES, LANGUAGES, SOCIAL_PLATFORMS } from "@/lib/rafty/constants";
@@ -115,147 +117,160 @@ function SettingsPage() {
         </p>
       </div>
 
-      <section className="card-soft grid gap-3 p-4">
-        <p className="text-sm font-bold">Account</p>
-        <div className="grid gap-1 text-sm">
-          <div className="flex justify-between gap-3">
-            <span className="text-muted-foreground">Name</span>
-            <span className="truncate font-semibold">{user.name || "—"}</span>
-          </div>
-          <div className="flex justify-between gap-3">
-            <span className="text-muted-foreground">Email</span>
-            <span className="truncate font-semibold">{user.email}</span>
-          </div>
-          <div className="flex justify-between gap-3">
-            <span className="text-muted-foreground">Role</span>
-            <span className="font-semibold">{isAdmin ? "Platform admin" : "Business user"}</span>
-          </div>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Passwords and email changes are handled by our secure sign-in provider. Contact support to
-          change your account email.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            className="rounded-xl"
-            disabled={signingOut}
-            onClick={async () => {
-              setSigningOut(true);
-              await signOut();
-            }}
-          >
-            <LogOut className="mr-1 size-4" />
-            {signingOut ? "Signing out..." : "Sign out"}
-          </Button>
-          {isAdmin ? (
-            <Button asChild variant="outline" className="rounded-xl">
-              <Link to="/admin">
-                <ShieldCheck className="mr-1 size-4" />
-                Admin
-              </Link>
-            </Button>
-          ) : null}
-        </div>
-      </section>
+      <Tabs defaultValue="account" className="gap-4">
+        <TabsList className="flex h-auto w-full justify-start gap-1 rounded-xl bg-card p-1">
+          <TabsTrigger value="account">Account</TabsTrigger>
+          <TabsTrigger value="communication">Communication</TabsTrigger>
+        </TabsList>
 
-      <section className="card-soft grid gap-3 p-4">
-        <div className="flex items-center gap-2">
-          <p className="text-sm font-bold">Plan</p>
-          <Badge variant={plan?.active ? "default" : "outline"} className="ml-auto">
-            {plan?.active ? "Active" : "Awaiting activation"}
-          </Badge>
-        </div>
-        <p className="text-sm font-semibold">{planLabel}</p>
-        <div className="grid gap-1 text-sm text-muted-foreground">
-          <p>Brands: {brands.length}</p>
-          <p>Video: {plan?.allowVideo ? "included" : "not included"}</p>
-          {plan && plan.partnershipPostsLimit > 0 ? (
-            <p>
-              Partnership posts: {plan.partnershipPostsUsed} of {plan.partnershipPostsLimit} this
-              month
+        <TabsContent value="communication" className="flex flex-col gap-4">
+          <section className="card-soft grid gap-3 p-4">
+            <div>
+              <p className="text-sm font-bold">Talk to krijo24</p>
+              <p className="text-sm text-muted-foreground">
+                One request per subject, answered here. You can see the status of each one, so you
+                know it has arrived and whether it is being worked on.
+              </p>
+            </div>
+            <ConversationPanel businessId={business.id} role="client" />
+          </section>
+        </TabsContent>
+
+        <TabsContent value="account" className="flex flex-col gap-4">
+          <section className="card-soft grid gap-3 p-4">
+            <p className="text-sm font-bold">Account</p>
+            <div className="grid gap-1 text-sm">
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Name</span>
+                <span className="truncate font-semibold">{user.name || "—"}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Email</span>
+                <span className="truncate font-semibold">{user.email}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Role</span>
+                <span className="font-semibold">
+                  {isAdmin ? "Platform admin" : "Business user"}
+                </span>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Passwords and email changes are handled by our secure sign-in provider. Contact
+              support to change your account email.
             </p>
-          ) : null}
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Plans are managed by the krijo24 team. Write to{" "}
-          <a
-            href="mailto:contact@webdoagency.com"
-            className="font-semibold text-foreground hover:underline"
-          >
-            contact@webdoagency.com
-          </a>{" "}
-          to change your plan.
-        </p>
-      </section>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                className="rounded-xl"
+                disabled={signingOut}
+                onClick={async () => {
+                  setSigningOut(true);
+                  await signOut();
+                }}
+              >
+                <LogOut className="mr-1 size-4" />
+                {signingOut ? "Signing out..." : "Sign out"}
+              </Button>
+              {isAdmin ? (
+                <Button asChild variant="outline" className="rounded-xl">
+                  <Link to="/admin">
+                    <ShieldCheck className="mr-1 size-4" />
+                    Admin
+                  </Link>
+                </Button>
+              ) : null}
+            </div>
+          </section>
 
-      <section className="card-soft grid gap-3 p-4 sm:grid-cols-2">
-        <div className="grid gap-1.5">
-          <p className="text-sm font-bold">Language</p>
-          <Select value={language} onValueChange={(v) => setLanguage(v as LanguageCode)}>
-            <SelectTrigger className="h-11 rounded-xl">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {LANGUAGES.map((l) => (
-                <SelectItem key={l.code} value={l.code}>
-                  {l.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        {brand ? (
-          <div className="grid gap-1.5">
-            <p className="text-sm font-bold">Currency on posts</p>
-            <Select
-              value={brand.currency}
-              onValueChange={(v) => void saveBrand({ currency: v as CurrencyCode })}
-            >
-              <SelectTrigger className="h-11 rounded-xl">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CURRENCIES.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        ) : null}
-      </section>
+          <section className="card-soft grid gap-3 p-4">
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-bold">Plan</p>
+              <Badge variant={plan?.active ? "default" : "outline"} className="ml-auto">
+                {plan?.active ? "Active" : "Awaiting activation"}
+              </Badge>
+            </div>
+            <p className="text-sm font-semibold">{planLabel}</p>
+            <div className="grid gap-1 text-sm text-muted-foreground">
+              <p>Brands: {brands.length}</p>
+              <p>Video: {plan?.allowVideo ? "included" : "not included"}</p>
+              {plan && plan.partnershipPostsLimit > 0 ? (
+                <p>
+                  Partnership posts: {plan.partnershipPostsUsed} of {plan.partnershipPostsLimit}{" "}
+                  this month
+                </p>
+              ) : null}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Plans are managed by the krijo24 team. Open a request under Communication to change
+              yours.
+            </p>
+          </section>
 
-      {/* Connecting an account is only worth anything once the thing it
+          <section className="card-soft grid gap-3 p-4 sm:grid-cols-2">
+            <div className="grid gap-1.5">
+              <p className="text-sm font-bold">Language</p>
+              <Select value={language} onValueChange={(v) => setLanguage(v as LanguageCode)}>
+                <SelectTrigger className="h-11 rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LANGUAGES.map((l) => (
+                    <SelectItem key={l.code} value={l.code}>
+                      {l.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {brand ? (
+              <div className="grid gap-1.5">
+                <p className="text-sm font-bold">Currency on posts</p>
+                <Select
+                  value={brand.currency}
+                  onValueChange={(v) => void saveBrand({ currency: v as CurrencyCode })}
+                >
+                  <SelectTrigger className="h-11 rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CURRENCIES.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
+          </section>
+
+          {/* Connecting an account is only worth anything once the thing it
           connects for is on, so the whole section says when that is. The
           component itself is untouched below the surface - see SocialAccounts -
           and goes back in here when publishing turns on. */}
-      <section className="card-soft grid gap-2 p-4">
-        <div className="flex items-center gap-2">
-          <Instagram className="size-4 text-muted-foreground" aria-hidden />
-          <p className="text-sm font-bold">Instagram</p>
-          <ComingIn2Badge className="ml-auto" />
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Connecting an Instagram Professional account and publishing your designs straight to it
-          comes in version {NEXT_VERSION}. Until then, download a finished post and put it out from
-          the Instagram app - the file is exactly what would have been published.
-        </p>
-      </section>
+          <section className="card-soft grid gap-2 p-4">
+            <div className="flex items-center gap-2">
+              <Instagram className="size-4 text-muted-foreground" aria-hidden />
+              <p className="text-sm font-bold">Instagram</p>
+              <ComingIn2Badge className="ml-auto" />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Connecting an Instagram Professional account and publishing your designs straight to
+              it comes in version {NEXT_VERSION}. Until then, download a finished post and put it
+              out from the Instagram app - the file is exactly what would have been published.
+            </p>
+          </section>
 
-      <section className="card-soft grid gap-2 p-4">
-        <p className="text-sm font-bold">Support</p>
-        <p className="text-sm text-muted-foreground">
-          Questions, custom templates or plan changes:{" "}
-          <a
-            href="mailto:contact@webdoagency.com"
-            className="font-semibold text-foreground hover:underline"
-          >
-            contact@webdoagency.com
-          </a>
-        </p>
-      </section>
+          <section className="card-soft grid gap-2 p-4">
+            <p className="text-sm font-bold">Support</p>
+            <p className="text-sm text-muted-foreground">
+              Questions, custom templates or plan changes go in the Communication tab above. Each
+              one becomes its own request, with a status you can follow.
+            </p>
+          </section>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

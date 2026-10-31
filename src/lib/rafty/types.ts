@@ -546,6 +546,69 @@ export type PostAdjustments = {
   elements?: Partial<Record<MovableElement, ElementAdjust>>;
 };
 
+/* --------------------------- talking to krijo24 --------------------------- */
+
+/**
+ * What a customer is writing in about.
+ *
+ * A fixed list rather than free text, because the topic is what sorts the
+ * queue, and "Plan activation" and "plan activation pls" are the same request
+ * only if something says so. The subject line underneath is where the specifics
+ * go.
+ */
+export const CONVERSATION_TOPICS = [
+  { id: "plan", label: "Plan activation" },
+  { id: "templates", label: "Template uploading" },
+  { id: "account", label: "Account assistance" },
+  { id: "technical", label: "Technical support" },
+  { id: "other", label: "Something else" },
+] as const;
+
+export type ConversationTopic = (typeof CONVERSATION_TOPICS)[number]["id"];
+
+/**
+ * Where a request has got to.
+ *
+ * Set by krijo24 and read by the customer, which is the whole point: somebody
+ * who has asked for their plan to be switched on needs to know the message
+ * arrived and is being dealt with, and nothing else on their screen can tell
+ * them that. A customer writing again on a resolved thread reopens it, so a
+ * request can never sit closed with an unanswered question under it.
+ */
+export type ConversationStatus = "active" | "in_progress" | "resolved";
+
+export const CONVERSATION_STATUS_LABELS: Record<ConversationStatus, string> = {
+  active: "Active",
+  in_progress: "In progress",
+  resolved: "Resolved",
+};
+
+export type SupportConversation = {
+  id: string;
+  businessId: string;
+  topic: ConversationTopic;
+  subject: string;
+  status: ConversationStatus;
+  createdAt: string;
+  lastMessageAt: string;
+  clientReadAt: string;
+  adminReadAt: string | null;
+};
+
+export type SupportMessage = {
+  id: string;
+  conversationId: string;
+  /** Which side wrote it. Set by the database from the sender's own role, never
+   * from the browser, so nothing can be made to look like a krijo24 reply. */
+  fromAdmin: boolean;
+  body: string;
+  createdAt: string;
+};
+
+export function topicLabel(topic: string): string {
+  return CONVERSATION_TOPICS.find((t) => t.id === topic)?.label ?? "Something else";
+}
+
 export type ShareStatus = {
   savedToDevice?: boolean;
   instagram?: "not_connected" | "ready" | "publishing" | "published" | "failed";
