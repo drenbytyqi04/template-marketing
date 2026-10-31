@@ -23,8 +23,7 @@ const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend/emails";
 const FROM = "krijo24 <notifications@krijo24.com>";
 
 export type EmailResult =
-  | { sent: true }
-  | { sent: false; reason: "unconfigured" | "provider" | "threw"; detail: string };
+  { sent: true } | { sent: false; reason: "unconfigured" | "provider" | "threw"; detail: string };
 
 export function escapeHtml(value: string) {
   return value

@@ -6,6 +6,9 @@ import type { PostAdjustments } from "@/lib/rafty/types";
 type Props = {
   adjustments: PostAdjustments;
   onChange: (next: PostAdjustments) => void;
+  /** The brand's own colours, offered as the first answers to "which colour".
+   * A recolour is almost always one of these. */
+  palette?: { primary: string; secondary: string; accent: string };
 };
 
 // The mark has far more room to move than the text nudges do: the text is a
@@ -44,7 +47,7 @@ const PLACES: { id: LogoPlace; label: string }[] = [
  * decisions about what the brand shows on a post are made here, before
  * generating, and so is this one.
  */
-export function LogoControls({ adjustments, onChange }: Props) {
+export function LogoControls({ adjustments, onChange, palette }: Props) {
   const logo: LogoAdjust = { ...defaultLogoAdjust, ...(adjustments.logo ?? {}) };
   const set = (patch: Partial<LogoAdjust>) =>
     onChange({ ...adjustments, logo: { ...logo, ...patch } });
@@ -119,9 +122,128 @@ export function LogoControls({ adjustments, onChange }: Props) {
         {arrow(<ArrowRight className="size-4" />, 1, 0, "Move the logo right")}
       </div>
 
+      <div className="grid gap-1.5 border-t border-border pt-2.5">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Logo colour
+          </p>
+          {/* Shown only when there is something to undo. A reset button beside
+              an untouched control is one more thing to read and nothing to do. */}
+          {logo.tint ? (
+            <button
+              type="button"
+              className="text-xs font-semibold text-muted-foreground underline-offset-4 hover:underline"
+              onClick={() => set({ tint: null })}
+            >
+              Original
+            </button>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Swatch
+            value={null}
+            active={!logo.tint}
+            label="Logo as uploaded"
+            onPick={() => set({ tint: null })}
+          />
+          {TINTS.map((option) => (
+            <Swatch
+              key={option.value}
+              value={option.value}
+              active={sameColour(logo.tint, option.value)}
+              label={option.label}
+              onPick={() => set({ tint: option.value })}
+            />
+          ))}
+          {brandTints(palette).map((option) => (
+            <Swatch
+              key={option.value}
+              value={option.value}
+              active={sameColour(logo.tint, option.value)}
+              label={option.label}
+              onPick={() => set({ tint: option.value })}
+            />
+          ))}
+          <label
+            className="relative size-8 shrink-0 cursor-pointer overflow-hidden rounded-lg border border-border"
+            title="Any other colour"
+            style={{
+              background: "conic-gradient(#ef4444,#f59e0b,#22c55e,#3b82f6,#a855f7,#ef4444)",
+            }}
+          >
+            <input
+              type="color"
+              className="absolute inset-0 cursor-pointer opacity-0"
+              value={logo.tint ?? "#ffffff"}
+              onChange={(e) => set({ tint: e.target.value })}
+            />
+          </label>
+        </div>
+      </div>
+
       <p className="text-xs text-muted-foreground">
-        Pick a corner, or leave it where the template puts it.
+        Pick a corner, or leave it where the template puts it. A colour here changes the mark on
+        this post only — your uploaded logo is untouched.
       </p>
     </div>
+  );
+}
+
+/** The two that answer most of it: a dark logo over a photograph needs to be
+ * white, a light one on a pale template needs to be black. */
+const TINTS = [
+  { value: "#ffffff", label: "White" },
+  { value: "#111111", label: "Black" },
+];
+
+function brandTints(palette: Props["palette"]) {
+  if (!palette) return [];
+  const seen = new Set(TINTS.map((t) => t.value.toLowerCase()));
+  const out: { value: string; label: string }[] = [];
+  for (const [label, value] of [
+    ["Brand", palette.primary],
+    ["Secondary", palette.secondary],
+    ["Accent", palette.accent],
+  ] as const) {
+    const key = value?.toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push({ value, label });
+  }
+  return out;
+}
+
+/** Hex comparison, because a colour picker returns lowercase and a brand stores
+ * whatever was typed into it. */
+function sameColour(a: string | null | undefined, b: string) {
+  return !!a && a.toLowerCase() === b.toLowerCase();
+}
+
+function Swatch({
+  value,
+  active,
+  label,
+  onPick,
+}: {
+  value: string | null;
+  active: boolean;
+  label: string;
+  onPick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      aria-pressed={active}
+      title={label}
+      onClick={onPick}
+      className={`grid size-8 shrink-0 place-items-center rounded-lg border text-[10px] font-bold transition-colors ${
+        active ? "border-primary ring-2 ring-primary" : "border-border"
+      }`}
+      style={value ? { background: value } : undefined}
+    >
+      {/* The uploaded logo has no colour to show, so it says so. */}
+      {value ? null : <span className="text-muted-foreground">Orig</span>}
+    </button>
   );
 }

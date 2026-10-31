@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { fieldLabel, formatPrice, SCRIPT_FONT } from "../constants";
 import { alpha, INK, luminance, RADIUS, shade, SPACE, TRACK, TYPE, WEIGHT } from "../tokens";
 import { FitText } from "@/components/rafty/FitText";
+import { BrandMark } from "../logo-paint";
 import type { RenderCtx } from "../templates";
 import type { ElementAdjust, LanguageCode, MovableElement } from "../types";
 import { MOVABLE_ELEMENTS } from "../types";
@@ -47,12 +48,21 @@ const LOGO = {
  * lockup and a corner placement draw it through here, so a logo moved out of
  * the lockup is the same drawing in a different spot rather than a second
  * implementation that drifts from the first. */
-function LogoMark({ src, scale, page }: { src: string; scale: number; page: number }) {
+function LogoMark({
+  src,
+  scale,
+  page,
+  tint,
+}: {
+  src: string;
+  scale: number;
+  page: number;
+  tint?: string | null;
+}) {
   return (
-    <img
+    <BrandMark
       src={src}
-      alt=""
-      crossOrigin="anonymous"
+      tint={tint}
       style={{
         height: px(LOGO.height * scale),
         // Never wider than the design's own content width, whatever the scale:
@@ -80,6 +90,7 @@ function logoAdjust(ctx: RenderCtx) {
     scale: clamp(a?.scale ?? 1, LOGO.minScale, LOGO.maxScale),
     x: clamp(a?.x ?? 0, -LOGO_NUDGE, LOGO_NUDGE),
     y: clamp(a?.y ?? 0, -LOGO_NUDGE, LOGO_NUDGE),
+    tint: a?.tint ?? null,
   };
 }
 
@@ -105,7 +116,7 @@ function FloatingLogo({
   arrival?: number;
 }) {
   const logo = ctx.brand.logoDataUrl;
-  const { place, scale, x, y } = logoAdjust(ctx);
+  const { place, scale, x, y, tint } = logoAdjust(ctx);
   if (!logo || place === "design") return null;
 
   // A centred placement is pinned to the middle of the frame rather than to one
@@ -148,7 +159,7 @@ function FloatingLogo({
         display: "flex",
       }}
     >
-      <LogoMark src={logo} scale={scale} page={page} />
+      <LogoMark src={logo} scale={scale} page={page} tint={tint} />
     </div>
   );
 }
@@ -1377,7 +1388,7 @@ function Brand({
   as?: "lockup" | "sign";
 }) {
   const showName = !!ctx.showBrandName && !!ctx.businessName;
-  const { place, scale } = logoAdjust(ctx);
+  const { place, scale, tint } = logoAdjust(ctx);
   // A mark the customer has pinned to a corner is drawn there, by FloatingLogo,
   // and must not also be drawn here - that is the one way this feature could
   // put two copies of a logo on one post.
@@ -1390,7 +1401,7 @@ function Brand({
   const divider = as === "sign" && !!logo && showName;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: px(SPACE.md) }}>
-      {logo ? <LogoMark src={logo} scale={scale} page={page} /> : null}
+      {logo ? <LogoMark src={logo} scale={scale} page={page} tint={tint} /> : null}
       {divider ? (
         <span
           aria-hidden

@@ -1094,7 +1094,15 @@ function CreatePage() {
 
               {/* Only worth showing to a brand that has a mark to place. */}
               {brand?.logoDataUrl ? (
-                <LogoControls adjustments={active.adjustments} onChange={setAdjustments} />
+                <LogoControls
+                  adjustments={active.adjustments}
+                  onChange={setAdjustments}
+                  palette={{
+                    primary: brand.primary,
+                    secondary: brand.secondary,
+                    accent: brand.accent,
+                  }}
+                />
               ) : null}
 
               <ElementControls

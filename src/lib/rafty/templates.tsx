@@ -1,6 +1,7 @@
 import { formatPrice } from "./constants";
 import { INK } from "./tokens";
 import { renderDesign } from "./design/render";
+import { BrandMark } from "./logo-paint";
 import { TRAVEL_DESIGNS } from "./design/travel";
 import { TRAVEL_POSTER_DESIGNS } from "./design/travel-poster";
 import { TRAVEL_ALTAVIA_DESIGNS, TRAVEL_ALTAVIA_V2_DESIGNS } from "./design/travel-altavia";
@@ -162,10 +163,9 @@ function ZoneNode({ zone, ctx }: { zone: TemplateZone; ctx: RenderCtx }) {
   if (zone.key === "logo") {
     if (!ctx.brand.logoDataUrl) return null;
     return (
-      <img
+      <BrandMark
         src={ctx.brand.logoDataUrl}
-        alt=""
-        crossOrigin="anonymous"
+        tint={ctx.adjustments?.logo?.tint ?? null}
         style={{
           position: "absolute",
           left: `${zone.x}%`,

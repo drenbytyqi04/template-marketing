@@ -472,6 +472,16 @@ export type LogoAdjust = {
   /** Nudges from the chosen corner, in the same units as the text nudges. */
   x: number;
   y: number;
+  /**
+   * One colour to paint the mark in on this post, or null for the logo as it
+   * was uploaded.
+   *
+   * Per post on purpose. A brand with a dark logo needs a light one over a
+   * photograph and the dark one on a pale template, and that is a decision
+   * about the post in front of you, not a change of brand - so it lives in the
+   * post's adjustments, and the stored logo is never rewritten.
+   */
+  tint?: string | null;
 };
 
 /**
@@ -653,7 +663,13 @@ export const emptyContent: PostContent = {
 
 export const defaultAdjust: LayerAdjust = { x: 0, y: 0, scale: 1, align: "left" };
 
-export const defaultLogoAdjust: LogoAdjust = { place: "design", scale: 1, x: 0, y: 0 };
+export const defaultLogoAdjust: LogoAdjust = {
+  place: "design",
+  scale: 1,
+  x: 0,
+  y: 0,
+  tint: null,
+};
 
 /* ------------------------- scheduling and connections ---------------------- */
 
